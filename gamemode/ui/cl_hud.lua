@@ -425,7 +425,17 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
     -- 3. Draw Bottom-Right Ammo Display (Unified Theme)
     local wep = ply:GetActiveWeapon()
-    if IsValid(wep) and wep:GetClass() ~= "weapon_gwrp_fists" and wep:GetClass() ~= "weapon_gwrp_keys" then
+    local nonAmmoWeps = {
+        weapon_gwrp_fists = true,
+        weapon_fists = true,
+        fists = true,
+        weapon_gwrp_keys = true,
+        weapon_physgun = true,
+        weapon_physcannon = true,
+        gmod_tool = true,
+        weapon_gwrp_remover = true
+    }
+    if IsValid(wep) and not nonAmmoWeps[wep:GetClass()] then
         local clip = wep:Clip1()
         local reserve = ply:GetAmmoCount(wep:GetPrimaryAmmoType())
         if clip >= 0 or reserve > 0 then
@@ -458,11 +468,94 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
         end
     end
 
-    -- 4. In-World Crosshair Tag for Entities with Item Quality (Excludes flag poles, doors, etc.)
+    -- 4. In-World Crosshair Tag for Entities (Doors, Clinic Pod, Printers, Network Switches)
     local tr = ply:GetEyeTrace()
     local ent = tr.Entity
-    if IsValid(ent) and tr.HitPos:DistToSqr(ply:EyePos()) <= (160 * 160) then
-        if ent:GetClass() == "gwrp_clinic_pod" then
+    if IsValid(ent) then
+        local distSqr = tr.HitPos:DistToSqr(ply:EyePos())
+        if ent.isDoor and ent:isDoor() and distSqr <= (200 * 200) then
+            local tagX = ScrW() / 2
+            local tagY = ScrH() / 2 + 36
+
+            local cardW = 340
+            local cardH = 92
+            local cardX = tagX - cardW / 2
+
+            local owner = ent:GetNWEntity("GWRP_DoorOwner")
+            local gangName = ent:GetNWString("GWRP_DoorFaction", "")
+            local isOwned = IsValid(owner)
+            local isOwner = isOwned and (owner == ply)
+            local canAccess = ent.CanAccessDoor and ent:CanAccessDoor(ply)
+            local cost = (GWRP.Config and GWRP.Config.DoorCost) or 15
+
+            local accentCol = Color(52, 211, 153)
+            local badgeText = "VACANT"
+            local titleText = "Property Available"
+            local subText = string.format("Purchase Cost: $%s", string.Comma(cost))
+            local subCol = Color(74, 222, 128)
+            local promptText = "[F2] Purchase Door"
+            local promptCol = Color(248, 250, 252)
+
+            if isOwner then
+                accentCol = Color(52, 211, 153)
+                badgeText = "YOUR DOOR"
+                titleText = ply:Nick()
+                local gangStr = (gangName ~= "" and gangName ~= "neutral") and ("Faction: " .. string.upper(gangName)) or "Private Residence"
+                subText = gangStr
+                subCol = Color(148, 163, 184)
+                promptText = "[F2] Manage / Sell Property"
+                promptCol = Color(74, 222, 128)
+            elseif isOwned then
+                local gangCol = (gangName ~= "" and gangName ~= "neutral" and GWRP.GetGangColor) and GWRP.GetGangColor(gangName) or nil
+                if canAccess then
+                    accentCol = gangCol or Color(6, 182, 212)
+                    badgeText = "GANG ACCESS"
+                    titleText = owner:Nick()
+                    subText = string.format("Gang: %s  •  Access Permitted", string.upper(gangName))
+                    subCol = Color(52, 211, 153)
+                    promptText = "[Shared Property]"
+                    promptCol = Color(203, 213, 225)
+                else
+                    accentCol = gangCol or Color(251, 191, 36)
+                    badgeText = "OCCUPIED"
+                    titleText = owner:Nick()
+                    local gangStr = (gangName ~= "" and gangName ~= "neutral") and ("Faction: " .. string.upper(gangName)) or "Private Residence"
+                    subText = gangStr
+                    subCol = Color(148, 163, 184)
+                    promptText = "Restricted Access  •  Trespassers Beware"
+                    promptCol = Color(239, 68, 68)
+                end
+            end
+
+            -- Measure Badge Width
+            surface.SetFont("GWRP_UI_Badge")
+            local bTextW = surface.GetTextSize(badgeText)
+            local badgeW = bTextW + 16
+
+            -- Card Background (Deep obsidian slate)
+            draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 200)
+            surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+
+            -- Top Accent Line
+            draw.RoundedBoxEx(8, cardX, tagY, cardW, 3, accentCol, true, true, false, false)
+
+            -- Row 1: Status Pill + Title
+            draw.RoundedBox(4, cardX + 8, tagY + 8, badgeW, 20, Color(accentCol.r, accentCol.g, accentCol.b, 40))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 160)
+            surface.DrawOutlinedRect(cardX + 8, tagY + 8, badgeW, 20, 1)
+            draw.SimpleText(badgeText, "GWRP_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+            local maxTitleW = cardW - badgeW - 24
+            local fitTitle = GWRP.UI.FitText(titleText, "GWRP_UI_Badge", maxTitleW)
+            draw.SimpleText(fitTitle, "GWRP_UI_Badge", cardX + badgeW + 16, tagY + 18, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+            -- Row 2: Subtitle Info
+            draw.SimpleText(subText, "GWRP_FontSmall", cardX + 12, tagY + 44, subCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+            -- Row 3: Prompt Action
+            draw.SimpleText(promptText, "GWRP_UI_Caption", cardX + 12, tagY + 68, promptCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        elseif distSqr <= (160 * 160) and ent:GetClass() == "gwrp_clinic_pod" then
             local tagX = ScrW() / 2
             local tagY = ScrH() / 2 + 36
 
@@ -477,7 +570,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             surface.DrawOutlinedRect(tagX - totalW / 2, tagY, totalW, totalH, 1)
 
             draw.SimpleText(podTitle, "GWRP_UI_Badge", tagX, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        elseif ent.HasItemQuality and ent:HasItemQuality() then
+        elseif distSqr <= (160 * 160) and ent.HasItemQuality and ent:HasItemQuality() then
             local qData = ent:GetItemQualityData()
             if qData then
             local entName = ent.PrintName or ent:GetClass()

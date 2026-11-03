@@ -120,14 +120,13 @@ function GM:PlayerSpawn(ply)
         ply:StripWeapons()
         ply:StripAmmo()
 
-        -- Standard RP tools
+        -- Universal RP tools (Given to ALL jobs)
+        ply:Give("weapon_fists")
         ply:Give("weapon_gwrp_keys")
+        ply:Give("weapon_physgun")
         ply:Give("weapon_physcannon")
-
-        -- Non-police players receive the Physics Gun for base building & prop handling
-        if not ply:IsPolice() then
-            ply:Give("weapon_physgun")
-        end
+        ply:Give("gmod_tool")
+        ply:Give("weapon_gwrp_remover")
 
         -- Job specific tools and weapons
         if job.weapons then

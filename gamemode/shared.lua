@@ -37,3 +37,15 @@ end
 function GM:CanPlayerSuicide(ply)
     return false
 end
+
+-- Alias "fists" to GMod's "weapon_fists" for universal compatibility
+hook.Add("Initialize", "GWRP_RegisterFistsAlias", function()
+    if weapons and weapons.Get and weapons.Register then
+        local baseFists = weapons.Get("weapon_fists")
+        if baseFists and not weapons.Get("fists") then
+            local fistsCopy = table.Copy(baseFists)
+            fistsCopy.ClassName = "fists"
+            weapons.Register(fistsCopy, "fists")
+        end
+    end
+end)

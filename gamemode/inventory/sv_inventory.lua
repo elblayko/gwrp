@@ -513,8 +513,8 @@ hook.Add("PlayerSay", "GWRP_DropWeaponChatCommands", function(ply, text)
         end
 
         local class = wep:GetClass()
-        if class == "weapon_gwrp_keys" or class == "weapon_physcannon" or class == "gmod_tool" then
-            GWRP.Notify(ply, "You cannot drop this weapon!", NOTIFY_ERROR)
+        if class == "weapon_gwrp_keys" or class == "weapon_physcannon" or class == "weapon_physgun" or class == "weapon_fists" or class == "fists" or class == "gmod_tool" or class == "weapon_gwrp_remover" then
+            GWRP.Notify(ply, "You cannot drop standard utility gear!", NOTIFY_ERROR)
             return ""
         end
 
