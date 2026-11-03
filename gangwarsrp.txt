@@ -1,0 +1,12 @@
+"gangwarsrp"
+{
+	"base"		"sandbox"
+	"title"		"GangWars RP"
+	"maps"		"^rp_"
+	"menusystem"	"1"
+	"author_name"	"Toxic"
+	"author_email"	""
+	"author_url"	""
+	"icon"		""
+	"info"		"GangWars RP gamemode for modern Garry's Mod by Toxic."
+}
