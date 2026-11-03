@@ -61,6 +61,8 @@ net.Receive("GWRP_SyncInventory", function()
             GWRP.UI.RenderContentTab(GWRP.UI.CurrentContentPanel, "inventory", GWRP.UI.F4Frame)
         end
     end
+
+    hook.Run("GWRP_InventorySynced")
 end)
 
 function GWRP.Inventory.MoveSlot(fromBag, fromSlot, toBag, toSlot)

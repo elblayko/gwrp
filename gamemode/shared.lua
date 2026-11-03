@@ -22,6 +22,7 @@ include("buffs/sh_buffs.lua")
 include("buffs/sh_buff_definitions.lua")
 include("factions/sh_factions.lua")
 include("turf/sh_turf.lua")
+include("crafting/sh_crafting.lua")
 
 function GM:Initialize()
     print("[GWRP] Initializing GangWars RP by Toxic...")

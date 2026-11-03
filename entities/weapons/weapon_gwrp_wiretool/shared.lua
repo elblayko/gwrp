@@ -50,6 +50,9 @@ local function IsValidNetworkTarget(ent)
     if class == "gwrp_computer" or ent.IsComputer then
         return true
     end
+    if class == "gwrp_resource_machine" or ent.IsNetworkDevice then
+        return true
+    end
     return false
 end
 
@@ -145,7 +148,7 @@ function SWEP:PrimaryAttack()
             sw:EmitSound("ambient/energy/zap1.wav", 70, 115)
             pr:EmitSound("buttons/button9.wav", 70, 100)
             local ipInfo = assignedIP and (" (IP: " .. assignedIP .. ")") or ""
-            local effInfo = (pr.PrintAmount ~= nil or string.find(pr:GetClass(), "printer")) and string.format(" [%d%% eff]", pr.GetEfficiency and pr:GetEfficiency() or 60) or ""
+            local effInfo = (pr.PrintAmount ~= nil or string.find(pr:GetClass(), "printer") or pr:GetClass() == "gwrp_resource_machine") and string.format(" [%d%% eff]", pr.GetEfficiency and pr:GetEfficiency() or 60) or ""
             GWRP.Notify(ply, string.format("Linked %s to Switch on Port %d%s%s!", pr.PrintName or "Device", assignedOrErr, effInfo, ipInfo), NOTIFY_GENERIC)
         else
             if IsValid(rope) then rope:Remove() end

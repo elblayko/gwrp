@@ -275,6 +275,14 @@ function ENT:RecalculateNetwork()
         totalEff = totalEff + eff
     end
 
+    -- Update Resource Fabricator efficiency based on network load (100% when 2+ are attached)
+    for _, dev in ipairs(validDevices) do
+        if dev:GetClass() == "gwrp_resource_machine" then
+            local eff = (count >= 2) and (GWRP.Config.PrinterNetworkEfficiency3 or 100) or (GWRP.Config.PrinterNetworkEfficiency2 or 80)
+            dev:SetEfficiency(eff)
+        end
+    end
+
     local printerCount = #validPrinters
     local avgEff = (printerCount > 0) and math.floor(totalEff / printerCount) or (GWRP.Config.PrinterStandaloneEfficiency or 60)
     self:SetEfficiency(avgEff)

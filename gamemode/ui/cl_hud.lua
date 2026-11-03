@@ -112,6 +112,13 @@ function GWRP.UI.CreateFonts()
         antialias = true,
         extended = true
     })
+    surface.CreateFont("GWRP_UI_BodyBold", {
+        font = "Roboto",
+        size = 19,
+        weight = 700,
+        antialias = true,
+        extended = true
+    })
     surface.CreateFont("GWRP_UI_Badge", {
         font = "Roboto",
         size = 16,

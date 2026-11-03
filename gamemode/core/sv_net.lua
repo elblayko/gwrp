@@ -35,6 +35,9 @@ util.AddNetworkString("GWRP_RunComputerCommand")
 util.AddNetworkString("GWRP_ComputerCommandResponse")
 util.AddNetworkString("GWRP_LevelUp")
 util.AddNetworkString("GWRP_XPGained")
+util.AddNetworkString("GWRP_OpenCraftingUI")
+util.AddNetworkString("GWRP_CraftItem")
+util.AddNetworkString("GWRP_CollectMachineResource")
 
 GWRP.NetLimits = GWRP.NetLimits or {}
 

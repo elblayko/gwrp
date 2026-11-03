@@ -42,6 +42,19 @@ net.Receive("GWRP_BuyItem", function(len, ply)
         ply:GiveAmmo(28 * mult, "357", true)
         GWRP.Notify(ply, (mult > 1 and "Delivered Wholesale Bulk Ammo Pack!" or "Purchased Ammo Pack!"), NOTIFY_GENERIC)
     elseif item.type == "entity" then
+        if item.max then
+            local count = 0
+            for _, existing in ipairs(ents.FindByClass(item.class)) do
+                if existing.GetOwnerPlayer and existing:GetOwnerPlayer() == ply then
+                    count = count + 1
+                end
+            end
+            if count >= item.max then
+                GWRP.Notify(ply, string.format("You have reached the maximum limit of %d %s!", item.max, item.name), NOTIFY_ERROR)
+                return
+            end
+        end
+
         local trace = ply:GetEyeTrace()
         local spawnPos = trace.HitPos + trace.HitNormal * 15
 

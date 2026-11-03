@@ -201,6 +201,46 @@ function GWRP.Inventory.PickupEntity(ply, ent)
         return true
     end
 
+    -- 5. Crafting Ingot, Carbon Rod & Blueprint Material Props
+    if class == "gwrp_crafting_material" then
+        if GWRP.Crafting and GWRP.Crafting.PickupMaterial then
+            return GWRP.Crafting.PickupMaterial(ply, ent)
+        end
+        return false
+    end
+
+    -- 6. Resource Fabricator Machine
+    if class == "gwrp_resource_machine" then
+        local owner = ent.GetOwnerPlayer and ent:GetOwnerPlayer()
+        if IsValid(owner) and owner ~= ply and not ply:IsAdmin() then
+            GWRP.Notify(ply, "Only the owner can pack up this Resource Fabricator!", NOTIFY_ERROR)
+            return false
+        end
+
+        if ent.DisconnectFromSwitch then ent:DisconnectFromSwitch() end
+        if IsValid(ent.CurrentItem) then
+            constraint.RemoveAll(ent.CurrentItem)
+            ent.CurrentItem.ParentMachine = nil
+            local phys = ent.CurrentItem:GetPhysicsObject()
+            if IsValid(phys) then phys:Wake() end
+            ent.CurrentItem = nil
+        end
+
+        local added = GWRP.Database.AddInventoryItem(ply:SteamID(), class, "entity", 1, {})
+        if not added then
+            GWRP.Notify(ply, "Your bags are full! Equip extra bags or drop items.", NOTIFY_ERROR)
+            ply:EmitSound("common/warning.wav", 65, 100)
+            return false
+        end
+
+        ent:EmitSound("weapons/iceaxe/iceaxe_swing1.wav", 65, 100)
+        local def = GWRP.Inventory.GetItemData(class)
+        GWRP.Notify(ply, "Packed " .. (def and def.name or "Resource Fabricator") .. " into your bag.", NOTIFY_GENERIC)
+        ent:Remove()
+        GWRP.Inventory.Sync(ply)
+        return true
+    end
+
     return false
 end
 
@@ -263,7 +303,7 @@ net.Receive("GWRP_DropInventorySlot", function(len, ply)
             if rawData.clip2 then spawnedEnt:SetClip2(rawData.clip2) end
         end
 
-    elseif itemType == "printer" or itemType == "switch" then
+    elseif itemType == "printer" or itemType == "switch" or itemId == "gwrp_resource_machine" then
         spawnedEnt = ents.Create(itemId)
         if IsValid(spawnedEnt) then
             spawnedEnt:SetPos(spawnPos)
@@ -277,6 +317,16 @@ net.Receive("GWRP_DropInventorySlot", function(len, ply)
             if rawData.hasUndervolt and spawnedEnt.SetHasUndervolt then
                 spawnedEnt:SetHasUndervolt(true)
             end
+        end
+
+    elseif itemType == "material" or itemType == "blueprint" then
+        spawnedEnt = ents.Create("gwrp_crafting_material")
+        if IsValid(spawnedEnt) then
+            spawnedEnt:SetMaterialID(itemId)
+            spawnedEnt:SetAmount(1)
+            spawnedEnt:SetPos(spawnPos)
+            spawnedEnt:Spawn()
+            spawnedEnt:Activate()
         end
 
     elseif itemType == "shipment" then

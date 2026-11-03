@@ -44,6 +44,7 @@ GWRP.Config.EntityQualities = {
     ["gwrp_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-2 Terminal | Port Scanner" },
     ["gwrp_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
     ["gwrp_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },
+    ["gwrp_resource_machine"] = { quality = 2, subType = "Automated Extractor", stats = "Extracts Metals & Blueprints | Network Capable" },
 
     -- Explicit Exclusions (Never have item quality)
     ["gwrp_flag_pole"] = false,
@@ -366,6 +367,17 @@ GWRP.ShopItems = {
         class = "gwrp_printer_diamond", 
         category = "printers",
         desc = "Maximum tier industrial printer. High yields, benefits greatly from networking."
+    },
+    ["entity_resource_machine"] = {
+        name = "Resource Fabricator",
+        level = 2,
+        cost = 500,
+        max = 2,
+        type = "entity",
+        class = "gwrp_resource_machine",
+        category = "printers",
+        badge = "Legal Tech",
+        desc = "Automated legal extractor & crafting station. Generates ingots, blueprints, and carbon rods. Connects to L2 switch for accelerated throughput."
     },
 
     -- ========================================================
