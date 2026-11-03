@@ -70,3 +70,25 @@ concommand.Add("gwrp_menu", function() GWRP.UI.ToggleF4Menu() end)
 concommand.Add("gwrp_admin", function() if GWRP.Turf and GWRP.Turf.OpenSetupMenu then GWRP.Turf.OpenSetupMenu() end end)
 concommand.Add("admin", function() if GWRP.Turf and GWRP.Turf.OpenSetupMenu then GWRP.Turf.OpenSetupMenu() end end)
 concommand.Add("debug", function() if GWRP.Turf and GWRP.Turf.OpenSetupMenu then GWRP.Turf.OpenSetupMenu() end end)
+
+-- Explicitly ensure client viewmodel hands render for SWEP.UseHands weapons
+function GM:PostDrawViewModel(vm, ply, wep, flags)
+    if not IsValid(wep) then return false end
+
+    if wep.UseHands or not wep:IsScripted() then
+        local hands = ply:GetHands()
+        if IsValid(hands) and IsValid(hands:GetParent()) then
+            if not hook.Call("PreDrawPlayerHands", self, hands, vm, ply, wep, flags) then
+                if wep.ViewModelFlip then render.CullMode(MATERIAL_CULLMODE_CW) end
+                hands:DrawModel(flags)
+                render.CullMode(MATERIAL_CULLMODE_CCW)
+            end
+            hook.Call("PostDrawPlayerHands", self, hands, vm, ply, wep, flags)
+        end
+    end
+
+    player_manager.RunClass(ply, "PostDrawViewModel", vm, wep, flags)
+
+    if wep.PostDrawViewModel == nil then return false end
+    return wep:PostDrawViewModel(vm, ply, wep, flags)
+end

@@ -150,6 +150,34 @@ function GM:PlayerSpawn(ply)
             ply:GiveAmmo(36, "357", true)
         end
     end
+
+    -- Setup viewmodel hands entity for c_ models and weapon_fists
+    ply:SetupHands()
+end
+
+function GM:PlayerSetHandsModel(ply, ent)
+    local info = player_manager.RunClass(ply, "GetHandsModel")
+    if not info then
+        local playermodel = player_manager.TranslateToPlayerModelName(ply:GetModel())
+        info = player_manager.TranslatePlayerHands(playermodel)
+    end
+
+    if info and info.model then
+        ent:SetModel(info.model)
+        ent:SetSkin(info.matchBodySkin and ply:GetSkin() or (info.skin or 0))
+        ent:SetBodyGroups(info.body or "0000000")
+    else
+        ent:SetModel("models/weapons/c_arms_citizen.mdl")
+        ent:SetSkin(0)
+        ent:SetBodyGroups("0000000")
+    end
+end
+
+-- Ensure any existing spawned players receive their hands immediately on lua reload
+for _, p in ipairs(player.GetAll()) do
+    if IsValid(p) and not IsValid(p:GetHands()) then
+        p:SetupHands()
+    end
 end
 
 -- ========================================================

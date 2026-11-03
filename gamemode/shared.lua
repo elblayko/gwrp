@@ -50,3 +50,26 @@ hook.Add("Initialize", "GWRP_RegisterFistsAlias", function()
         end
     end
 end)
+
+-- Shared Viewmodel Hands Model Configuration
+function GM:PlayerSetHandsModel(ply, ent)
+    local info = player_manager.RunClass(ply, "GetHandsModel")
+    if not info then
+        local playermodel = player_manager.TranslateToPlayerModelName(ply:GetModel())
+        info = player_manager.TranslatePlayerHands(playermodel)
+    end
+
+    if info and info.model then
+        ent:SetModel(info.model)
+        ent:SetSkin(info.matchBodySkin and ply:GetSkin() or (info.skin or 0))
+        ent:SetBodyGroups(info.body or "0000000")
+    else
+        ent:SetModel("models/weapons/c_arms_citizen.mdl")
+        ent:SetSkin(0)
+        ent:SetBodyGroups("0000000")
+    end
+end
+
+hook.Add("PlayerSetHandsModel", "GWRP_PlayerSetHandsModelHook", function(ply, ent)
+    return GAMEMODE:PlayerSetHandsModel(ply, ent)
+end)
