@@ -30,8 +30,9 @@ GWRP.Config.PrinterHeatRiseUndervolted = 1   -- +1C per cycle (+400% lifespan)
 GWRP.Config.ModuleUndervoltCost = 80
 
 -- Network Switch & Efficiency Rates
-GWRP.Config.SwitchMaxPorts = 3 -- 3 physical ports per L2 switch
-GWRP.Config.MaxCableLength = 550 -- maximum length in hammer units before cable snaps
+GWRP.Config.SwitchMaxPorts = 3 -- 3 physical copper ports per L2 switch (Port 4 is SFP module uplink)
+GWRP.Config.MaxCableLength = 550 -- maximum length in hammer units before copper cable snaps
+GWRP.Config.MaxFiberCableLength = 800 -- maximum length in hammer units for SFP fiber optic cable
 GWRP.Config.PrinterStandaloneEfficiency = 60 -- 1 printer or unlinked = 60%
 GWRP.Config.PrinterNetworkEfficiency2 = 80   -- 2 printers on switch = 80%
 GWRP.Config.PrinterNetworkEfficiency3 = 100  -- 3 printers on switch = 100%
@@ -41,7 +42,7 @@ GWRP.Config.EntityQualities = {
     ["gwrp_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
     ["gwrp_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
     ["gwrp_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
-    ["gwrp_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "3x Ports | L2 Layer" },
+    ["gwrp_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "3x Copper + SFP Uplink | L2 Layer" },
     ["gwrp_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-2 Terminal | Port Scanner" },
     ["gwrp_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
     ["gwrp_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },
@@ -303,13 +304,13 @@ GWRP.ShopItems = {
         desc = "Handheld cryo-calibrator. Cools printers (-35°C), repairs integrity, and allows Cyber Engineers to Supercharge hardware." 
     },
     ["entity_network_switch"] = { 
-        name = "L2 Network Switch (3-Port)", 
+        name = "L2 Network Switch (3-Port + SFP)", 
         level = 2,
         cost = 120, 
         type = "entity", 
         class = "gwrp_network_switch", 
         category = "networking", 
-        desc = "Hardware Layer-2 switch with 3 copper ports to boost printer efficiency to 100%." 
+        desc = "Layer-2 hardware switch featuring 3 copper device ports and a 4th SFP transceiver port for switch-to-switch uplinks." 
     },
     ["entity_computer"] = { 
         name = "Personal Computer", 

@@ -285,12 +285,10 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
             end
 
             if c1 == "use" then
-                if string.find(c2, "overheat") or string.find(c2, "thermal") then
+                if string.find(c2, "overheat") or string.find(c2, "thermal") or string.find(c2, "synth") or string.find(c2, "meltdown") then
                     currentMSFMod = "thermal_overheat"
                 elseif string.find(c2, "siphon") or string.find(c2, "cash") then
                     currentMSFMod = "cash_siphon"
-                elseif string.find(c2, "synth") or string.find(c2, "ot") or string.find(c2, "fabricator") or string.find(c2, "material") or string.find(c2, "meltdown") then
-                    currentMSFMod = "synth_overload"
                 end
                 UpdatePrompt()
                 net.Start("GWRP_RunComputerCommand")

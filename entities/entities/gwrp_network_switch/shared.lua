@@ -1,11 +1,11 @@
 --[[
     entities/entities/gwrp_network_switch/shared.lua
-    GWRP 4-Port Layer-2 Network Switch (3 Copper Ports + 1 SFP Optical Uplink)
+    GWRP 4-Port Layer-3 Network Switch (3 Copper Ports + 1 SFP Optical Uplink)
 --]]
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
-ENT.PrintName = "L2 Network Switch (3-Port + SFP)"
+ENT.PrintName = "L3 Network Switch (3-Port + SFP)"
 ENT.Author = "Toxic"
 ENT.Spawnable = true
 

@@ -36,11 +36,15 @@ function GWRP.Network.FormatMAC(ent, subnetId, hostId)
     return string.format("02:42:C0:%02X:%02X:%02X", sub % 256, hst % 256, idx % 256)
 end
 
--- Traverses and retrieves all active devices within the broadcast domain of a switch
-function GWRP.Network.GetBroadcastDomain(switchEnt)
+-- Traverses and retrieves all active devices within the broadcast domain of a switch (including SFP-uplinked switches)
+function GWRP.Network.GetBroadcastDomain(switchEnt, visited)
     if not IsValid(switchEnt) or switchEnt:GetClass() ~= "gwrp_network_switch" then
         return {}
     end
+
+    visited = visited or {}
+    if visited[switchEnt] then return {} end
+    visited[switchEnt] = true
 
     local subnet = GWRP.Network.GetSubnetID(switchEnt)
     local devices = {}
@@ -48,7 +52,7 @@ function GWRP.Network.GetBroadcastDomain(switchEnt)
     -- 1. The Switch itself (Default Gateway)
     table.insert(devices, {
         entity = switchEnt,
-        name = switchEnt.PrintName or "L2 Network Switch (3-Port)",
+        name = switchEnt.PrintName or "L2 Network Switch (3-Port + SFP)",
         type = "switch",
         ip = GWRP.Network.GetGatewayIP(switchEnt),
         mac = GWRP.Network.FormatMAC(switchEnt, subnet, 1),
@@ -60,9 +64,8 @@ function GWRP.Network.GetBroadcastDomain(switchEnt)
         }
     })
 
-    -- 2. Connected Devices across the switch ports
-    local maxPorts = switchEnt.GetMaxPorts and switchEnt:GetMaxPorts() or 3
-    for portNum = 1, maxPorts do
+    -- 2. Connected Devices across the copper switch ports (1..3)
+    for portNum = 1, 3 do
         local portData = switchEnt.Ports and switchEnt.Ports[portNum]
         if portData then
             local dev = portData.device or portData.printer
@@ -122,6 +125,18 @@ function GWRP.Network.GetBroadcastDomain(switchEnt)
                     status = "ONLINE",
                     services = services
                 })
+            end
+        end
+    end
+
+    -- 3. Interconnected Switches via SFP Optical Trunk (Port 4)
+    local sfpData = switchEnt.Ports and switchEnt.Ports[4]
+    if sfpData then
+        local uplink = sfpData.device or sfpData.switch
+        if IsValid(uplink) and uplink:GetClass() == "gwrp_network_switch" and not visited[uplink] then
+            local trunkedDevices = GWRP.Network.GetBroadcastDomain(uplink, visited)
+            for _, devData in ipairs(trunkedDevices) do
+                table.insert(devices, devData)
             end
         end
     end

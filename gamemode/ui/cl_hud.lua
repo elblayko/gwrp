@@ -593,8 +593,8 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
             -- Up-Close Raycast UI: Layer-2 Network Switch
             if ent:GetClass() == "gwrp_network_switch" then
-                local cardW = 340
-                local cardH = 94
+                local cardW = 380
+                local cardH = 96
                 local cardX = tagX - cardW / 2
 
                 draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
@@ -606,24 +606,34 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
                 draw.SimpleText(qName, "GWRP_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 draw.SimpleText(entName, "GWRP_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-                -- 3 Ports Status Row
+                -- 4 Ports Status Row: Ports 1..3 (Copper) & Port 4 (SFP Module)
                 local p1 = ent.GetPort1Active and ent:GetPort1Active()
                 local p2 = ent.GetPort2Active and ent:GetPort2Active()
                 local p3 = ent.GetPort3Active and ent:GetPort3Active()
+                local p4 = ent.GetPort4Active and ent:GetPort4Active()
 
-                local portW = 100
+                local portW = 86
                 local portH = 24
                 local portY = tagY + 34
                 local ports = {
-                    { name = "P1", active = p1, x = cardX + 10 },
-                    { name = "P2", active = p2, x = cardX + 120 },
-                    { name = "P3", active = p3, x = cardX + 230 }
+                    { name = "P1", active = p1, x = cardX + 10, isSFP = false },
+                    { name = "P2", active = p2, x = cardX + 101, isSFP = false },
+                    { name = "P3", active = p3, x = cardX + 192, isSFP = false },
+                    { name = "SFP", active = p4, x = cardX + 283, isSFP = true }
                 }
 
                 for _, pt in ipairs(ports) do
-                    local bg = pt.active and Color(16, 185, 129, 35) or Color(30, 41, 59, 140)
-                    local col = pt.active and Color(52, 211, 153) or Color(148, 163, 184)
-                    local txt = pt.active and (pt.name .. ": LINKED") or (pt.name .. ": EMPTY")
+                    local bg, col, txt
+                    if pt.isSFP then
+                        bg = pt.active and Color(6, 182, 212, 35) or Color(30, 41, 59, 140)
+                        col = pt.active and Color(56, 189, 248) or Color(100, 116, 139)
+                        txt = pt.active and "SFP: 10G" or "SFP: OPEN"
+                    else
+                        bg = pt.active and Color(16, 185, 129, 35) or Color(30, 41, 59, 140)
+                        col = pt.active and Color(52, 211, 153) or Color(148, 163, 184)
+                        txt = pt.active and (pt.name .. ": LINK") or (pt.name .. ": OPEN")
+                    end
+
                     draw.RoundedBox(4, pt.x, portY, portW, portH, bg)
                     surface.SetDrawColor(col.r, col.g, col.b, 160)
                     surface.DrawOutlinedRect(pt.x, portY, portW, portH, 1)
@@ -632,7 +642,8 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
                 -- Hardware Status Row
                 local links = ent.GetConnectedCount and ent:GetConnectedCount() or 0
-                local linksTxt = string.format("Active Ports: %d / 3 Connected", links)
+                local sfpTxt = p4 and "SFP Uplink: ACTIVE" or "SFP Uplink: OPEN"
+                local linksTxt = string.format("Copper: %d/3 Active | %s", links, sfpTxt)
 
                 draw.SimpleText(linksTxt, "GWRP_UI_Caption", cardX + cardW / 2, tagY + 75, Color(203, 213, 225), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 

@@ -140,13 +140,13 @@ GWRP.Inventory.Items = {
 
     -- 2. Money Printers & Networking Appliances
     ["gwrp_network_switch"] = {
-        name = "L2 Network Switch (3-Port)",
+        name = "L2 Network Switch (3-Port + SFP)",
         type = "switch",
         subType = "Network Appliance",
         quality = 2, -- Uncommon
         model = "models/props_lab/reciever01a.mdl",
-        desc = "Hardware Layer-2 switch with 3 copper ports to boost printer efficiency.",
-        stats = "3 Copper Ports | Layer-2 Hub"
+        desc = "Layer-2 hardware switch featuring 3 copper device ports and a 4th SFP transceiver port for switch-to-switch uplinks.",
+        stats = "3 Copper Ports + SFP Uplink | Layer-2 Switch"
     },
     ["gwrp_module_undervolt"] = {
         name = "Undervolt Hardware Module",

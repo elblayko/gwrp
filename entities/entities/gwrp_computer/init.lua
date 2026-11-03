@@ -236,22 +236,18 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
                 computer.ActiveMSFModule = "siphon"
                 table.insert(responseLines, { text = "[+] Loaded module: exploit/printer/cash_siphon", color = "green" })
                 table.insert(responseLines, { text = "[*] Description : Bypasses EEPROM vault lockbox to extract all stored cash", color = "muted" })
+                table.insert(responseLines, { text = "[*] Target      : Money Printers only", color = "muted" })
                 table.insert(responseLines, { text = "[*] Ready. Type 'msf <ip>' or 'msf run <ip>' to execute against target.", color = "highlight" })
-            elseif string.find(targetMod, "overheat") or string.find(targetMod, "thermal") or string.find(targetMod, "burn") then
+            elseif string.find(targetMod, "overheat") or string.find(targetMod, "thermal") or string.find(targetMod, "burn") or string.find(targetMod, "synth") or string.find(targetMod, "meltdown") then
                 computer.ActiveMSFModule = "overheat"
-                table.insert(responseLines, { text = "[+] Loaded module: exploit/printer/thermal_overheat", color = "red" })
-                table.insert(responseLines, { text = "[*] Description : Overclocks thermal elements to induce catastrophic meltdown", color = "muted" })
-                table.insert(responseLines, { text = "[*] Ready. Type 'msf <ip>' or 'msf run <ip>' to execute against target.", color = "highlight" })
-            elseif string.find(targetMod, "synth") or string.find(targetMod, "ot") or string.find(targetMod, "fabricator") or string.find(targetMod, "material") or string.find(targetMod, "meltdown") then
-                computer.ActiveMSFModule = "synth_overload"
-                table.insert(responseLines, { text = "[+] Loaded module: exploit/ot/synth_overload", color = "yellow" })
-                table.insert(responseLines, { text = "[*] Description : Injects malicious Modbus SCADA firmware to detonate OT Synthesizer", color = "muted" })
+                table.insert(responseLines, { text = "[+] Loaded module: exploit/multi/thermal_overheat", color = "red" })
+                table.insert(responseLines, { text = "[*] Description : Overclocks thermal elements to detonate target printer or synthesizer", color = "muted" })
+                table.insert(responseLines, { text = "[*] Target      : Money Printers & Material Synthesizers", color = "muted" })
                 table.insert(responseLines, { text = "[*] Ready. Type 'msf <ip>' or 'msf run <ip>' to execute against target.", color = "highlight" })
             else
                 table.insert(responseLines, { text = "[-] Unknown module. Available modules:", color = "yellow" })
-                table.insert(responseLines, { text = "  use siphon    - Exploit lockbox & siphon stored cash", color = "green" })
-                table.insert(responseLines, { text = "  use overheat  - Overclock printer & trigger explosion", color = "red" })
-                table.insert(responseLines, { text = "  use synth     - Sabotage OT Modbus PLC & detonate material synthesizer", color = "yellow" })
+                table.insert(responseLines, { text = "  use siphon    - Exploit lockbox & siphon stored cash (Printers)", color = "green" })
+                table.insert(responseLines, { text = "  use overheat  - Overclock & detonate target (Printers & Synthesizers)", color = "red" })
             end
         end
 
@@ -264,15 +260,12 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
             local targetIP = arg1
             local chosenModule = computer.ActiveMSFModule or "siphon"
 
-        -- Support explicit module in command line: e.g. "msf siphon <ip>", "msf overheat <ip>", or "msf synth <ip>"
+        -- Support explicit module in command line: e.g. "msf siphon <ip>" or "msf overheat <ip>"
         if arg1 == "siphon" or arg1 == "cash" then
             chosenModule = "siphon"
             targetIP = parts[3] or ""
-        elseif arg1 == "overheat" or arg1 == "thermal" then
+        elseif arg1 == "overheat" or arg1 == "thermal" or arg1 == "burn" or arg1 == "synth" then
             chosenModule = "overheat"
-            targetIP = parts[3] or ""
-        elseif arg1 == "synth" or arg1 == "ot" or arg1 == "synthesizer" or arg1 == "fabricator" or arg1 == "meltdown" then
-            chosenModule = "synth_overload"
             targetIP = parts[3] or ""
         elseif (arg1 == "run" or arg1 == "exploit") and parts[3] then
             targetIP = parts[3]
@@ -288,25 +281,23 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
             table.insert(responseLines, { text = " _|    _|  _|  _|  _|       ", color = "cyan" })
             table.insert(responseLines, { text = "  _|_|_|   _|  _|  _|       ", color = "cyan" })
             table.insert(responseLines, { text = "Metasploit Framework Console (MSF v6.4.12-toxic)", color = "white" })
-            local modDisplay = (chosenModule == "overheat" and "exploit/printer/thermal_overheat") or ((chosenModule == "synth_overload" and "exploit/ot/synth_overload") or "exploit/printer/cash_siphon")
+            local modDisplay = chosenModule == "overheat" and "exploit/multi/thermal_overheat" or "exploit/printer/cash_siphon"
             table.insert(responseLines, { text = string.format("Active Module : %s", modDisplay), color = "highlight" })
             table.insert(responseLines, { text = "----------------------------------------------------------------------", color = "dark" })
             table.insert(responseLines, { text = "Available Exploit Modules:", color = "white" })
             table.insert(responseLines, { text = "  1) exploit/printer/cash_siphon", color = "green" })
             table.insert(responseLines, { text = "     Syntax : msf siphon <ip> (or 'use siphon')", color = "muted" })
+            table.insert(responseLines, { text = "     Target : Money Printers only", color = "muted" })
             table.insert(responseLines, { text = "     Action : Drains 100% of printer cash vault into your wallet", color = "muted" })
-            table.insert(responseLines, { text = "  2) exploit/printer/thermal_overheat", color = "red" })
+            table.insert(responseLines, { text = "  2) exploit/multi/thermal_overheat", color = "red" })
             table.insert(responseLines, { text = "     Syntax : msf overheat <ip> (or 'use overheat')", color = "muted" })
-            table.insert(responseLines, { text = "     Action : Overclocks voltage regulator & detonates target printer", color = "muted" })
-            table.insert(responseLines, { text = "  3) exploit/ot/synth_overload", color = "yellow" })
-            table.insert(responseLines, { text = "     Syntax : msf synth <ip> (or 'use synth')", color = "muted" })
-            table.insert(responseLines, { text = "     Action : Injects Modbus SCADA firmware to detonate OT synthesizer", color = "muted" })
+            table.insert(responseLines, { text = "     Target : Money Printers & Material Synthesizers", color = "muted" })
+            table.insert(responseLines, { text = "     Action : Overclocks thermal regulators & detonates target device in 3s", color = "muted" })
             table.insert(responseLines, { text = "----------------------------------------------------------------------", color = "dark" })
             table.insert(responseLines, { text = "MSF Console Commands:", color = "white" })
             table.insert(responseLines, { text = "  run <ip>         - Execute active module on target IP (or 'exploit <ip>')", color = "green" })
             table.insert(responseLines, { text = "  use siphon       - Select Cash Siphon exploit module", color = "white" })
             table.insert(responseLines, { text = "  use overheat     - Select Thermal Overheat exploit module", color = "white" })
-            table.insert(responseLines, { text = "  use synth        - Select OT Synthesizer Overload exploit module", color = "white" })
             table.insert(responseLines, { text = "  show modules     - List available exploit modules", color = "white" })
             table.insert(responseLines, { text = "  help             - Display this MSF help menu", color = "white" })
             table.insert(responseLines, { text = "  back / exit      - Exit Metasploit console back to bash shell", color = "muted" })
@@ -326,83 +317,35 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
                     end
                 end
 
-                local modName = (chosenModule == "overheat" and "exploit/printer/thermal_overheat") or ((chosenModule == "synth_overload" and "exploit/ot/synth_overload") or "exploit/printer/cash_siphon")
+                local modName = chosenModule == "overheat" and "exploit/multi/thermal_overheat" or "exploit/printer/cash_siphon"
                 table.insert(responseLines, { text = string.format("[*] Started reverse TCP handler on %s:4444", localIP), color = "muted" })
                 table.insert(responseLines, { text = string.format("[*] Using module: %s", modName), color = "cyan" })
 
                 if not targetDev then
                     table.insert(responseLines, { text = string.format("[-] Exploit failed: Host %s is unreachable or not in broadcast domain.", targetIP), color = "red" })
-                elseif chosenModule == "synth_overload" then
-                    -- MODULE 3: OT SYNTHESIZER OVERLOAD
-                    if targetDev.type ~= "synthesizer" then
-                        table.insert(responseLines, { text = string.format("[*] Probing %s:502 (Modbus/TCP) ...", targetIP), color = "muted" })
-                        table.insert(responseLines, { text = string.format("[-] Exploit failed: Host %s (%s) is not an OT Material Synthesizer.", targetIP, targetDev.name), color = "red" })
-                        table.insert(responseLines, { text = "[-] Selected module targets OT / Material Synthesizers only.", color = "muted" })
+
+                -- ========================================================
+                -- MODULE 1: CASH SIPHON (Money Printers only)
+                -- ========================================================
+                elseif chosenModule == "siphon" then
+                    if targetDev.type ~= "printer" then
+                        table.insert(responseLines, { text = string.format("[*] Probing %s ...", targetIP), color = "muted" })
+                        if targetDev.type == "synthesizer" then
+                            table.insert(responseLines, { text = string.format("[-] Exploit failed: Host %s (%s) is a Material Synthesizer and does not store cash.", targetIP, targetDev.name), color = "red" })
+                            table.insert(responseLines, { text = "[-] Use 'use overheat' or 'msf overheat <ip>' to sabotage synthesizers.", color = "yellow" })
+                        else
+                            table.insert(responseLines, { text = string.format("[-] Exploit failed: Host %s (%s) is not a Money Printer.", targetIP, targetDev.name), color = "red" })
+                        end
                     else
-                        local synth = targetDev.entity
-                        if not IsValid(synth) then
+                        local printer = targetDev.entity
+                        if not IsValid(printer) then
                             table.insert(responseLines, { text = "[-] Exploit failed: Target entity has disconnected or was removed.", color = "red" })
                         else
                             computer.NextExploitTime = now + 6 -- 6-second exploit cooldown
 
-                            table.insert(responseLines, { text = string.format("[*] Targeting %s:502 (Modbus/TCP SCADA - %s)", targetIP, targetDev.name), color = "muted" })
-                            table.insert(responseLines, { text = "[*] Transmitting forged Modbus function 0x5A (PLC Firmware Override)...", color = "muted" })
-                            table.insert(responseLines, { text = string.format("[+] Meterpreter session 1 opened (%s:4444 -> %s:502)", localIP, targetIP), color = "green" })
-                            table.insert(responseLines, { text = "[+] Modbus holding registers 40001-40016 poisoned! Safety interlocks BYPASSED.", color = "yellow" })
-                            table.insert(responseLines, { text = "[!] OVERCHARGE: Material synthesis rotor speed set to 600%!", color = "red" })
-                            table.insert(responseLines, { text = "[!] CRITICAL: Thermal containment ruptured! Temperature spiking past 100°C!", color = "red" })
-                            table.insert(responseLines, { text = "[!] Target Material Synthesizer will detonate in 3 seconds!", color = "highlight" })
-
-                            -- In-world cues
-                            synth:EmitSound("ambient/alarms/klaxon1.wav", 80, 130)
-                            synth:EmitSound("ambient/energy/zap2.wav", 80, 110)
-                            local effect = EffectData()
-                            effect:SetOrigin(synth:GetPos() + Vector(0, 0, 20))
-                            util.Effect("cball_bounce", effect)
-
-                            synth:SetTemperature(98)
-
-                            GWRP.Notify(ply, string.format("OT Modbus exploit injected into %s at %s! Detonation in 3 seconds!", targetDev.name, targetIP), NOTIFY_GENERIC)
-
-                            local victim = synth.GetOwnerPlayer and synth:GetOwnerPlayer() or synth.OwnerPlayer
-                            if IsValid(victim) and victim:IsPlayer() and victim ~= ply then
-                                GWRP.Notify(victim, string.format("CRITICAL OT SABOTAGE: Your %s at %s was remotely hacked via Modbus exploit and is detonating!", targetDev.name, targetIP), NOTIFY_ERROR, 8)
-                                victim:EmitSound("ambient/alarms/klaxon1.wav", 80, 120)
-                            end
-
-                            -- Detonate after 3 seconds
-                            local timerId = "GWRP_SynthesizerMeltdown_" .. synth:EntIndex()
-                            timer.Create(timerId, 3.0, 1, function()
-                                if IsValid(synth) then
-                                    synth:SetTemperature(105)
-                                    if synth.Explode then
-                                        synth:Explode()
-                                    end
-                                end
-                            end)
-                        end
-                    end
-                elseif targetDev.type ~= "printer" then
-                    table.insert(responseLines, { text = string.format("[*] Probing %s:8080 ...", targetIP), color = "muted" })
-                    table.insert(responseLines, { text = string.format("[-] Exploit failed: Host %s (%s) is not running a vulnerable MoneyFab service.", targetIP, targetDev.name), color = "red" })
-                    if targetDev.type == "synthesizer" then
-                        table.insert(responseLines, { text = "[-] Target is an OT Material Synthesizer. Use 'use synth' (exploit/ot/synth_overload) to attack it.", color = "yellow" })
-                    else
-                        table.insert(responseLines, { text = "[-] Selected module targets Money Fabricators only.", color = "muted" })
-                    end
-                else
-                    local printer = targetDev.entity
-                    if not IsValid(printer) then
-                        table.insert(responseLines, { text = "[-] Exploit failed: Target entity has disconnected or was removed.", color = "red" })
-                    else
-                        computer.NextExploitTime = now + 6 -- 6-second exploit cooldown
-
-                        table.insert(responseLines, { text = string.format("[*] Targeting %s:8080 (%s)", targetIP, targetDev.name), color = "muted" })
-                        table.insert(responseLines, { text = "[*] Sending stage (1536 bytes) to MoneyFab daemon...", color = "muted" })
-                        table.insert(responseLines, { text = string.format("[+] Meterpreter session 1 opened (%s:4444 -> %s:8080)", localIP, targetIP), color = "green" })
-
-                        -- MODULE 1: CASH SIPHON
-                        if chosenModule == "siphon" then
+                            table.insert(responseLines, { text = string.format("[*] Targeting %s:8080 (%s)", targetIP, targetDev.name), color = "muted" })
+                            table.insert(responseLines, { text = "[*] Sending stage (1536 bytes) to MoneyFab daemon...", color = "muted" })
+                            table.insert(responseLines, { text = string.format("[+] Meterpreter session 1 opened (%s:4444 -> %s:8080)", localIP, targetIP), color = "green" })
                             table.insert(responseLines, { text = "[+] EEPROM buffer overflow triggered at 0x7FFF0042!", color = "green" })
 
                             local stolenCash = printer.GetStoredCash and printer:GetStoredCash() or 0
@@ -430,38 +373,73 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
                             else
                                 table.insert(responseLines, { text = "[+] Exploit succeeded, but the printer's cash vault is currently empty ($0).", color = "yellow" })
                             end
+                        end
+                    end
 
-                        -- MODULE 2: THERMAL OVERHEAT
-                        elseif chosenModule == "overheat" then
-                            table.insert(responseLines, { text = "[+] Thermal safety governor registers disabled in BIOS!", color = "yellow" })
-                            table.insert(responseLines, { text = "[+] Voltage multiplier forced to 400% maximum output!", color = "red" })
-                            table.insert(responseLines, { text = "[!] CRITICAL: Core temperature spiked past 100°C! Meltdown initiated!", color = "red" })
-                            table.insert(responseLines, { text = "[!] Target printer will detonate in 3 seconds!", color = "highlight" })
+                -- ========================================================
+                -- MODULE 2: THERMAL OVERHEAT (Printers & Synthesizers)
+                -- ========================================================
+                elseif chosenModule == "overheat" then
+                    if targetDev.type ~= "printer" and targetDev.type ~= "synthesizer" then
+                        table.insert(responseLines, { text = string.format("[*] Probing %s ...", targetIP), color = "muted" })
+                        table.insert(responseLines, { text = string.format("[-] Exploit failed: Host %s (%s) does not have a vulnerable thermal regulator.", targetIP, targetDev.name), color = "red" })
+                        table.insert(responseLines, { text = "[-] Thermal Overheat targets Money Printers and Material Synthesizers only.", color = "muted" })
+                    else
+                        local targetEnt = targetDev.entity
+                        if not IsValid(targetEnt) then
+                            table.insert(responseLines, { text = "[-] Exploit failed: Target entity has disconnected or was removed.", color = "red" })
+                        else
+                            computer.NextExploitTime = now + 6 -- 6-second exploit cooldown
 
-                            -- Visual and audio cues on target printer
-                            printer:EmitSound("ambient/alarms/klaxon1.wav", 80, 125)
-                            local effect = EffectData()
-                            effect:SetOrigin(printer:GetPos() + Vector(0, 0, 10))
-                            util.Effect("cball_bounce", effect)
+                            local isSynth = (targetDev.type == "synthesizer")
+                            local targetPort = isSynth and 502 or 8080
+                            local protoName = isSynth and "Modbus/TCP SCADA" or "MoneyFab daemon"
 
-                            printer:SetTemperature(98)
-                            if printer.UpdateWireOutputs then printer:UpdateWireOutputs() end
+                            table.insert(responseLines, { text = string.format("[*] Targeting %s:%d (%s - %s)", targetIP, targetPort, protoName, targetDev.name), color = "muted" })
+                            table.insert(responseLines, { text = string.format("[*] Transmitting thermal overload payload to %s...", protoName), color = "muted" })
+                            table.insert(responseLines, { text = string.format("[+] Meterpreter session 1 opened (%s:4444 -> %s:%d)", localIP, targetIP, targetPort), color = "green" })
+
+                            if isSynth then
+                                table.insert(responseLines, { text = "[+] Modbus holding registers 40001-40016 poisoned! Safety interlocks BYPASSED.", color = "yellow" })
+                                table.insert(responseLines, { text = "[!] OVERCHARGE: Material synthesis rotor speed set to 600%!", color = "red" })
+                                table.insert(responseLines, { text = "[!] CRITICAL: Core temperature spiked past 100°C! Meltdown initiated!", color = "red" })
+                                table.insert(responseLines, { text = string.format("[!] Target %s will detonate in 3 seconds!", targetDev.name), color = "highlight" })
+
+                                targetEnt:EmitSound("ambient/alarms/klaxon1.wav", 80, 130)
+                                targetEnt:EmitSound("ambient/energy/zap2.wav", 80, 110)
+                                local effect = EffectData()
+                                effect:SetOrigin(targetEnt:GetPos() + Vector(0, 0, 20))
+                                util.Effect("cball_bounce", effect)
+                            else
+                                table.insert(responseLines, { text = "[+] Thermal safety governor registers disabled in BIOS!", color = "yellow" })
+                                table.insert(responseLines, { text = "[+] Voltage multiplier forced to 400% maximum output!", color = "red" })
+                                table.insert(responseLines, { text = "[!] CRITICAL: Core temperature spiked past 100°C! Meltdown initiated!", color = "red" })
+                                table.insert(responseLines, { text = string.format("[!] Target %s will detonate in 3 seconds!", targetDev.name), color = "highlight" })
+
+                                targetEnt:EmitSound("ambient/alarms/klaxon1.wav", 80, 125)
+                                local effect = EffectData()
+                                effect:SetOrigin(targetEnt:GetPos() + Vector(0, 0, 10))
+                                util.Effect("cball_bounce", effect)
+                            end
+
+                            targetEnt:SetTemperature(98)
+                            if targetEnt.UpdateWireOutputs then targetEnt:UpdateWireOutputs() end
 
                             GWRP.Notify(ply, string.format("Thermal exploit injected into %s at %s! Detonation in 3 seconds!", targetDev.name, targetIP), NOTIFY_GENERIC)
 
-                            local victim = printer.GetOwnerPlayer and printer:GetOwnerPlayer() or printer.OwnerPlayer
+                            local victim = targetEnt.GetOwnerPlayer and targetEnt:GetOwnerPlayer() or targetEnt.OwnerPlayer
                             if IsValid(victim) and victim:IsPlayer() and victim ~= ply then
                                 GWRP.Notify(victim, string.format("CRITICAL THERMAL ALERT: Your %s at %s was sabotaged via remote exploit and is detonating!", targetDev.name, targetIP), NOTIFY_ERROR, 8)
                                 victim:EmitSound("ambient/alarms/klaxon1.wav", 80, 120)
                             end
 
                             -- Detonate after 3 seconds
-                            local timerId = "GWRP_ThermalMeltdown_" .. printer:EntIndex()
+                            local timerId = "GWRP_ThermalMeltdown_" .. targetEnt:EntIndex()
                             timer.Create(timerId, 3.0, 1, function()
-                                if IsValid(printer) then
-                                    printer:SetTemperature(105)
-                                    if printer.Explode then
-                                        printer:Explode()
+                                if IsValid(targetEnt) then
+                                    targetEnt:SetTemperature(105)
+                                    if targetEnt.Explode then
+                                        targetEnt:Explode()
                                     end
                                 end
                             end)
