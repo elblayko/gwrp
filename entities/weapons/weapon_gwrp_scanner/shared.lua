@@ -14,7 +14,7 @@ SWEP.Category = "GangWars RP"
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
 
-SWEP.Slot = 0
+SWEP.Slot = 2
 SWEP.SlotPos = 5
 SWEP.DrawAmmo = false
 SWEP.DrawCrosshair = true

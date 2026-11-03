@@ -43,11 +43,11 @@ GWRP.Jobs = {
         level = 3,
         faction = GWRP.Factions.FACTION_CITIZEN,
         salary = 14,
-        weapons = { "weapon_fists", "weapon_gwrp_wiretool", "weapon_gwrp_repairtool" },
+        weapons = { "weapon_fists", "weapon_gwrp_wiretool" },
         armor = 10,
         models = { "models/player/kleiner.mdl", "models/player/magnusson.mdl" },
         max = 3,
-        desc = "High-tech network architect & infiltrator. Spawns with wiring & maintenance gear, can Supercharge printers for bonus yields, and holds root terminal exploit clearance."
+        desc = "High-tech network architect & infiltrator. Spawns with network wiring gear, can Supercharge hardware with a Cryo Calibrator, and holds root terminal exploit clearance."
     },
     ["security_guard"] = {
         name = "Security Contractor",
