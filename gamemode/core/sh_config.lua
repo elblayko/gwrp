@@ -30,9 +30,10 @@ GWRP.Config.PrinterHeatRiseUndervolted = 1   -- +1C per cycle (+400% lifespan)
 GWRP.Config.ModuleUndervoltCost = 80
 
 -- Network Switch & Efficiency Rates
-GWRP.Config.SwitchMaxPorts = 3 -- 3 physical copper ports per L2 switch (Port 4 is SFP module uplink)
+GWRP.Config.SwitchMaxPorts = 3 -- 2 copper ports + Port 3 combo SFP (10G/1G) + Port 4 10G SFP uplink
 GWRP.Config.MaxCableLength = 550 -- maximum length in hammer units before copper cable snaps
 GWRP.Config.MaxFiberCableLength = 800 -- maximum length in hammer units for SFP fiber optic cable
+GWRP.Config.WLANSniffMaxDistance = 2500 -- maximum distance in hammer units for airmon & computer WLAN traffic sniffing
 GWRP.Config.PrinterStandaloneEfficiency = 60 -- 1 printer or unlinked = 60%
 GWRP.Config.PrinterNetworkEfficiency2 = 80   -- 2 printers on switch = 80%
 GWRP.Config.PrinterNetworkEfficiency3 = 100  -- 3 printers on switch = 100%
@@ -42,8 +43,9 @@ GWRP.Config.EntityQualities = {
     ["gwrp_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
     ["gwrp_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
     ["gwrp_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
-    ["gwrp_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "3x Copper + SFP Uplink | L2 Layer" },
-    ["gwrp_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-2 Terminal | Port Scanner" },
+    ["gwrp_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "2x Cu + 2x SFP (10G/Cu Combo + 10G Uplink) | L3 Layer" },
+    ["gwrp_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-3 Terminal | Port Scanner" },
+    ["gwrp_wan_uplink"] = { quality = 3, subType = "Wireless Gateway", stats = "Long-Range L3 Mesh | WPA3 Encrypted" },
     ["gwrp_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
     ["gwrp_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },
     ["gwrp_resource_machine"] = { quality = 1, subType = "Automated Extractor", stats = "Extracts Metals & Blueprints | Network Capable" },
@@ -304,13 +306,13 @@ GWRP.ShopItems = {
         desc = "Handheld cryo-calibrator. Cools printers (-35°C), repairs integrity, and allows Cyber Engineers to Supercharge hardware." 
     },
     ["entity_network_switch"] = { 
-        name = "L2 Network Switch (3-Port + SFP)", 
+        name = "L3 Network Switch (2-Cu + 2-SFP)", 
         level = 2,
         cost = 120, 
         type = "entity", 
         class = "gwrp_network_switch", 
         category = "networking", 
-        desc = "Layer-2 hardware switch featuring 3 copper device ports and a 4th SFP transceiver port for switch-to-switch uplinks." 
+        desc = "Layer-3 hardware switch featuring 2 copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink." 
     },
     ["entity_computer"] = { 
         name = "Personal Computer", 
@@ -320,6 +322,24 @@ GWRP.ShopItems = {
         class = "gwrp_computer", 
         category = "networking", 
         desc = "Hacking OS terminal; connect to switch for network operations & nmap." 
+    },
+    ["entity_wan_uplink"] = { 
+        name = "Satellite WAN Uplink", 
+        level = 3,
+        cost = 180, 
+        type = "entity", 
+        class = "gwrp_wan_uplink", 
+        category = "networking", 
+        desc = "Encrypted microwave satellite dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to link separate networks wirelessly across the map with matching keys." 
+    },
+    ["weapon_cyberphone"] = { 
+        name = "CyberDeck Mobile Phone", 
+        level = 3,
+        cost = 250, 
+        type = "weapon", 
+        class = "weapon_gwrp_cyberphone", 
+        category = "networking", 
+        desc = "Handheld mobile CyberDeck handset exclusively for Cyber Engineers. Runs CyberDeck OS with built-in wireless spectrum reconnaissance and mobile Metasploit." 
     },
     ["module_undervolt"] = { 
         name = "Undervolt Hardware Module", 
@@ -379,7 +399,7 @@ GWRP.ShopItems = {
         class = "gwrp_resource_machine",
         category = "printers",
         badge = "Legal Tech",
-        desc = "Automated legal extractor & crafting station. Generates ingots, blueprints, and carbon rods. Connects to L2 switch for accelerated throughput."
+        desc = "Automated legal extractor & crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput."
     },
 
     -- ========================================================

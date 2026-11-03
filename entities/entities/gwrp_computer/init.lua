@@ -111,47 +111,94 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
     local computer = net.ReadEntity()
     local rawCmd = string.Trim(net.ReadString() or "")
 
-    if not IsValid(computer) or computer:GetClass() ~= "gwrp_computer" then return end
-    if ply:EyePos():DistToSqr(computer:GetPos()) > (220 * 220) then
-        GWRP.Notify(ply, "You are too far from the computer terminal!", NOTIFY_ERROR)
-        return
+    if not IsValid(computer) then return end
+    local isPhone = computer:GetClass() == "weapon_gwrp_cyberphone"
+    if computer:GetClass() ~= "gwrp_computer" and not isPhone then return end
+
+    if isPhone then
+        if computer:GetOwner() ~= ply then return end
+    else
+        if ply:EyePos():DistToSqr(computer:GetPos()) > (220 * 220) then
+            GWRP.Notify(ply, "You are too far from the computer terminal!", NOTIFY_ERROR)
+            return
+        end
     end
 
-    local sw = computer:GetConnectedSwitch()
-    local isConnected = IsValid(sw)
-    local localIP = computer:GetIPAddress() or ""
-    local subnet = isConnected and (GWRP.Network and GWRP.Network.GetSubnetID(sw) or sw:GetSubnetID()) or 0
+    local sw = nil
+    local isConnected = false
+    local localIP = ""
+    local subnet = 0
+    local scanOrigin = isPhone and ply or computer
+    local maxSniffDist = (GWRP.Config and GWRP.Config.WLANSniffMaxDistance) or 2500
+
+    if isPhone then
+        local wanKey = string.Trim(string.upper(computer:GetAssociatedWANKey() or ""))
+        local maxRangeSqr = maxSniffDist * maxSniffDist
+        if wanKey ~= "" then
+            for _, uplink in ipairs(GWRP.Network.WANUplinks or {}) do
+                if IsValid(uplink) and string.Trim(string.upper(uplink:GetEncryptionKey() or "")) == wanKey then
+                    if ply:GetPos():DistToSqr(uplink:GetPos()) <= maxRangeSqr then
+                        local pSw = uplink:GetConnectedSwitch()
+                        if IsValid(pSw) then
+                            sw = pSw
+                            isConnected = true
+                            subnet = GWRP.Network.GetSubnetID(sw)
+                            break
+                        end
+                    end
+                end
+            end
+        end
+        localIP = computer:GetIPAddress() ~= "" and computer:GetIPAddress() or "10.84.1.25"
+    else
+        sw = computer:GetConnectedSwitch()
+        isConnected = IsValid(sw)
+        localIP = computer:GetIPAddress() or ""
+        subnet = isConnected and (GWRP.Network and GWRP.Network.GetSubnetID(sw) or sw:GetSubnetID()) or 0
+    end
+
     local isEngineer = (ply.GetJob and ply:GetJob() == "cyber_engineer")
 
     local parts = string.Explode(" ", rawCmd)
     local cmd = string.lower(parts[1] or "")
-    local arg1 = parts[2] or ""
+    local arg1 = string.lower(parts[2] or "")
 
     local responseLines = {}
 
     if cmd == "nmap" then
         if not isConnected then
             table.insert(responseLines, { text = "Starting Nmap 7.94 ( https://nmap.org )", color = "muted" })
-            table.insert(responseLines, { text = "nmap: FATAL: No active network interface found on eth0.", color = "red" })
-            table.insert(responseLines, { text = "Interface eth0 has NO CARRIER (Physical copper cable unplugged).", color = "yellow" })
-            table.insert(responseLines, { text = "Tip: Use Copper Wiring Tool to link this computer to an L2 Switch.", color = "muted" })
+            if isPhone then
+                local wanKey = computer:GetAssociatedWANKey() or ""
+                if wanKey ~= "" then
+                    table.insert(responseLines, { text = string.format("nmap: SIGNAL LOST: Out of range of WAN transmitter '%s' (Max: %du).", wanKey, maxSniffDist), color = "red" })
+                    table.insert(responseLines, { text = "Move closer to an active Satellite WAN Uplink to re-establish wireless link.", color = "yellow" })
+                else
+                    table.insert(responseLines, { text = "nmap: No active wireless WAN mesh association on wlan0.", color = "yellow" })
+                    table.insert(responseLines, { text = "Tip: Type 'airmon' to scan wireless airspace, then 'wan connect <key>'.", color = "cyan" })
+                end
+            else
+                table.insert(responseLines, { text = "nmap: FATAL: No active network interface found on eth0.", color = "red" })
+                table.insert(responseLines, { text = "Interface eth0 has NO CARRIER (Physical copper cable unplugged).", color = "yellow" })
+                table.insert(responseLines, { text = "Tip: Use Network Wiring Tool to link this computer to an L3 Switch.", color = "muted" })
+            end
         else
-            local devices = GWRP.Network and GWRP.Network.GetBroadcastDomain(sw) or {}
+            local devices = GWRP.Network and GWRP.Network.GetAllReachableDevices(sw) or {}
             local gatewayIP = GWRP.Network and GWRP.Network.GetGatewayIP(sw) or string.format("192.168.%d.1", subnet)
             local targetSubnet = string.format("192.168.%d.0/24", subnet)
 
             table.insert(responseLines, { text = string.format("Starting Nmap 7.94 ( https://nmap.org ) at %s", os.date("%Y-%m-%d %H:%M:%S")), color = "cyan" })
-            table.insert(responseLines, { text = string.format("Initiating ARP Ping Scan on broadcast domain %s", targetSubnet), color = "muted" })
-            table.insert(responseLines, { text = string.format("Completed ARP Ping Scan (%d live devices discovered).", #devices), color = "green" })
+            table.insert(responseLines, { text = string.format("Initiating ARP/L3 Routing Scan on %s and active WAN tunnels", targetSubnet), color = "muted" })
+            table.insert(responseLines, { text = string.format("Completed Scan: Discovered %d live reachable devices.", #devices), color = "green" })
             table.insert(responseLines, { text = "----------------------------------------------------------------------", color = "dark" })
 
             local liveCount = 0
             for _, dev in ipairs(devices) do
                 liveCount = liveCount + 1
                 local isLocal = (dev.entity == computer)
-                local hostLabel = isLocal and " (this terminal [localhost])" or ""
+                local hostLabel = isLocal and " (this terminal [localhost])" or (dev.isRemoteWAN and " [Routed via WAN Mesh]" or "")
 
-                table.insert(responseLines, { text = string.format("Nmap scan report for %s (%s)%s", dev.ip, dev.name, hostLabel), color = "highlight" })
+                table.insert(responseLines, { text = string.format("Nmap scan report for %s (%s)%s", dev.ip, dev.name, hostLabel), color = dev.isRemoteWAN and "cyan" or "highlight" })
                 table.insert(responseLines, { text = string.format("Host is UP (0.00%02ds latency). MAC: %s", math.random(12, 65), dev.mac), color = "white" })
 
                 if dev.type == "printer" then
@@ -163,7 +210,7 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
                     table.insert(responseLines, { text = string.format("8080/tcp OPEN  http-proxy   MoneyFab Daemon (%d%% eff, %d°C)%s", eff, temp, uv), color = "green" })
                 elseif dev.type == "switch" then
                     table.insert(responseLines, { text = "PORT     STATE SERVICE      VERSION", color = "muted" })
-                    table.insert(responseLines, { text = "22/tcp   OPEN  ssh          GWRP-Switch-OS L2.1 (OpenSSH 8.9)", color = "cyan" })
+                    table.insert(responseLines, { text = "22/tcp   OPEN  ssh          GWRP-Switch-OS L3.1 (OpenSSH 8.9)", color = "cyan" })
                     table.insert(responseLines, { text = "80/tcp   OPEN  http         Switch Management Web Console", color = "cyan" })
                 elseif dev.type == "computer" then
                     table.insert(responseLines, { text = "PORT     STATE SERVICE      VERSION", color = "muted" })
@@ -175,6 +222,10 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
                     table.insert(responseLines, { text = "PORT     STATE SERVICE      VERSION", color = "muted" })
                     table.insert(responseLines, { text = string.format("502/tcp  OPEN  modbus       Modbus/TCP OT Synthesizer PLC (%d%% eff, %d°C)", eff, temp), color = "yellow" })
                     table.insert(responseLines, { text = "4840/tcp OPEN  opcua        OPC-UA Material Fabrication Service", color = "yellow" })
+                elseif dev.type == "wan_uplink" then
+                    table.insert(responseLines, { text = "PORT     STATE SERVICE      VERSION", color = "muted" })
+                    table.insert(responseLines, { text = "443/tcp  OPEN  https        Satellite WAN Mesh Gateway (WPA3-Enterprise)", color = "cyan" })
+                    table.insert(responseLines, { text = "1194/udp OPEN  openvpn      L3 Wireless Tunnel Router (AES-256-GCM)", color = "cyan" })
                 end
                 table.insert(responseLines, { text = " ", color = "muted" })
             end
@@ -184,7 +235,14 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
         end
 
     elseif cmd == "ifconfig" or cmd == "ip" then
-        if not isConnected then
+        if isPhone then
+            local wanKey = computer:GetAssociatedWANKey() or ""
+            local statusStr = (wanKey ~= "" and isConnected) and string.format("ASSOCIATED (Key: %s | Gateway: 192.168.%d.1)", wanKey, subnet) or "STANDALONE (No mesh association)"
+            table.insert(responseLines, { text = "wlan0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500", color = "white" })
+            table.insert(responseLines, { text = string.format("        inet %s  netmask 255.255.0.0", localIP), color = "green" })
+            table.insert(responseLines, { text = "        ether 02:42:0a:54:01:19  txqueuelen 1000  (Wireless 802.11ax)", color = "muted" })
+            table.insert(responseLines, { text = "        wireless: " .. statusStr, color = isConnected and "cyan" or "yellow" })
+        elseif not isConnected then
             table.insert(responseLines, { text = "eth0: flags=4098<BROADCAST,MULTICAST>  mtu 1500", color = "white" })
             table.insert(responseLines, { text = "        ether 02:42:c0:00:00:00  txqueuelen 1000  (Ethernet)", color = "muted" })
             table.insert(responseLines, { text = "        status: NO CARRIER (Cable unplugged)", color = "red" })
@@ -194,15 +252,25 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
             table.insert(responseLines, { text = string.format("        inet %s  netmask 255.255.255.0  broadcast 192.168.%d.255", localIP, subnet), color = "green" })
             table.insert(responseLines, { text = string.format("        ether %s  txqueuelen 1000  (Ethernet)", mac), color = "muted" })
             table.insert(responseLines, { text = string.format("        gateway: 192.168.%d.1 (Switch on Port %d)", subnet, computer:GetAssignedPort() or 0), color = "cyan" })
+
+            local uplink = GWRP.Network and GWRP.Network.GetUplinkForSwitch(sw)
+            if IsValid(uplink) then
+                local wanKey = uplink:GetEncryptionKey() or "NONE"
+                local isOnline = uplink:GetIsOnline()
+                local peers = uplink:GetLinkedPeerCount() or 0
+                local wanStatus = isOnline and string.format("TUNNEL UP (%d Peers)", peers) or "STANDBY"
+                table.insert(responseLines, { text = "wan0: flags=4163<UP,POINTOPOINT,RUNNING>  mtu 1420 (Satellite WAN Gateway)", color = "white" })
+                table.insert(responseLines, { text = string.format("        inet %s  wan_key %s  status: %s", uplink:GetIPAddress() ~= "" and uplink:GetIPAddress() or "Pending", wanKey, wanStatus), color = isOnline and "cyan" or "yellow" })
+            end
         end
 
     elseif cmd == "ping" then
         if not isConnected then
-            table.insert(responseLines, { text = "ping: connect: Network is unreachable (eth0 is down).", color = "red" })
+            table.insert(responseLines, { text = "ping: connect: Network is unreachable (Interface is down).", color = "red" })
         elseif arg1 == "" then
             table.insert(responseLines, { text = "Usage: ping <ip_address>", color = "yellow" })
         else
-            local devices = GWRP.Network and GWRP.Network.GetBroadcastDomain(sw) or {}
+            local devices = GWRP.Network and GWRP.Network.GetAllReachableDevices(sw) or {}
             local found = false
             for _, dev in ipairs(devices) do
                 if dev.ip == arg1 then
@@ -221,6 +289,133 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
                 table.insert(responseLines, { text = string.format("From %s icmp_seq=1 Destination Host Unreachable", localIP), color = "red" })
                 table.insert(responseLines, { text = string.format("--- %s ping statistics --- 3 packets transmitted, 0 received, 100%% packet loss", arg1), color = "yellow" })
             end
+        end
+
+    -- Wireless Airspace Reconnaissance
+    elseif cmd == "airmon" or cmd == "airodump" or (cmd == "wan" and (arg1 == "scan" or arg1 == "recon")) then
+        local spectrum = GWRP.Network and GWRP.Network.GetActiveWANSpectrum and GWRP.Network.GetActiveWANSpectrum(scanOrigin, maxSniffDist) or {}
+        table.insert(responseLines, { text = string.format("[*] Airmon-ng 1.7 - Wireless Airspace Reconnaissance (Max Range: %du)", maxSniffDist), color = "cyan" })
+        table.insert(responseLines, { text = string.format("[+] Sniffing 2.4/5.8GHz Satellite Relay bands... Found %d active signal(s) in range.", #spectrum), color = "muted" })
+        table.insert(responseLines, { text = "--------------------------------------------------------------------------------", color = "dark" })
+        table.insert(responseLines, { text = "BSSID              PWR  DIST   CH  ENC      SUBNET          SSID", color = "highlight" })
+
+        if #spectrum == 0 then
+            table.insert(responseLines, { text = string.format("No active satellite WAN transmitters detected within %du.", maxSniffDist), color = "yellow" })
+            table.insert(responseLines, { text = "Move closer to suspected transmitter locations to sniff wireless packets.", color = "muted" })
+        else
+            for _, sig in ipairs(spectrum) do
+                local subStr = sig.subnet > 0 and string.format("192.168.%d.0/24", sig.subnet) or "Unlinked"
+                table.insert(responseLines, { text = string.format("%-18s %4ddBm %4du  %2d  WPA3-ENT %-15s %s", sig.bssid, sig.rssi, sig.dist or 0, sig.channel, subStr, sig.ssid), color = "green" })
+            end
+        end
+        table.insert(responseLines, { text = "--------------------------------------------------------------------------------", color = "dark" })
+        table.insert(responseLines, { text = "Tip: Type 'wan crack <bssid>' to capture handshake & crack encryption key.", color = "muted" })
+        if isPhone then
+            table.insert(responseLines, { text = "Tip: Type 'wan connect <key>' to link handset wlan0 interface to mesh.", color = "muted" })
+        end
+
+    -- Wireless Handshake Cracking
+    elseif cmd == "wan" and (arg1 == "crack" or arg1 == "brute") then
+        local targetBSSID = string.upper(parts[3] or "")
+        if targetBSSID == "" then
+            table.insert(responseLines, { text = "Usage: wan crack <bssid>", color = "yellow" })
+            table.insert(responseLines, { text = "Run 'airmon' to view active transmitter BSSIDs within range.", color = "muted" })
+        else
+            local spectrum = GWRP.Network and GWRP.Network.GetActiveWANSpectrum and GWRP.Network.GetActiveWANSpectrum(scanOrigin, maxSniffDist) or {}
+            local matchedSig = nil
+            for _, sig in ipairs(spectrum) do
+                if string.upper(sig.bssid) == targetBSSID or string.find(string.upper(sig.ssid), targetBSSID) then
+                    matchedSig = sig
+                    break
+                end
+            end
+
+            if not matchedSig then
+                table.insert(responseLines, { text = string.format("[-] crack: No active transmitter found matching '%s' within range (%du).", targetBSSID, maxSniffDist), color = "red" })
+                table.insert(responseLines, { text = "Transmitter may be powered off, offline, or beyond sniffing distance.", color = "muted" })
+            else
+                table.insert(responseLines, { text = string.format("[*] Initiating deauthentication attack against %s (Signal: %ddBm, Distance: %du)...", matchedSig.bssid, matchedSig.rssi, matchedSig.dist or 0), color = "muted" })
+                table.insert(responseLines, { text = "[+] WPA3/AES 4-way handshake captured!", color = "green" })
+                table.insert(responseLines, { text = "[*] Running dictionary attack against GPU wordlist...", color = "muted" })
+                table.insert(responseLines, { text = string.format("[+] KEY CRACKED! Plaintext Encryption Key: [ %s ]", matchedSig.fullKey), color = "highlight" })
+                table.insert(responseLines, { text = string.format("[*] Associated Subnet: 192.168.%d.0/24 (%d Mesh Peers)", matchedSig.subnet, matchedSig.peers), color = "cyan" })
+            end
+        end
+
+    -- Handset Wireless Mesh Association
+    elseif (cmd == "wan" or cmd == "wifi") and (arg1 == "connect" or arg1 == "link") then
+        local reqKey = string.Trim(string.upper(parts[3] or ""))
+        if reqKey == "" then
+            table.insert(responseLines, { text = "Usage: wan connect <encryption_key>", color = "yellow" })
+        elseif not isPhone then
+            table.insert(responseLines, { text = "[-] Fixed terminals use copper cables. Set encryption keys directly on your physical Satellite WAN Uplink entity.", color = "yellow" })
+        else
+            local inRangeUplink = nil
+            local closestDist = nil
+            for _, uplink in ipairs(GWRP.Network.WANUplinks or {}) do
+                if IsValid(uplink) and string.Trim(string.upper(uplink:GetEncryptionKey() or "")) == reqKey then
+                    local d = ply:GetPos():Distance(uplink:GetPos())
+                    if d <= maxSniffDist and (not closestDist or d < closestDist) then
+                        closestDist = d
+                        inRangeUplink = uplink
+                    end
+                end
+            end
+
+            if not inRangeUplink then
+                table.insert(responseLines, { text = string.format("[-] Association failed: No active WAN transmitter with key '%s' found within wireless range (%du).", reqKey, maxSniffDist), color = "red" })
+                table.insert(responseLines, { text = "Move closer to the target network's Satellite WAN Uplink dish.", color = "muted" })
+            else
+                computer:SetAssociatedWANKey(reqKey)
+                computer:SetIsConnected(true)
+                local mobileIP = string.format("10.84.%d.%d", math.random(2, 50), math.random(10, 200))
+                computer:SetIPAddress(mobileIP)
+                table.insert(responseLines, { text = string.format("[+] Handset wlan0 associated with WAN mesh [ %s ] (Distance: %du)", reqKey, math.floor(closestDist)), color = "green" })
+                table.insert(responseLines, { text = string.format("[+] DHCP Lease granted. Mobile IP: %s / 16", mobileIP), color = "cyan" })
+                table.insert(responseLines, { text = "[*] Routed WAN packets active. Type 'nmap' to scan mesh subnets.", color = "muted" })
+            end
+        end
+
+    -- WAN Gateway Status
+    elseif cmd == "wan" and (arg1 == "status" or arg1 == "") then
+        local uplink = isConnected and GWRP.Network.GetUplinkForSwitch(sw) or nil
+        if isPhone then
+            local key = computer:GetAssociatedWANKey() or ""
+            local inRange = false
+            local closestDist = nil
+            if key ~= "" then
+                for _, up in ipairs(GWRP.Network.WANUplinks or {}) do
+                    if IsValid(up) and string.Trim(string.upper(up:GetEncryptionKey() or "")) == key then
+                        local d = ply:GetPos():Distance(up:GetPos())
+                        if not closestDist or d < closestDist then
+                            closestDist = d
+                        end
+                        if d <= maxSniffDist then
+                            inRange = true
+                        end
+                    end
+                end
+            end
+
+            table.insert(responseLines, { text = "=== CyberDeck Mobile Handset WAN Status ===", color = "cyan" })
+            table.insert(responseLines, { text = string.format("  Associated Mesh Key : %s", key ~= "" and key or "NONE (Standalone)"), color = "white" })
+            table.insert(responseLines, { text = string.format("  Wireless Signal     : %s", (key ~= "" and inRange) and "ONLINE (In-Range)" or ((key ~= "" and not inRange) and "SIGNAL LOST (Out of Range)" or "DISCONNECTED")), color = (key ~= "" and inRange) and "green" or "red" })
+            if closestDist then
+                table.insert(responseLines, { text = string.format("  Transmitter Range   : %du / %du", math.floor(closestDist), maxSniffDist), color = inRange and "muted" or "yellow" })
+            end
+            table.insert(responseLines, { text = string.format("  Mobile IP Address   : %s", localIP), color = "white" })
+        elseif IsValid(uplink) then
+            local isOnline = uplink:GetIsOnline()
+            local peers = uplink:GetLinkedPeerCount() or 0
+            local key = uplink:GetEncryptionKey() or "NONE"
+            table.insert(responseLines, { text = "=== Satellite WAN Gateway Status ===", color = "cyan" })
+            table.insert(responseLines, { text = string.format("  Encryption Key      : %s", key), color = "white" })
+            table.insert(responseLines, { text = string.format("  Mesh Status         : %s", isOnline and "ONLINE" or "SEARCHING FOR PEERS"), color = isOnline and "green" or "yellow" })
+            table.insert(responseLines, { text = string.format("  Linked Mesh Peers   : %d remote site(s)", peers), color = "white" })
+            table.insert(responseLines, { text = string.format("  Local Subnet Gateway: 192.168.%d.1", subnet), color = "white" })
+        else
+            table.insert(responseLines, { text = "[-] No Satellite WAN Uplink attached to this L3 Switch.", color = "yellow" })
+            table.insert(responseLines, { text = "Tip: Plug a Satellite WAN Uplink into a copper port using the Network Wiring Tool.", color = "muted" })
         end
 
     elseif cmd == "use" or (cmd == "msf" and arg1 == "use") then
@@ -272,8 +467,8 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
         end
 
         if not isConnected then
-            table.insert(responseLines, { text = "[-] msf: Exploit failed: eth0 has NO CARRIER (Unplugged).", color = "red" })
-            table.insert(responseLines, { text = "    Connect this terminal to an L2 Switch to reach target subnets.", color = "yellow" })
+            table.insert(responseLines, { text = "[-] msf: Exploit failed: Interface has NO CARRIER (Unplugged or no mesh association).", color = "red" })
+            table.insert(responseLines, { text = "    Connect this terminal to an L3 Switch or associate handset to an active WAN mesh.", color = "yellow" })
         elseif targetIP == "" or targetIP == "help" or targetIP == "modules" or targetIP == "show" then
             table.insert(responseLines, { text = "  _|_|_|    _|_|    _|_|_|  ", color = "cyan" })
             table.insert(responseLines, { text = " _|        _|  _|  _|       ", color = "cyan" })
@@ -308,7 +503,7 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
                 local remaining = math.ceil(computer.NextExploitTime - now)
                 table.insert(responseLines, { text = string.format("[-] msf: Module cooldown active. Please wait %ds before re-arming payload.", remaining), color = "yellow" })
             else
-                local devices = GWRP.Network and GWRP.Network.GetBroadcastDomain(sw) or {}
+                local devices = GWRP.Network and GWRP.Network.GetAllReachableDevices(sw) or {}
                 local targetDev = nil
                 for _, dev in ipairs(devices) do
                     if dev.ip == targetIP then
@@ -452,10 +647,14 @@ net.Receive("GWRP_RunComputerCommand", function(len, ply)
 
     elseif cmd == "help" then
         table.insert(responseLines, { text = "=== GWRP CyberDeck OS - Built-in Shell Utility Commands ===", color = "cyan" })
-        table.insert(responseLines, { text = "  nmap         - Scan broadcast domain & enumerate device IP addresses / ports", color = "white" })
+        table.insert(responseLines, { text = "  nmap         - Scan reachable broadcast domain & routed WAN mesh device IP addresses", color = "white" })
         table.insert(responseLines, { text = "  msf          - Launch Metasploit Framework console (Cyber Engineer only)", color = "highlight" })
-        table.insert(responseLines, { text = "  ifconfig     - Show local ethernet adapter status, IP, netmask & gateway", color = "white" })
-        table.insert(responseLines, { text = "  ping <ip>    - Test connectivity to an IP address in the broadcast domain", color = "white" })
+        table.insert(responseLines, { text = "  airmon       - Scan wireless airspace for active Satellite WAN Uplink transmitters", color = "cyan" })
+        table.insert(responseLines, { text = "  wan crack    - Capture handshake & crack encryption key on a detected BSSID", color = "yellow" })
+        table.insert(responseLines, { text = "  wan connect  - Associate CyberDeck Mobile Handset with a wireless WAN mesh key", color = "green" })
+        table.insert(responseLines, { text = "  wan status   - Display active Satellite WAN gateway status & peer subnets", color = "white" })
+        table.insert(responseLines, { text = "  ifconfig     - Show local ethernet/wireless adapter status, IP, netmask & gateway", color = "white" })
+        table.insert(responseLines, { text = "  ping <ip>    - Test connectivity to an IP address across local and WAN subnets", color = "white" })
         table.insert(responseLines, { text = "  clear        - Clear the terminal screen buffer", color = "white" })
         table.insert(responseLines, { text = "  exit         - Close the terminal session", color = "white" })
         table.insert(responseLines, { text = "Tip: Type 'msf' to enter Metasploit console, then type 'help' for exploit commands.", color = "muted" })

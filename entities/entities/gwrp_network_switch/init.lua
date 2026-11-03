@@ -1,6 +1,7 @@
 --[[
     entities/entities/gwrp_network_switch/init.lua
-    GWRP 4-Port Layer-2 Network Switch Server Logic (3 Copper Ports + 1 SFP Optical Uplink)
+    GWRP 4-Port Layer-3 Network Switch Server Logic
+    (Ports 1-2: Dedicated Copper | Port 3: SFP Combo 10G/1G | Port 4: Dedicated 10G SFP)
 --]]
 
 AddCSLuaFile("cl_init.lua")
@@ -38,8 +39,10 @@ function ENT:Initialize()
     self:SetPort1Active(false)
     self:SetPort2Active(false)
     self:SetPort3Active(false)
+    self:SetPort3Is10G(false)
     self:SetPort4Active(false)
     self:SetUplinkSwitch(NULL)
+    self:SetPort3Switch(NULL)
 
     -- Broadcast Domain Subnet & Gateway IP
     local subnetId = GWRP.Network and GWRP.Network.GetSubnetID(self) or (((self:EntIndex() * 7) % 240) + 10)
@@ -47,8 +50,9 @@ function ENT:Initialize()
     self:SetIPAddress(string.format("192.168.%d.1", subnetId))
 
     -- Physical Port Slots:
-    -- Ports [1..3]: Copper Ethernet (Printers, Computers, Devices)
-    -- Port [4]: SFP Optical Transceiver Module (Switch-to-Switch Interconnect Only)
+    -- Ports [1..2]: Dedicated Copper Ethernet (Printers, Computers, Devices)
+    -- Port [3]: SFP Combo Port (10G for Switches / WAN Uplink, or 1G Copper SFP for Printers)
+    -- Port [4]: Dedicated SFP 10G Optical Transceiver (Switch-to-Switch Interconnect Only)
     self.Ports = {
         [1] = nil,
         [2] = nil,
@@ -66,8 +70,11 @@ function ENT:Initialize()
             "Port1Connected",
             "Port2Connected",
             "Port3Connected",
+            "Port3Is10G",
+            "Port3Mode [STRING]",
             "Port4Connected",
             "SFPUplink [ENTITY]",
+            "Port3Uplink [ENTITY]",
             "Port1Efficiency",
             "Port2Efficiency",
             "Port3Efficiency",
@@ -97,34 +104,46 @@ function ENT:TriggerInput(name, value)
     end
 end
 
--- Retrieves next free copper port (1..3) or SFP port (4)
-function ENT:GetAvailablePort(isSwitch)
-    if isSwitch then
-        if self.Ports[4] == nil then
-            return 4
-        end
-        return nil
-    end
+-- Retrieves next available SFP port for switch uplinks (checks Port 4 first, then Port 3)
+function ENT:GetAvailableSwitchPort()
+    if self.Ports[4] == nil then return 4 end
+    if self.Ports[3] == nil then return 3 end
+    return nil
+end
 
-    -- Other things (printers, computers, synthesizers) only connect to copper ports [1..3]
+-- Retrieves next available port for standard devices (1..3)
+function ENT:GetAvailableCopperPort()
     for i = 1, 3 do
-        if self.Ports[i] == nil then
-            return i
-        end
+        if self.Ports[i] == nil then return i end
     end
     return nil
 end
 
-function ENT:GetAvailableCopperPort()
-    return self:GetAvailablePort(false)
+-- General port finder based on device characteristics
+function ENT:GetAvailablePort(targetDev)
+    local isSwitch = (IsValid(targetDev) and targetDev:GetClass() == "gwrp_network_switch") or (targetDev == true)
+    if isSwitch then
+        return self:GetAvailableSwitchPort()
+    end
+
+    local isWAN = IsValid(targetDev) and (targetDev:GetClass() == "gwrp_wan_uplink" or targetDev.IsWANUplink)
+    if isWAN then
+        -- WAN prefers Port 3 for 10G SFP, then ports 1 and 2
+        if self.Ports[3] == nil then return 3 end
+        if self.Ports[1] == nil then return 1 end
+        if self.Ports[2] == nil then return 2 end
+        return nil
+    end
+
+    -- Printers and regular devices prefer copper ports 1-2, then Port 3 in 1G copper mode
+    if self.Ports[1] == nil then return 1 end
+    if self.Ports[2] == nil then return 2 end
+    if self.Ports[3] == nil then return 3 end
+    return nil
 end
 
-function ENT:GetAvailableSFPPort()
-    return self:GetAvailablePort(true)
-end
-
--- Connects this switch to another switch via the 4th port (SFP Module)
-function ENT:ConnectSwitch(otherSwitch, rope)
+-- Connects this switch to another switch via SFP (using Port 4 or Port 3)
+function ENT:ConnectSwitch(otherSwitch, rope, myPort, otherPort)
     if not IsValid(otherSwitch) or otherSwitch:GetClass() ~= "gwrp_network_switch" then
         return false, "Invalid switch entity"
     end
@@ -132,37 +151,56 @@ function ENT:ConnectSwitch(otherSwitch, rope)
         return false, "Cannot wire an entity to itself!"
     end
 
-    if self.Ports[4] ~= nil then
-        return false, "This switch's SFP module port (Port 4) is already connected to another switch!"
+    myPort = myPort or self:GetAvailableSwitchPort()
+    otherPort = otherPort or (otherSwitch.GetAvailableSwitchPort and otherSwitch:GetAvailableSwitchPort() or (otherSwitch.Ports[4] == nil and 4 or (otherSwitch.Ports[3] == nil and 3 or nil)))
+
+    if not myPort then
+        return false, "This switch's SFP ports (Ports 3 and 4) are both in use!"
     end
-    if otherSwitch.Ports and otherSwitch.Ports[4] ~= nil then
-        return false, "Target switch's SFP module port (Port 4) is already connected to another switch!"
+    if not otherPort then
+        return false, "Target switch's SFP ports (Ports 3 and 4) are both in use!"
     end
 
-    self.Ports[4] = {
+    self.Ports[myPort] = {
         device = otherSwitch,
         switch = otherSwitch,
         rope = rope,
-        type = "sfp_uplink"
+        type = "sfp_uplink",
+        is10G = true
     }
 
-    otherSwitch.Ports[4] = {
+    otherSwitch.Ports[otherPort] = {
         device = self,
         switch = self,
         rope = rope,
-        type = "sfp_uplink"
+        type = "sfp_uplink",
+        is10G = true
     }
 
-    self:SetPort4Active(true)
-    otherSwitch:SetPort4Active(true)
-    self:SetUplinkSwitch(otherSwitch)
-    otherSwitch:SetUplinkSwitch(self)
+    if myPort == 3 then
+        self:SetPort3Active(true)
+        self:SetPort3Is10G(true)
+        self:SetPort3Switch(otherSwitch)
+    else
+        self:SetPort4Active(true)
+        self:SetUplinkSwitch(otherSwitch)
+    end
+
+    if otherPort == 3 then
+        otherSwitch:SetPort3Active(true)
+        otherSwitch:SetPort3Is10G(true)
+        otherSwitch:SetPort3Switch(self)
+    else
+        otherSwitch:SetPort4Active(true)
+        otherSwitch:SetUplinkSwitch(self)
+    end
 
     self:RecalculateNetwork()
-    return true, 4
+    otherSwitch:RecalculateNetwork()
+    return true, myPort, otherPort
 end
 
--- Disconnects the SFP module switch uplink
+-- Disconnects Port 4 (Dedicated SFP Uplink)
 function ENT:DisconnectSFP()
     local sfpData = self.Ports[4]
     if not sfpData then return end
@@ -177,14 +215,22 @@ function ENT:DisconnectSFP()
     self:SetUplinkSwitch(NULL)
 
     if IsValid(otherSwitch) and otherSwitch:GetClass() == "gwrp_network_switch" then
-        if otherSwitch.Ports and otherSwitch.Ports[4] and (otherSwitch.Ports[4].device == self or otherSwitch.Ports[4].switch == self) then
-            if IsValid(otherSwitch.Ports[4].rope) then
-                otherSwitch.Ports[4].rope:Remove()
+        if otherSwitch.Ports then
+            for p = 3, 4 do
+                if otherSwitch.Ports[p] and (otherSwitch.Ports[p].device == self or otherSwitch.Ports[p].switch == self) then
+                    if IsValid(otherSwitch.Ports[p].rope) then otherSwitch.Ports[p].rope:Remove() end
+                    otherSwitch.Ports[p] = nil
+                    if p == 3 then
+                        otherSwitch:SetPort3Active(false)
+                        otherSwitch:SetPort3Is10G(false)
+                        otherSwitch:SetPort3Switch(NULL)
+                    else
+                        otherSwitch:SetPort4Active(false)
+                        otherSwitch:SetUplinkSwitch(NULL)
+                    end
+                    otherSwitch:RecalculateNetwork()
+                end
             end
-            otherSwitch.Ports[4] = nil
-            otherSwitch:SetPort4Active(false)
-            otherSwitch:SetUplinkSwitch(NULL)
-            otherSwitch:RecalculateNetwork()
         end
     end
 
@@ -195,7 +241,7 @@ ENT.DisconnectSwitch = ENT.DisconnectSFP
 function ENT:ConnectDevice(dev, rope)
     if not IsValid(dev) then return false, "Invalid device" end
 
-    -- Switches connect specifically through the 4th port SFP Module
+    -- Switches connect through SFP ports (Port 4 or Port 3)
     if dev:GetClass() == "gwrp_network_switch" then
         return self:ConnectSwitch(dev, rope)
     end
@@ -208,10 +254,34 @@ function ENT:ConnectDevice(dev, rope)
         end
     end
 
-    -- Standard devices can only connect to copper ports 1..3
-    local port = self:GetAvailableCopperPort()
-    if not port then
-        return false, "Switch copper ports are at maximum capacity (3/3 ports occupied)! Port 4 is an SFP module for switch uplinks only."
+    local isWAN = (dev:GetClass() == "gwrp_wan_uplink" or dev.IsWANUplink)
+    local isPrinter = dev.PrintAmount ~= nil or string.find(dev:GetClass(), "printer")
+    local isComputer = dev:GetClass() == "gwrp_computer" or dev.IsComputer
+
+    -- Port selection:
+    -- If WAN uplink: prefers Port 3 for 10G SFP mode, otherwise copper ports 1..2
+    -- If Printer or regular device: prefers copper ports 1..2, then Port 3 in 1G copper SFP mode
+    local chosenPort = nil
+    if isWAN then
+        if self.Ports[3] == nil then
+            chosenPort = 3
+        elseif self.Ports[1] == nil then
+            chosenPort = 1
+        elseif self.Ports[2] == nil then
+            chosenPort = 2
+        end
+    else
+        if self.Ports[1] == nil then
+            chosenPort = 1
+        elseif self.Ports[2] == nil then
+            chosenPort = 2
+        elseif self.Ports[3] == nil then
+            chosenPort = 3
+        end
+    end
+
+    if not chosenPort then
+        return false, "Switch device ports are full (Ports 1-3 occupied)! Port 4 is dedicated to 10G switch uplinks."
     end
 
     -- If device was connected to another switch, disconnect it first
@@ -224,103 +294,160 @@ function ENT:ConnectDevice(dev, rope)
         end
     end
 
-    local isPrinter = dev.PrintAmount ~= nil or string.find(dev:GetClass(), "printer")
-    local isComputer = dev:GetClass() == "gwrp_computer" or dev.IsComputer
+    local is10G = (chosenPort == 3 and isWAN)
 
-    self.Ports[port] = {
+    self.Ports[chosenPort] = {
         device = dev,
         printer = isPrinter and dev or nil,
         rope = rope,
-        type = isPrinter and "printer" or (isComputer and "computer" or "device")
+        type = isPrinter and "printer" or (isComputer and "computer" or (isWAN and "wan_uplink" or "device")),
+        is10G = is10G
     }
+
+    if chosenPort == 3 then
+        self:SetPort3Active(true)
+        self:SetPort3Is10G(is10G)
+        self:SetPort3Switch(NULL)
+    end
 
     local subnet = self:GetSubnetID()
     if not subnet or subnet <= 0 then
         subnet = GWRP.Network and GWRP.Network.GetSubnetID(self) or (((self:EntIndex() * 7) % 240) + 10)
         self:SetSubnetID(subnet)
     end
-    local assignedIP = string.format("192.168.%d.%d", subnet, 10 + port)
+    local assignedIP = string.format("192.168.%d.%d", subnet, 10 + chosenPort)
 
     if dev.SetIPAddress then dev:SetIPAddress(assignedIP) end
     if dev.SetConnectedSwitch then dev:SetConnectedSwitch(self) end
-    if dev.SetAssignedPort then dev:SetAssignedPort(port) end
+    if dev.SetAssignedPort then dev:SetAssignedPort(chosenPort) end
+
+    if isWAN and GWRP.Network and GWRP.Network.RecalculateWANMesh then
+        GWRP.Network.RecalculateWANMesh()
+    end
 
     self:RecalculateNetwork()
-    return true, port, assignedIP
+    return true, chosenPort, assignedIP, is10G
 end
 ENT.ConnectPrinter = ENT.ConnectDevice
+
+local function CleanDeviceParams(dev)
+    if not IsValid(dev) then return end
+    if dev.SetIPAddress then dev:SetIPAddress("") end
+    if dev.SetConnectedSwitch then dev:SetConnectedSwitch(NULL) end
+    if dev.SetAssignedPort then dev:SetAssignedPort(0) end
+
+    if dev.SetEfficiency then
+        dev:SetEfficiency(GWRP.Config.PrinterStandaloneEfficiency or 60)
+    end
+    if dev.SetNetworkedCount then
+        dev:SetNetworkedCount(1)
+    end
+    if dev.UpdateWireOutputs then
+        dev:UpdateWireOutputs()
+    end
+end
 
 function ENT:DisconnectDevice(dev)
     if not IsValid(dev) then return end
 
-    if dev:GetClass() == "gwrp_network_switch" then
-        if self.Ports[4] and (self.Ports[4].device == dev or self.Ports[4].switch == dev) then
-            self:DisconnectSFP()
+    -- Check Port 3 (SFP Combo: Switch 10G, WAN 10G, or Device 1G)
+    if self.Ports[3] and (self.Ports[3].device == dev or self.Ports[3].switch == dev) then
+        if IsValid(self.Ports[3].rope) then self.Ports[3].rope:Remove() end
+
+        if dev:GetClass() == "gwrp_network_switch" and dev.Ports then
+            for p = 3, 4 do
+                if dev.Ports[p] and (dev.Ports[p].device == self or dev.Ports[p].switch == self) then
+                    if IsValid(dev.Ports[p].rope) then dev.Ports[p].rope:Remove() end
+                    dev.Ports[p] = nil
+                    if p == 3 then
+                        dev:SetPort3Active(false)
+                        dev:SetPort3Is10G(false)
+                        dev:SetPort3Switch(NULL)
+                    else
+                        dev:SetPort4Active(false)
+                        dev:SetUplinkSwitch(NULL)
+                    end
+                    dev:RecalculateNetwork()
+                end
+            end
         end
+
+        local isWAN = (dev:GetClass() == "gwrp_wan_uplink" or dev.IsWANUplink)
+        self.Ports[3] = nil
+        self:SetPort3Active(false)
+        self:SetPort3Is10G(false)
+        self:SetPort3Switch(NULL)
+
+        CleanDeviceParams(dev)
+        if isWAN and GWRP.Network and GWRP.Network.RecalculateWANMesh then
+            GWRP.Network.RecalculateWANMesh()
+        end
+        self:RecalculateNetwork()
         return
     end
 
-    local foundPort = nil
-    for portNum = 1, 3 do
-        local portData = self.Ports[portNum]
-        if portData and (portData.device == dev or portData.printer == dev) then
-            foundPort = portNum
-            if IsValid(portData.rope) then
-                portData.rope:Remove()
-            end
-            self.Ports[portNum] = nil
-            break
-        end
+    -- Check Port 4 (Dedicated SFP 10G Uplink)
+    if self.Ports[4] and (self.Ports[4].device == dev or self.Ports[4].switch == dev) then
+        self:DisconnectSFP()
+        return
     end
 
-    if foundPort then
-        if dev.SetIPAddress then dev:SetIPAddress("") end
-        if dev.SetConnectedSwitch then dev:SetConnectedSwitch(NULL) end
-        if dev.SetAssignedPort then dev:SetAssignedPort(0) end
+    -- Check Ports 1..2
+    for portNum = 1, 2 do
+        local portData = self.Ports[portNum]
+        if portData and (portData.device == dev or portData.printer == dev) then
+            if IsValid(portData.rope) then portData.rope:Remove() end
+            self.Ports[portNum] = nil
 
-        if dev.SetEfficiency then
-            dev:SetEfficiency(GWRP.Config.PrinterStandaloneEfficiency or 60)
+            local isWAN = (dev:GetClass() == "gwrp_wan_uplink" or dev.IsWANUplink)
+            CleanDeviceParams(dev)
+            if isWAN and GWRP.Network and GWRP.Network.RecalculateWANMesh then
+                GWRP.Network.RecalculateWANMesh()
+            end
+            self:RecalculateNetwork()
+            break
         end
-        if dev.SetNetworkedCount then
-            dev:SetNetworkedCount(1)
-        end
-        if dev.UpdateWireOutputs then
-            dev:UpdateWireOutputs()
-        end
-
-        self:RecalculateNetwork()
     end
 end
 ENT.DisconnectPrinter = ENT.DisconnectDevice
 
 function ENT:DisconnectAll()
-    -- Disconnect copper ports 1..3
+    -- Disconnect ports 1..3
     for i = 1, 3 do
         local portData = self.Ports[i]
         if portData then
-            if IsValid(portData.rope) then
-                portData.rope:Remove()
-            end
-            local dev = portData.device or portData.printer
+            if IsValid(portData.rope) then portData.rope:Remove() end
+            local dev = portData.device or portData.printer or portData.switch
             if IsValid(dev) then
-                if dev.SetIPAddress then dev:SetIPAddress("") end
-                if dev.SetConnectedSwitch then dev:SetConnectedSwitch(NULL) end
-                if dev.SetAssignedPort then dev:SetAssignedPort(0) end
-                if dev.SetEfficiency then
-                    dev:SetEfficiency(GWRP.Config.PrinterStandaloneEfficiency or 60)
-                end
-                if dev.SetNetworkedCount then
-                    dev:SetNetworkedCount(1)
-                end
-                if dev.UpdateWireOutputs then
-                    dev:UpdateWireOutputs()
+                if dev:GetClass() == "gwrp_network_switch" then
+                    for p = 3, 4 do
+                        if dev.Ports and dev.Ports[p] and (dev.Ports[p].device == self or dev.Ports[p].switch == self) then
+                            if IsValid(dev.Ports[p].rope) then dev.Ports[p].rope:Remove() end
+                            dev.Ports[p] = nil
+                            if p == 3 then
+                                dev:SetPort3Active(false)
+                                dev:SetPort3Is10G(false)
+                                dev:SetPort3Switch(NULL)
+                            else
+                                dev:SetPort4Active(false)
+                                dev:SetUplinkSwitch(NULL)
+                            end
+                            dev:RecalculateNetwork()
+                        end
+                    end
+                else
+                    CleanDeviceParams(dev)
                 end
             end
             self.Ports[i] = nil
         end
     end
 
-    -- Disconnect SFP module uplink (Port 4)
+    self:SetPort3Active(false)
+    self:SetPort3Is10G(false)
+    self:SetPort3Switch(NULL)
+
+    -- Disconnect Port 4 SFP uplink
     if self.Ports[4] then
         self:DisconnectSFP()
     else
@@ -336,8 +463,8 @@ function ENT:RecalculateNetwork(visited)
     local validPrinters = {}
     local validDevices = {}
 
-    -- Clean invalid entities on copper ports [1..3]
-    for i = 1, 3 do
+    -- Clean invalid entities on ports [1..2]
+    for i = 1, 2 do
         local portData = self.Ports[i]
         if portData then
             local dev = portData.device or portData.printer
@@ -347,25 +474,48 @@ function ENT:RecalculateNetwork(visited)
                     table.insert(validPrinters, dev)
                 end
             else
-                if IsValid(portData.rope) then
-                    portData.rope:Remove()
-                end
+                if IsValid(portData.rope) then portData.rope:Remove() end
                 self.Ports[i] = nil
             end
         end
     end
 
-    -- Validate Port 4 (SFP Module Uplink)
+    -- Validate Port 3 (SFP Combo: Switch 10G, WAN 10G, or Device 1G)
+    local p3Data = self.Ports[3]
+    local uplinkSwitch3 = nil
+    local p3Is10G = false
+    if p3Data then
+        local dev = p3Data.device or p3Data.switch or p3Data.printer
+        if IsValid(dev) then
+            if dev:GetClass() == "gwrp_network_switch" then
+                uplinkSwitch3 = dev
+                p3Is10G = true
+            elseif dev:GetClass() == "gwrp_wan_uplink" or dev.IsWANUplink then
+                p3Is10G = true
+                table.insert(validDevices, dev)
+            else
+                -- 1G Copper SFP mode (Printer or Device)
+                p3Is10G = false
+                table.insert(validDevices, dev)
+                if dev.PrintAmount ~= nil or string.find(dev:GetClass(), "printer") then
+                    table.insert(validPrinters, dev)
+                end
+            end
+        else
+            if IsValid(p3Data.rope) then p3Data.rope:Remove() end
+            self.Ports[3] = nil
+        end
+    end
+
+    -- Validate Port 4 (Dedicated SFP 10G Uplink)
     local sfpData = self.Ports[4]
-    local uplinkSwitch = nil
+    local uplinkSwitch4 = nil
     if sfpData then
         local other = sfpData.device or sfpData.switch
         if IsValid(other) and other:GetClass() == "gwrp_network_switch" then
-            uplinkSwitch = other
+            uplinkSwitch4 = other
         else
-            if IsValid(sfpData.rope) then
-                sfpData.rope:Remove()
-            end
+            if IsValid(sfpData.rope) then sfpData.rope:Remove() end
             self.Ports[4] = nil
         end
     end
@@ -375,15 +525,20 @@ function ENT:RecalculateNetwork(visited)
     self:SetPort1Active(self.Ports[1] ~= nil)
     self:SetPort2Active(self.Ports[2] ~= nil)
     self:SetPort3Active(self.Ports[3] ~= nil)
+    self:SetPort3Is10G(p3Is10G)
+    self:SetPort3Switch(uplinkSwitch3 or NULL)
     self:SetPort4Active(self.Ports[4] ~= nil)
-    self:SetUplinkSwitch(uplinkSwitch or NULL)
+    self:SetUplinkSwitch(uplinkSwitch4 or NULL)
 
-    -- Propagate recalculation to uplinked switch across SFP if not yet visited
-    if IsValid(uplinkSwitch) and not visited[uplinkSwitch] then
-        uplinkSwitch:RecalculateNetwork(visited)
+    -- Propagate recalculation to uplinked switches across SFP trunks
+    if IsValid(uplinkSwitch3) and not visited[uplinkSwitch3] then
+        uplinkSwitch3:RecalculateNetwork(visited)
+    end
+    if IsValid(uplinkSwitch4) and not visited[uplinkSwitch4] then
+        uplinkSwitch4:RecalculateNetwork(visited)
     end
 
-    -- Aggregate all printers within the shared Layer-2 broadcast domain (including SFP trunks)
+    -- Aggregate all printers within the shared Layer-3 broadcast domain (including SFP trunks)
     local allPrintersInDomain = {}
     for sw, _ in pairs(visited) do
         if IsValid(sw) and sw.Ports then
@@ -450,39 +605,55 @@ function ENT:CheckCableDistances()
     local maxFiberDistSqr = maxFiberDist * maxFiberDist
     local myPos = self:GetPos()
 
-    -- Check copper cables (ports 1..3)
-    for portNum = 1, 3 do
+    -- Check copper ports 1..2
+    for portNum = 1, 2 do
         local portData = self.Ports[portNum]
         if portData then
             local dev = portData.device or portData.printer
-            if IsValid(dev) then
-                if myPos:DistToSqr(dev:GetPos()) > maxDistSqr then
-                    local effect = EffectData()
-                    effect:SetOrigin(dev:GetPos() + Vector(0, 0, 10))
-                    util.Effect("cball_bounce", effect)
-                    self:EmitSound("ambient/energy/spark1.wav", 75, 100)
+            if IsValid(dev) and myPos:DistToSqr(dev:GetPos()) > maxDistSqr then
+                local effect = EffectData()
+                effect:SetOrigin(dev:GetPos() + Vector(0, 0, 10))
+                util.Effect("cball_bounce", effect)
+                self:EmitSound("ambient/energy/spark1.wav", 75, 100)
 
-                    self:DisconnectDevice(dev)
-                    GWRP.NotifyAll("A copper network cable snapped due to tension!", NOTIFY_HINT)
-                end
+                self:DisconnectDevice(dev)
+                GWRP.NotifyAll("A copper network cable snapped due to tension!", NOTIFY_HINT)
             end
         end
     end
 
-    -- Check SFP optical fiber cable (Port 4)
-    local sfpData = self.Ports[4]
-    if sfpData then
-        local other = sfpData.device or sfpData.switch
-        if IsValid(other) then
-            if myPos:DistToSqr(other:GetPos()) > maxFiberDistSqr then
+    -- Check Port 3 (SFP Combo: 10G mode uses fiber distance, 1G mode uses copper distance)
+    local p3Data = self.Ports[3]
+    if p3Data then
+        local dev = p3Data.device or p3Data.switch or p3Data.printer
+        if IsValid(dev) then
+            local limitSqr = (self:GetPort3Is10G() and maxFiberDistSqr or maxDistSqr)
+            if myPos:DistToSqr(dev:GetPos()) > limitSqr then
                 local effect = EffectData()
-                effect:SetOrigin(other:GetPos() + Vector(0, 0, 10))
+                effect:SetOrigin(dev:GetPos() + Vector(0, 0, 10))
                 util.Effect("cball_bounce", effect)
                 self:EmitSound("ambient/energy/zap2.wav", 80, 120)
 
-                self:DisconnectSFP()
-                GWRP.NotifyAll("An SFP fiber optic uplink cable snapped due to tension!", NOTIFY_HINT)
+                local is10G = self:GetPort3Is10G()
+                self:DisconnectDevice(dev)
+                local msg = is10G and "An SFP 10G optical cable snapped due to tension!" or "A copper network cable snapped due to tension!"
+                GWRP.NotifyAll(msg, NOTIFY_HINT)
             end
+        end
+    end
+
+    -- Check Port 4 (SFP 10G Dedicated Uplink)
+    local sfpData = self.Ports[4]
+    if sfpData then
+        local other = sfpData.device or sfpData.switch
+        if IsValid(other) and myPos:DistToSqr(other:GetPos()) > maxFiberDistSqr then
+            local effect = EffectData()
+            effect:SetOrigin(other:GetPos() + Vector(0, 0, 10))
+            util.Effect("cball_bounce", effect)
+            self:EmitSound("ambient/energy/zap2.wav", 80, 120)
+
+            self:DisconnectSFP()
+            GWRP.NotifyAll("An SFP 10G fiber optic uplink cable snapped due to tension!", NOTIFY_HINT)
         end
     end
 end
@@ -496,8 +667,12 @@ function ENT:UpdateWireOutputs()
 
     local count = self:GetConnectedCount() or 0
     local eff = self:GetEfficiency() or 60
+    local p3Active = self:GetPort3Active() and 1 or 0
+    local p3Is10G = self:GetPort3Is10G()
+    local p3ModeStr = (p3Active == 1) and (p3Is10G and "10G SFP" or "1G Copper") or "EMPTY"
     local sfpActive = self:GetPort4Active() and 1 or 0
-    local uplinkSwitch = self:GetUplinkSwitch()
+    local uplinkSwitch4 = self:GetUplinkSwitch()
+    local uplinkSwitch3 = self:GetPort3Switch()
 
     local totalCash = 0
     local maxTemp = 0
@@ -530,9 +705,12 @@ function ENT:UpdateWireOutputs()
     WireLib.TriggerOutput(self, "IsOptimal", isOptimal)
     WireLib.TriggerOutput(self, "Port1Connected", IsValid(p1) and 1 or 0)
     WireLib.TriggerOutput(self, "Port2Connected", IsValid(p2) and 1 or 0)
-    WireLib.TriggerOutput(self, "Port3Connected", IsValid(p3) and 1 or 0)
+    WireLib.TriggerOutput(self, "Port3Connected", p3Active)
+    WireLib.TriggerOutput(self, "Port3Is10G", p3Is10G and 1 or 0)
+    WireLib.TriggerOutput(self, "Port3Mode", p3ModeStr)
     WireLib.TriggerOutput(self, "Port4Connected", sfpActive)
-    WireLib.TriggerOutput(self, "SFPUplink", IsValid(uplinkSwitch) and uplinkSwitch or NULL)
+    WireLib.TriggerOutput(self, "SFPUplink", IsValid(uplinkSwitch4) and uplinkSwitch4 or NULL)
+    WireLib.TriggerOutput(self, "Port3Uplink", IsValid(uplinkSwitch3) and uplinkSwitch3 or NULL)
     WireLib.TriggerOutput(self, "Port1Efficiency", eff1)
     WireLib.TriggerOutput(self, "Port2Efficiency", eff2)
     WireLib.TriggerOutput(self, "Port3Efficiency", eff3)
@@ -542,10 +720,10 @@ function ENT:UpdateWireOutputs()
     WireLib.TriggerOutput(self, "Printer2", p2)
     WireLib.TriggerOutput(self, "Printer3", p3)
 
-    local sfpStatusStr = (sfpActive == 1) and "UP (10G Optical)" or "DOWN"
+    local p4StatusStr = (sfpActive == 1) and "UP (10G Optical)" or "DOWN"
     WireLib.SetOverlayText(self, string.format(
-        "[GWRP L2 Network Switch]\nCopper Ports: %d / 3 (Avg %d%% Eff)\nSFP Uplink: %s\nNet Cash: $%d | Peak Temp: %d°C",
-        count, eff, sfpStatusStr, totalCash, maxTemp
+        "[GWRP L3 Network Switch]\nPorts: P1/P2 Cu (%d links) | P3: %s | P4: %s\nAvg Eff: %d%% | Net Cash: $%d | Peak Temp: %d°C",
+        count, p3ModeStr, p4StatusStr, eff, totalCash, maxTemp
     ))
 end
 
@@ -571,9 +749,12 @@ function ENT:Use(activator, caller)
         local count = self:GetConnectedCount() or 0
         local subnet = self:GetSubnetID() or 1
         local gateway = self:GetIPAddress() ~= "" and self:GetIPAddress() or string.format("192.168.%d.1", subnet)
+        local p3Active = self:GetPort3Active()
+        local p3Is10G = self:GetPort3Is10G()
+        local p3Str = p3Active and (p3Is10G and "P3: SFP 10G" or "P3: Copper 1G") or "P3: Empty"
         local sfpActive = self:GetPort4Active()
-        local sfpText = sfpActive and "SFP: Uplinked (10G)" or "SFP: Standby (Port 4)"
-        GWRP.Notify(activator, string.format("L2 Switch: %d/3 Copper Ports Active | %s | Subnet: 192.168.%d.0/24 (Gateway: %s)", count, sfpText, subnet, gateway), NOTIFY_HINT)
+        local p4Str = sfpActive and "P4: Uplinked (10G)" or "P4: Standby"
+        GWRP.Notify(activator, string.format("L3 Switch: %s | %s | Subnet: 192.168.%d.0/24 (Gateway: %s)", p3Str, p4Str, subnet, gateway), NOTIFY_HINT)
         self:EmitSound("buttons/button14.wav", 60, 100)
     end
 end

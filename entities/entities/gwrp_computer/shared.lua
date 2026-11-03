@@ -1,6 +1,6 @@
 --[[
     entities/entities/gwrp_computer/shared.lua
-    GWRP CyberDeck Personal Computer (L2 Terminal Appliance)
+    GWRP CyberDeck Personal Computer (L3 Terminal Appliance)
     Author: Toxic
 --]]
 

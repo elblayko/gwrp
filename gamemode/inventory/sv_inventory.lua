@@ -156,7 +156,25 @@ function GWRP.Inventory.PickupEntity(ply, ent)
 
         ent:EmitSound("weapons/iceaxe/iceaxe_swing1.wav", 65, 100)
         local def = GWRP.Inventory.GetItemData(class)
-        GWRP.Notify(ply, "Stored " .. (def and def.name or "L2 Network Switch") .. " into your bag.", NOTIFY_GENERIC)
+        GWRP.Notify(ply, "Stored " .. (def and def.name or "L3 Network Switch") .. " into your bag.", NOTIFY_GENERIC)
+        ent:Remove()
+        GWRP.Inventory.Sync(ply)
+        return true
+    end
+
+    -- 3.55 Satellite WAN Uplink Gateway
+    if class == "gwrp_wan_uplink" then
+        if ent.DisconnectFromSwitch then ent:DisconnectFromSwitch() end
+        local added = GWRP.Database.AddInventoryItem(ply:SteamID(), class, "uplink", 1, {})
+        if not added then
+            GWRP.Notify(ply, "Your bags are full! Equip extra bags or drop items.", NOTIFY_ERROR)
+            ply:EmitSound("common/warning.wav", 65, 100)
+            return false
+        end
+
+        ent:EmitSound("weapons/iceaxe/iceaxe_swing1.wav", 65, 100)
+        local def = GWRP.Inventory.GetItemData(class)
+        GWRP.Notify(ply, "Stored " .. (def and def.name or "Satellite WAN Uplink") .. " into your bag.", NOTIFY_GENERIC)
         ent:Remove()
         GWRP.Inventory.Sync(ply)
         return true
@@ -563,7 +581,7 @@ hook.Add("PlayerSay", "GWRP_DropWeaponChatCommands", function(ply, text)
         end
 
         local class = wep:GetClass()
-        if class == "weapon_gwrp_keys" or class == "weapon_physcannon" or class == "weapon_physgun" or class == "weapon_fists" or class == "fists" or class == "gmod_tool" or class == "weapon_gwrp_remover" then
+        if class == "weapon_gwrp_keys" or class == "weapon_physcannon" or class == "weapon_physgun" or class == "weapon_fists" or class == "fists" or class == "gmod_tool" then
             GWRP.Notify(ply, "You cannot drop standard utility gear!", NOTIFY_ERROR)
             return ""
         end

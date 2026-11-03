@@ -79,10 +79,13 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
         ActiveTerminal:Remove()
     end
 
+    local isPhone = IsValid(computerEnt) and computerEnt:GetClass() == "weapon_gwrp_cyberphone"
     local swValid = IsValid(switchEnt)
     local subnet = swValid and (switchEnt.GetSubnetID and switchEnt:GetSubnetID() or 1) or 0
-    local localIP = (ipStr and ipStr ~= "") and ipStr or "127.0.0.1"
-    local domainLabel = swValid and string.format("192.168.%d.0/24 (Gateway: 192.168.%d.1)", subnet, subnet) or "DISCONNECTED (No broadcast domain)"
+    local localIP = (ipStr and ipStr ~= "") and ipStr or (isPhone and "10.84.1.25" or "127.0.0.1")
+    local domainLabel = isPhone and "WIRELESS SUITE (802.11ax / SAT-WAN Mesh)" or (swValid and string.format("192.168.%d.0/24 (Gateway: 192.168.%d.1)", subnet, subnet) or "DISCONNECTED (No broadcast domain)")
+    local ifaceName = isPhone and "wlan0" or "eth0"
+    local isIfaceUp = isPhone or swValid
 
     local frameW = math.Clamp(ScrW() * 0.65, 750, 950)
     local frameH = math.Clamp(ScrH() * 0.65, 500, 650)
@@ -105,21 +108,21 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
         draw.RoundedBox(8, 0, 0, w, h, Color(11, 15, 25, 255))
 
         -- Header Bar
-        local headerCol = swValid and Color(16, 185, 129, 35) or Color(239, 68, 68, 35)
+        local headerCol = isIfaceUp and Color(16, 185, 129, 35) or Color(239, 68, 68, 35)
         draw.RoundedBoxEx(8, 0, 0, w, 38, Color(15, 23, 42, 255), true, true, false, false)
         surface.SetDrawColor(headerCol)
         surface.DrawRect(0, 0, w, 38)
 
         -- Glowing top border line
-        surface.SetDrawColor(swValid and Color(34, 197, 94, 220) or Color(239, 68, 68, 220))
+        surface.SetDrawColor(isIfaceUp and Color(34, 197, 94, 220) or Color(239, 68, 68, 220))
         surface.DrawLine(0, 37, w, 37)
 
         -- Frame border
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
         -- Title text
-        local title = string.format("GWRP CYBERDECK OS v2.4 -- [ Interface: eth0 | IP: %s ]", localIP)
-        draw.SimpleText(title, "GWRP_Terminal_Header", 14, 10, swValid and Color(74, 222, 128) or Color(248, 113, 113), TEXT_ALIGN_LEFT)
+        local title = isPhone and string.format("GWRP CYBERDECK MOBILE OS v2.4 -- [ Handset: %s | IP: %s ]", ifaceName, localIP) or string.format("GWRP CYBERDECK OS v2.4 -- [ Interface: %s | IP: %s ]", ifaceName, localIP)
+        draw.SimpleText(title, "GWRP_Terminal_Header", 14, 10, isIfaceUp and Color(74, 222, 128) or Color(248, 113, 113), TEXT_ALIGN_LEFT)
     end
 
     -- Close Button
@@ -184,10 +187,17 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
 
     -- Welcome Banner Lines
     AddTerminalLine("================================================================================", "dark")
-    AddTerminalLine("  GWRP CYBERDECK OPERATING SYSTEM - KERNEL 2.4.19 (x86_64)", "cyan")
-    AddTerminalLine(string.format("  Local Host IP     : %s", localIP), "green")
-    AddTerminalLine(string.format("  Broadcast Domain  : %s", domainLabel), "white")
-    AddTerminalLine("  Ethernet Status   : " .. (swValid and "CONNECTED (eth0 UP, 1000BASE-T Full Duplex)" or "NO CARRIER (Cable unplugged)"), swValid and "green" or "red")
+    if isPhone then
+        AddTerminalLine("  GWRP CYBERDECK MOBILE OPERATING SYSTEM - KERNEL 2.4.19-ARM (wlan0)", "cyan")
+        AddTerminalLine(string.format("  Mobile Device IP  : %s", localIP), "green")
+        AddTerminalLine("  Wireless Suite    : ONLINE (802.11ax / SAT-WAN Mesh Enabled)", "green")
+        AddTerminalLine("  Type 'airmon' to scan wireless WAN airspace, or 'wan connect <key>' to link.", "highlight")
+    else
+        AddTerminalLine("  GWRP CYBERDECK OPERATING SYSTEM - KERNEL 2.4.19 (x86_64)", "cyan")
+        AddTerminalLine(string.format("  Local Host IP     : %s", localIP), "green")
+        AddTerminalLine(string.format("  Broadcast Domain  : %s", domainLabel), "white")
+        AddTerminalLine("  Ethernet Status   : " .. (swValid and "CONNECTED (eth0 UP, 1000BASE-T Full Duplex)" or "NO CARRIER (Cable unplugged)"), swValid and "green" or "red")
+    end
     AddTerminalLine("--------------------------------------------------------------------------------", "dark")
     AddTerminalLine("  Type 'help' to list available commands.", "white")
     AddTerminalLine("================================================================================", "dark")

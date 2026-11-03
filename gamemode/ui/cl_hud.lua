@@ -439,8 +439,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
         weapon_gwrp_keys = true,
         weapon_physgun = true,
         weapon_physcannon = true,
-        gmod_tool = true,
-        weapon_gwrp_remover = true
+        gmod_tool = true
     }
     if IsValid(wep) and not nonAmmoWeps[wep:GetClass()] then
         local clip = wep:Clip1()
@@ -591,7 +590,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             local nameW = surface.GetTextSize(entName)
             local badgeW = surface.GetTextSize(qName) + 16
 
-            -- Up-Close Raycast UI: Layer-2 Network Switch
+            -- Up-Close Raycast UI: Layer-3 Network Switch
             if ent:GetClass() == "gwrp_network_switch" then
                 local cardW = 380
                 local cardH = 96
@@ -606,28 +605,39 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
                 draw.SimpleText(qName, "GWRP_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 draw.SimpleText(entName, "GWRP_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-                -- 4 Ports Status Row: Ports 1..3 (Copper) & Port 4 (SFP Module)
+                -- 4 Ports Status Row: Ports 1..2 (Copper), Port 3 (SFP Combo 10G/1G), Port 4 (Dedicated SFP 10G)
                 local p1 = ent.GetPort1Active and ent:GetPort1Active()
                 local p2 = ent.GetPort2Active and ent:GetPort2Active()
                 local p3 = ent.GetPort3Active and ent:GetPort3Active()
+                local p3Is10G = ent.GetPort3Is10G and ent:GetPort3Is10G()
                 local p4 = ent.GetPort4Active and ent:GetPort4Active()
 
                 local portW = 86
                 local portH = 24
                 local portY = tagY + 34
                 local ports = {
-                    { name = "P1", active = p1, x = cardX + 10, isSFP = false },
-                    { name = "P2", active = p2, x = cardX + 101, isSFP = false },
-                    { name = "P3", active = p3, x = cardX + 192, isSFP = false },
-                    { name = "SFP", active = p4, x = cardX + 283, isSFP = true }
+                    { name = "P1", active = p1, x = cardX + 10, isSFP = false, is10G = false, isCombo = false },
+                    { name = "P2", active = p2, x = cardX + 101, isSFP = false, is10G = false, isCombo = false },
+                    { name = "P3", active = p3, x = cardX + 192, isSFP = true, is10G = p3Is10G, isCombo = true },
+                    { name = "P4", active = p4, x = cardX + 283, isSFP = true, is10G = true, isCombo = false }
                 }
 
                 for _, pt in ipairs(ports) do
                     local bg, col, txt
-                    if pt.isSFP then
+                    if pt.isCombo then
+                        if pt.active then
+                            bg = pt.is10G and Color(6, 182, 212, 35) or Color(16, 185, 129, 35)
+                            col = pt.is10G and Color(56, 189, 248) or Color(52, 211, 153)
+                            txt = pt.is10G and "P3: 10G" or "P3: 1G Cu"
+                        else
+                            bg = Color(30, 41, 59, 140)
+                            col = Color(100, 116, 139)
+                            txt = "P3: COMBO"
+                        end
+                    elseif pt.isSFP then
                         bg = pt.active and Color(6, 182, 212, 35) or Color(30, 41, 59, 140)
                         col = pt.active and Color(56, 189, 248) or Color(100, 116, 139)
-                        txt = pt.active and "SFP: 10G" or "SFP: OPEN"
+                        txt = pt.active and "P4: 10G" or "P4: SFP"
                     else
                         bg = pt.active and Color(16, 185, 129, 35) or Color(30, 41, 59, 140)
                         col = pt.active and Color(52, 211, 153) or Color(148, 163, 184)
@@ -641,11 +651,41 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
                 end
 
                 -- Hardware Status Row
-                local links = ent.GetConnectedCount and ent:GetConnectedCount() or 0
-                local sfpTxt = p4 and "SFP Uplink: ACTIVE" or "SFP Uplink: OPEN"
-                local linksTxt = string.format("Copper: %d/3 Active | %s", links, sfpTxt)
+                local p3Status = p3 and (p3Is10G and "P3: 10G SFP Mode" or "P3: 1G Copper Mode") or "P3: SFP Combo Open"
+                local p4Status = p4 and "P4: 10G Uplink UP" or "P4: 10G Uplink Open"
+                local linksTxt = string.format("%s | %s", p3Status, p4Status)
 
                 draw.SimpleText(linksTxt, "GWRP_UI_Caption", cardX + cardW / 2, tagY + 75, Color(203, 213, 225), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+            -- Up-Close Raycast UI: Satellite WAN Uplink Gateway
+            elseif ent:GetClass() == "gwrp_wan_uplink" then
+                local cardW = 360
+                local cardH = 92
+                local cardX = tagX - cardW / 2
+
+                draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+                surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
+                surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+
+                -- Header: Quality Pill + Name
+                draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
+                draw.SimpleText(qName, "GWRP_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(entName, "GWRP_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+                -- Key and Mesh Status Row
+                local key = ent.GetEncryptionKey and ent:GetEncryptionKey() or "NONE"
+                local isOnline = ent.GetIsOnline and ent:GetIsOnline()
+                local peers = ent.GetLinkedPeerCount and ent:GetLinkedPeerCount() or 0
+                local statusCol = isOnline and Color(52, 211, 153) or Color(245, 158, 11)
+                local statusTxt = isOnline and string.format("ONLINE (%d PEER%s)", peers, peers == 1 and "" or "S") or "SEARCHING"
+
+                draw.SimpleText(string.format("Encryption Key: %s", key), "GWRP_UI_BodyBold", cardX + 12, tagY + 40, Color(56, 189, 248), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(statusTxt, "GWRP_UI_Badge", cardX + cardW - 12, tagY + 40, statusCol, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+
+                -- Attachment and Hint Row
+                local sw = ent.GetConnectedSwitch and ent:GetConnectedSwitch()
+                local swTxt = IsValid(sw) and string.format("Connected: L3 Switch Port %d (Active L3 Route)", ent:GetAssignedPort() or 0) or "Unlinked: Connect to L3 Switch via Wire Tool"
+                draw.SimpleText(swTxt, "GWRP_UI_Caption", cardX + 12, tagY + 68, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Up-Close Raycast UI: Contraband Money Printers
             elseif ent.PrintAmount ~= nil or ent:GetClass():find("gwrp_printer_") then

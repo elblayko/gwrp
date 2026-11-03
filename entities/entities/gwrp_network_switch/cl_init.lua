@@ -1,6 +1,6 @@
 --[[
     entities/entities/gwrp_network_switch/cl_init.lua
-    GWRP 3-Port Layer-2 Network Switch Client Logic
+    GWRP 4-Port Layer-3 Network Switch Client Logic
 --]]
 
 include("shared.lua")

@@ -134,7 +134,7 @@ function GWRP.Crafting.OpenCraftingMenu(machine)
         local netX = 430
         draw.SimpleText("NETWORK CONNECTION", "GWRP_UI_Badge", netX, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         if isNet then
-            local netMsg = string.format("L2 Switch Port %d  |  %s  |  %d%% Speed", port, ip ~= "" and ip or "DHCP", eff)
+            local netMsg = string.format("L3 Switch Port %d  |  %s  |  %d%% Speed", port, ip ~= "" and ip or "DHCP", eff)
             draw.SimpleText(netMsg, "GWRP_UI_BodyBold", netX, 36, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         else
             draw.SimpleText("Standalone (60% Speed) - Link to Switch via Wire Tool", "GWRP_UI_BodyBold", netX, 36, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)

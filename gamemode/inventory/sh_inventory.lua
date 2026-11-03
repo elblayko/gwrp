@@ -140,13 +140,22 @@ GWRP.Inventory.Items = {
 
     -- 2. Money Printers & Networking Appliances
     ["gwrp_network_switch"] = {
-        name = "L2 Network Switch (3-Port + SFP)",
+        name = "L3 Network Switch (2-Cu + 2-SFP)",
         type = "switch",
         subType = "Network Appliance",
         quality = 2, -- Uncommon
         model = "models/props_lab/reciever01a.mdl",
-        desc = "Layer-2 hardware switch featuring 3 copper device ports and a 4th SFP transceiver port for switch-to-switch uplinks.",
-        stats = "3 Copper Ports + SFP Uplink | Layer-2 Switch"
+        desc = "Layer-3 hardware switch featuring 2 dedicated copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink.",
+        stats = "2x Copper + 2x SFP (Combo + Uplink) | Layer-3 Switch"
+    },
+    ["gwrp_wan_uplink"] = {
+        name = "Satellite WAN Uplink",
+        type = "uplink",
+        subType = "Wireless Gateway",
+        quality = 3, -- Rare
+        model = "models/props_rooftop/roof_dish001.mdl",
+        desc = "Encrypted satellite transceiver dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to establish long-range wireless mesh tunnels across the map.",
+        stats = "Long-Range L3 Mesh | WPA3 Encrypted"
     },
     ["gwrp_module_undervolt"] = {
         name = "Undervolt Hardware Module",

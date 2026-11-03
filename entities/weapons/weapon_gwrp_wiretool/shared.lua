@@ -50,7 +50,7 @@ local function IsValidNetworkTarget(ent)
     if class == "gwrp_computer" or ent.IsComputer then
         return true
     end
-    if class == "gwrp_resource_machine" or ent.IsNetworkDevice then
+    if class == "gwrp_resource_machine" or class == "gwrp_wan_uplink" or ent.IsNetworkDevice or ent.IsWANUplink then
         return true
     end
     return false
@@ -101,7 +101,7 @@ function SWEP:PrimaryAttack()
     local isSwitch1 = (ent1:GetClass() == "gwrp_network_switch")
     local isSwitch2 = (ent2:GetClass() == "gwrp_network_switch")
 
-    -- Case A: Switch-to-Switch interconnection via the 4th Port SFP Module
+    -- Case A: Switch-to-Switch interconnection via SFP 10G Ports (Port 4 or Port 3)
     if isSwitch1 and isSwitch2 then
         local maxFiberDist = GWRP.Config.MaxFiberCableLength or 800
         if ent1:GetPos():DistToSqr(ent2:GetPos()) > (maxFiberDist * maxFiberDist) then
@@ -113,16 +113,19 @@ function SWEP:PrimaryAttack()
         end
 
         if SERVER then
-            if ent1.Ports and ent1.Ports[4] ~= nil then
-                GWRP.Notify(ply, "First switch SFP module port (Port 4) is already connected to another switch!", NOTIFY_ERROR)
+            local port1 = ent1.GetAvailableSwitchPort and ent1:GetAvailableSwitchPort() or (ent1.Ports[4] == nil and 4 or (ent1.Ports[3] == nil and 3 or nil))
+            local port2 = ent2.GetAvailableSwitchPort and ent2:GetAvailableSwitchPort() or (ent2.Ports[4] == nil and 4 or (ent2.Ports[3] == nil and 3 or nil))
+
+            if not port1 then
+                GWRP.Notify(ply, "First switch SFP ports (Ports 3 and 4) are both in use!", NOTIFY_ERROR)
                 ply:EmitSound("buttons/button10.wav", 65, 100)
                 self.SelectedEntity = nil
                 self:SetNWEntity("GWRP_WireSrc", NULL)
                 return
             end
 
-            if ent2.Ports and ent2.Ports[4] ~= nil then
-                GWRP.Notify(ply, "Second switch SFP module port (Port 4) is already connected to another switch!", NOTIFY_ERROR)
+            if not port2 then
+                GWRP.Notify(ply, "Second switch SFP ports (Ports 3 and 4) are both in use!", NOTIFY_ERROR)
                 ply:EmitSound("buttons/button10.wav", 65, 100)
                 self.SelectedEntity = nil
                 self:SetNWEntity("GWRP_WireSrc", NULL)
@@ -140,14 +143,14 @@ function SWEP:PrimaryAttack()
                 Color(0, 220, 255) -- vibrant glowing cyan for fiber optic SFP
             )
 
-            local success, err = ent1:ConnectSwitch(ent2, rope)
+            local success, assignedPort1, assignedPort2 = ent1:ConnectSwitch(ent2, rope, port1, port2)
             if success then
                 ent1:EmitSound("ambient/energy/zap1.wav", 75, 130)
                 ent2:EmitSound("buttons/button9.wav", 75, 120)
-                GWRP.Notify(ply, "Linked switches via SFP 10G Optical Uplink (Port 4)!", NOTIFY_GENERIC)
+                GWRP.Notify(ply, string.format("Linked switches via SFP 10G Optical Uplink (Port %d <-> Port %d)!", assignedPort1 or port1, assignedPort2 or port2), NOTIFY_GENERIC)
             else
                 if IsValid(rope) then rope:Remove() end
-                GWRP.Notify(ply, err or "Failed to connect switches", NOTIFY_ERROR)
+                GWRP.Notify(ply, assignedPort1 or "Failed to connect switches", NOTIFY_ERROR)
             end
 
             self.SelectedEntity = nil
@@ -161,54 +164,68 @@ function SWEP:PrimaryAttack()
     -- Case B: Neither entity is a switch
     if not isSwitch1 and not isSwitch2 then
         if SERVER then
-            GWRP.Notify(ply, "You must connect a network device (Printer or Computer) to a Network Switch, or link two switches together via SFP!", NOTIFY_ERROR)
+            GWRP.Notify(ply, "You must connect a network device (Printer, WAN, Computer) to a Network Switch, or link two switches together via SFP!", NOTIFY_ERROR)
             ply:EmitSound("buttons/button10.wav", 65, 100)
         end
         return
     end
 
-    -- Case C: One entity is a switch and the other is a regular network device (Printer, Computer, Synthesizer)
+    -- Case C: One entity is a switch and the other is a device (Printer, WAN Uplink, Computer, Synthesizer)
     local sw = isSwitch1 and ent1 or ent2
     local pr = isSwitch1 and ent2 or ent1
 
-    local maxDist = GWRP.Config.MaxCableLength or 550
+    local isWAN = (pr:GetClass() == "gwrp_wan_uplink" or pr.IsWANUplink)
+    local maxDist = isWAN and (GWRP.Config.MaxFiberCableLength or 800) or (GWRP.Config.MaxCableLength or 550)
     if sw:GetPos():DistToSqr(pr:GetPos()) > (maxDist * maxDist) then
         if SERVER then
-            GWRP.Notify(ply, "Distance is too far for copper cable (Max " .. maxDist .. " units)!", NOTIFY_ERROR)
+            local cableType = isWAN and "SFP cable" or "copper cable"
+            GWRP.Notify(ply, "Distance is too far for " .. cableType .. " (Max " .. maxDist .. " units)!", NOTIFY_ERROR)
             ply:EmitSound("buttons/button10.wav", 65, 100)
         end
         return
     end
 
     if SERVER then
-        local port = sw.GetAvailableCopperPort and sw:GetAvailableCopperPort() or sw:GetAvailablePort(false)
+        local port = sw.GetAvailablePort and sw:GetAvailablePort(pr) or (sw.GetAvailableCopperPort and sw:GetAvailableCopperPort() or 1)
         if not port then
-            GWRP.Notify(ply, "Switch copper ports are at maximum capacity (3/3 ports occupied)! Port 4 is an SFP module reserved for switch uplinks.", NOTIFY_ERROR)
+            GWRP.Notify(ply, "Switch device ports are full (Ports 1-3 occupied)! Port 4 is dedicated to 10G switch uplinks.", NOTIFY_ERROR)
             ply:EmitSound("buttons/button10.wav", 65, 100)
             self.SelectedEntity = nil
             self:SetNWEntity("GWRP_WireSrc", NULL)
             return
         end
 
-        -- Create physical copper rope constraint
+        local is10G = (port == 3 and isWAN)
+        local ropeCol = is10G and Color(0, 220, 255) or Color(205, 127, 50)
+        local ropeWidth = is10G and 1.4 or 1.6
+
+        -- Create physical rope constraint
         local length = math.max(10, sw:GetPos():Distance(pr:GetPos()))
         local rope = constraint.Rope(
             sw, pr,
             0, 0,
             Vector(0, 0, 5), Vector(0, 0, 10),
-            length, 25, 0, 1.6,
+            length, 25, 0, ropeWidth,
             "cable/cable2", false,
-            Color(205, 127, 50) -- metallic copper
+            ropeCol
         )
 
         local connectFunc = sw.ConnectDevice or sw.ConnectPrinter
-        local success, assignedOrErr, assignedIP = connectFunc(sw, pr, rope)
+        local success, assignedOrErr, assignedIP, assignedIs10G = connectFunc(sw, pr, rope)
         if success then
             sw:EmitSound("ambient/energy/zap1.wav", 70, 115)
             pr:EmitSound("buttons/button9.wav", 70, 100)
             local ipInfo = assignedIP and (" (IP: " .. assignedIP .. ")") or ""
             local effInfo = (pr.PrintAmount ~= nil or string.find(pr:GetClass(), "printer") or pr:GetClass() == "gwrp_resource_machine") and string.format(" [%d%% eff]", pr.GetEfficiency and pr:GetEfficiency() or 60) or ""
-            GWRP.Notify(ply, string.format("Linked %s to Switch on Copper Port %d%s%s!", pr.PrintName or "Device", assignedOrErr, effInfo, ipInfo), NOTIFY_GENERIC)
+
+            local modeTag
+            if assignedOrErr == 3 then
+                modeTag = assignedIs10G and " [Port 3: 10G SFP]" or " [Port 3: 1G Copper SFP]"
+            else
+                modeTag = string.format(" [Copper Port %d]", assignedOrErr)
+            end
+
+            GWRP.Notify(ply, string.format("Linked %s to Switch%s%s%s!", pr.PrintName or "Device", modeTag, effInfo, ipInfo), NOTIFY_GENERIC)
         else
             if IsValid(rope) then rope:Remove() end
             GWRP.Notify(ply, assignedOrErr or "Failed to connect", NOTIFY_ERROR)

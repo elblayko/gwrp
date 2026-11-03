@@ -133,7 +133,6 @@ function GM:PlayerSpawn(ply)
         ply:Give("weapon_physgun")
         ply:Give("weapon_physcannon")
         ply:Give("gmod_tool")
-        ply:Give("weapon_gwrp_remover")
 
         -- Job specific tools and weapons
         if job.weapons then

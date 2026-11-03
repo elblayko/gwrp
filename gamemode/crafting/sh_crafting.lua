@@ -130,7 +130,7 @@ GWRP.Inventory.Items["gwrp_resource_machine"] = {
     subType = "Automated Extractor",
     quality = 1, -- Common
     model = "models/props_c17/trappropeller_engine.mdl",
-    desc = "Legal industrial extractor and crafting station. Generates ingots, blueprints, and carbon rods. Connects to L2 switch for accelerated throughput.",
+    desc = "Legal industrial extractor and crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput.",
     stats = "Legal Extractor & Workbench | Network Capable"
 }
 
