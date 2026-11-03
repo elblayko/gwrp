@@ -41,14 +41,8 @@ function ENT:Draw()
     local ply = LocalPlayer()
     if not IsValid(ply) then return end
 
-    local myPos = self:GetPos()
-    local distSqr = ply:EyePos():DistToSqr(myPos)
-    if distSqr > (240 * 240) then return end
-
-    -- Raycast angle check
-    local aim = ply:GetAimVector()
-    local dir = (myPos - ply:EyePos()):GetNormalized()
-    if aim:Dot(dir) < 0.55 then return end
+    local maxDist = (GWRP.Config and GWRP.Config.EntityHUDViewDistance) or 380
+    if ply:GetPos():DistToSqr(self:GetPos()) > (maxDist * maxDist) then return end
 
     local ang = ply:EyeAngles()
     ang:RotateAroundAxis(ang:Forward(), 90)

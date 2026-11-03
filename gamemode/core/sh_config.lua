@@ -22,6 +22,7 @@ GWRP.Config.MaxPrintersPerPlayer = 4
 GWRP.Config.PoliceBountyPerPrinter = 125
 GWRP.Config.PoliceBountyPerSwitch = 50
 GWRP.Config.PoliceBountyPerModule = 25
+GWRP.Config.EntityHUDViewDistance = 380 -- Shared max 3D2D HUD visibility distance for printers & synthesizers
 
 -- Thermal Regulation & Undervolt Module
 GWRP.Config.PrinterHeatRiseStandard = 4      -- +4C per cycle

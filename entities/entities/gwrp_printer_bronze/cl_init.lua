@@ -9,7 +9,8 @@ function ENT:Draw()
     self:DrawModel()
 
     local ply = LocalPlayer()
-    if not IsValid(ply) or ply:GetPos():DistToSqr(self:GetPos()) > (380 * 380) then return end
+    local maxDist = (GWRP.Config and GWRP.Config.EntityHUDViewDistance) or 380
+    if not IsValid(ply) or ply:GetPos():DistToSqr(self:GetPos()) > (maxDist * maxDist) then return end
 
     local ang = self:GetAngles()
     ang:RotateAroundAxis(ang:Up(), 90)
