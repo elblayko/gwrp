@@ -190,10 +190,11 @@ function GWRP.Turf.RenderPlayerDebug(parent)
     playerList:SetPos(10, 48)
     playerList:SetSize(400, contH - 58)
     playerList:SetMultiSelect(false)
-    playerList:AddColumn("Player Name"):SetFixedWidth(140)
-    playerList:AddColumn("Role"):SetFixedWidth(110)
-    playerList:AddColumn("Wallet"):SetFixedWidth(85)
-    playerList:AddColumn("Health"):SetFixedWidth(60)
+    playerList:AddColumn("Player Name"):SetFixedWidth(130)
+    playerList:AddColumn("Role"):SetFixedWidth(100)
+    playerList:AddColumn("Lvl"):SetFixedWidth(42)
+    playerList:AddColumn("Wallet"):SetFixedWidth(70)
+    playerList:AddColumn("Health"):SetFixedWidth(54)
 
     -- Right: Controls / Properties Panel
     local actionPanel = vgui.Create("DPanel", parent)
@@ -215,7 +216,8 @@ function GWRP.Turf.RenderPlayerDebug(parent)
                 continue
             end
             local job = p:GetJobData()
-            local line = playerList:AddLine(nick, job and job.name or "Citizen", "$" .. string.Comma(p:GetMoney()), p:Health() .. " HP")
+            local pLvl = p.GetLevel and p:GetLevel() or 1
+            local line = playerList:AddLine(nick, job and job.name or "Citizen", "Lv." .. pLvl, "$" .. string.Comma(p:GetMoney()), p:Health() .. " HP")
             line.Player = p
         end
     end
@@ -242,6 +244,9 @@ function GWRP.Turf.RenderPlayerDebug(parent)
         local pSteam = selectedPlayer:SteamID()
         local pMoney = selectedPlayer:GetMoney()
         local pGang = selectedPlayer:GetGang()
+        local pLvl = selectedPlayer.GetLevel and selectedPlayer:GetLevel() or 1
+        local pXP = selectedPlayer.GetXP and selectedPlayer:GetXP() or 0
+        local pReqXP = GWRP.GetRequiredXP and GWRP.GetRequiredXP(pLvl) or (pLvl * 100)
 
         local topInfo = vgui.Create("DPanel", actionPanel)
         topInfo:Dock(TOP)
@@ -249,14 +254,150 @@ function GWRP.Turf.RenderPlayerDebug(parent)
         topInfo.Paint = function(s, w, h)
             draw.RoundedBox(6, 10, 10, w - 20, h - 14, Color(24, 32, 47, 240))
             draw.SimpleText(pNick, "GWRP_UI_Header", 20, 18, Color(248, 250, 252))
-            draw.SimpleText(pSteam .. "  |  Wallet: $" .. string.Comma(pMoney) .. "  |  Gang: " .. (pGang ~= "" and pGang or "None"), "GWRP_UI_Caption", 20, 38, Color(148, 163, 184))
+            local subInfo = string.format("%s  |  Level %d (%s/%s XP)  |  Wallet: $%s  |  Gang: %s", pSteam, pLvl, string.Comma(pXP), string.Comma(pReqXP), string.Comma(pMoney), (pGang ~= "" and pGang or "None"))
+            draw.SimpleText(subInfo, "GWRP_UI_Caption", 20, 38, Color(148, 163, 184))
         end
 
         local scroll = vgui.Create("DScrollPanel", actionPanel)
         scroll:Dock(FILL)
         scroll:DockMargin(10, 6, 10, 10)
 
-        -- Section 1: Money & Economy Debug
+        -- Section 1: Leveling & XP Progression
+        local secLevel = scroll:Add("DPanel")
+        secLevel:Dock(TOP)
+        secLevel:DockMargin(0, 0, 0, 12)
+        secLevel:SetTall(110)
+        secLevel.Paint = function(s, w, h)
+            draw.RoundedBox(6, 0, 0, w, h, Color(24, 32, 47, 180))
+            draw.SimpleText("Leveling & Progression Control", "GWRP_UI_Sub", 14, 10, Color(251, 191, 36))
+        end
+
+        local txtLevel = vgui.Create("DTextEntry", secLevel)
+        txtLevel:SetPos(14, 34)
+        txtLevel:SetSize(110, 32)
+        txtLevel:SetText(tostring(pLvl))
+        txtLevel:SetNumeric(true)
+        txtLevel:SetFont("GWRP_UI_Body")
+
+        local btnSetLevel = vgui.Create("DButton", secLevel)
+        btnSetLevel:SetPos(132, 34)
+        btnSetLevel:SetSize(100, 32)
+        btnSetLevel:SetText("Set Level")
+        btnSetLevel.DoClick = function()
+            local lvl = tonumber(txtLevel:GetText()) or 1
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("set_level")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(lvl, 16)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        local btnLvl1 = vgui.Create("DButton", secLevel)
+        btnLvl1:SetPos(240, 34)
+        btnLvl1:SetSize(42, 32)
+        btnLvl1:SetText("Lv 1")
+        btnLvl1.DoClick = function()
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("set_level")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(1, 16)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        local btnLvl10 = vgui.Create("DButton", secLevel)
+        btnLvl10:SetPos(288, 34)
+        btnLvl10:SetSize(46, 32)
+        btnLvl10:SetText("Lv 10")
+        btnLvl10.DoClick = function()
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("set_level")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(10, 16)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        local btnLvl25 = vgui.Create("DButton", secLevel)
+        btnLvl25:SetPos(340, 34)
+        btnLvl25:SetSize(46, 32)
+        btnLvl25:SetText("Lv 25")
+        btnLvl25.DoClick = function()
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("set_level")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(25, 16)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        local btnLvl50 = vgui.Create("DButton", secLevel)
+        btnLvl50:SetPos(392, 34)
+        btnLvl50:SetSize(46, 32)
+        btnLvl50:SetText("Lv 50")
+        btnLvl50.DoClick = function()
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("set_level")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(50, 16)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        local btnAdd100XP = vgui.Create("DButton", secLevel)
+        btnAdd100XP:SetPos(14, 72)
+        btnAdd100XP:SetSize(90, 28)
+        btnAdd100XP:SetText("+ 100 XP")
+        btnAdd100XP.DoClick = function()
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("add_xp")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(100, 32)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        local btnAdd500XP = vgui.Create("DButton", secLevel)
+        btnAdd500XP:SetPos(110, 72)
+        btnAdd500XP:SetSize(90, 28)
+        btnAdd500XP:SetText("+ 500 XP")
+        btnAdd500XP.DoClick = function()
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("add_xp")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(500, 32)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        local btnAdd2500XP = vgui.Create("DButton", secLevel)
+        btnAdd2500XP:SetPos(206, 72)
+        btnAdd2500XP:SetSize(100, 28)
+        btnAdd2500XP:SetText("+ 2,500 XP")
+        btnAdd2500XP.DoClick = function()
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("add_xp")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(2500, 32)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        local btnAdd10kXP = vgui.Create("DButton", secLevel)
+        btnAdd10kXP:SetPos(312, 72)
+        btnAdd10kXP:SetSize(110, 28)
+        btnAdd10kXP:SetText("+ 10,000 XP")
+        btnAdd10kXP.DoClick = function()
+            net.Start("GWRP_AdminDebugAction")
+                net.WriteString("add_xp")
+                net.WriteEntity(selectedPlayer)
+                net.WriteInt(10000, 32)
+            net.SendToServer()
+            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+        end
+
+        -- Section 2: Money & Economy Debug
         local secMoney = scroll:Add("DPanel")
         secMoney:Dock(TOP)
         secMoney:DockMargin(0, 0, 0, 12)
