@@ -12,7 +12,7 @@ ENT.Spawnable = true
 ENT.AdminOnly = false
 
 ENT.IsNetworkDevice = true
-ENT.ItemQuality = 2 -- Uncommon
+ENT.ItemQuality = 1 -- Common
 ENT.ItemSubType = "Automated Extractor"
 ENT.Model = "models/props_c17/trappropeller_engine.mdl"
 ENT.Instructions = "Automated legal extractor and crafting station. Generates ingots, blueprints, and carbon rods. Connects to L2 switch for accelerated throughput."
