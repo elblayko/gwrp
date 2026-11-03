@@ -3,10 +3,13 @@
     GWRP AK-47 Assault Rifle
 --]]
 
+AddCSLuaFile()
+
 SWEP.Base = "weapon_gwrp_base"
 SWEP.PrintName = "AK-47"
 SWEP.Author = "Toxic"
 SWEP.Instructions = "Primary: Fully Automatic Fire\nSecondary: Iron Sights\nReload: Reload"
+SWEP.Category = "GangWars RP"
 
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
@@ -26,10 +29,13 @@ SWEP.Primary.Delay = 0.1
 SWEP.Slot = 2
 SWEP.SlotPos = 1
 SWEP.HoldType = "ar2"
+SWEP.UseHands = true
+SWEP.ViewModelFOV = 54
+SWEP.ViewModelFlip = false
 
-local hasCSS = util.IsValidModel("models/weapons/v_rif_ak47.mdl")
-SWEP.ViewModel = hasCSS and "models/weapons/v_rif_ak47.mdl" or "models/weapons/v_smg1.mdl"
-SWEP.WorldModel = hasCSS and "models/weapons/w_rif_ak47.mdl" or "models/weapons/w_smg1.mdl"
+local hasCStrike = util.IsValidModel("models/weapons/cstrike/c_rif_ak47.mdl")
+SWEP.ViewModel = hasCStrike and "models/weapons/cstrike/c_rif_ak47.mdl" or "models/weapons/c_smg1.mdl"
+SWEP.WorldModel = util.IsValidModel("models/weapons/w_rif_ak47.mdl") and "models/weapons/w_rif_ak47.mdl" or "models/weapons/w_smg1.mdl"
 
-SWEP.IronSightsPos = Vector(-6.6, -6, 2.3)
-SWEP.IronSightsAng = Vector(2, 0, 0)
+SWEP.IronSightsPos = hasCStrike and Vector(-6.6, -15, 2.6) or Vector(-6.43, -10, 1.05)
+SWEP.IronSightsAng = hasCStrike and Vector(2.4, 0.02, 0) or Vector(0, 0, 0)

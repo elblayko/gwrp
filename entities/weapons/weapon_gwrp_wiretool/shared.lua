@@ -4,6 +4,8 @@
     Author: Toxic
 --]]
 
+AddCSLuaFile()
+
 SWEP.PrintName = "Network Wiring Tool"
 SWEP.Author = "Toxic"
 SWEP.Instructions = "Left Click: Connect Device <-> Switch (Copper) or Switch <-> Switch (SFP Fiber)\nRight Click: Disconnect / Unplug entity\nReload: Clear selection"

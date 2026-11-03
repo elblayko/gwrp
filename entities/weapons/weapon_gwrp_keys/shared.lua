@@ -4,6 +4,8 @@
     Author: Toxic
 --]]
 
+AddCSLuaFile()
+
 SWEP.PrintName = "Hands"
 SWEP.Author = "Toxic"
 SWEP.Instructions = "Left Click: Lock Door\nRight Click: Unlock Door / Pickup Item to Inventory\nReload: Knock on Door"

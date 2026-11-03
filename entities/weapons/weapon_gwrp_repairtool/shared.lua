@@ -4,6 +4,8 @@
     Author: Toxic
 --]]
 
+AddCSLuaFile()
+
 SWEP.PrintName = "Cryo-Thermal Calibrator"
 SWEP.Author = "Toxic"
 SWEP.Instructions = "Left Click: Flash-Cool & Repair Printer (Instant 20°C)\nRight Click: Cyber-Tune Printer (Cyber Engineer)"

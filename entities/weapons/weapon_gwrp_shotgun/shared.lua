@@ -3,10 +3,13 @@
     GWRP Pump Shotgun
 --]]
 
+AddCSLuaFile()
+
 SWEP.Base = "weapon_gwrp_base"
 SWEP.PrintName = "Pump Shotgun"
 SWEP.Author = "Toxic"
 SWEP.Instructions = "Primary: Shotgun Blast\nSecondary: Iron Sights\nReload: Reload"
+SWEP.Category = "GangWars RP"
 
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
@@ -26,10 +29,13 @@ SWEP.Primary.Delay = 0.85
 SWEP.Slot = 3
 SWEP.SlotPos = 1
 SWEP.HoldType = "shotgun"
+SWEP.UseHands = true
+SWEP.ViewModelFOV = 54
+SWEP.ViewModelFlip = false
 
-local hasCSS = util.IsValidModel("models/weapons/v_shot_m3super90.mdl")
-SWEP.ViewModel = hasCSS and "models/weapons/v_shot_m3super90.mdl" or "models/weapons/v_shotgun.mdl"
-SWEP.WorldModel = hasCSS and "models/weapons/w_shot_m3super90.mdl" or "models/weapons/w_shotgun.mdl"
+local hasCStrike = util.IsValidModel("models/weapons/cstrike/c_shot_m3super90.mdl")
+SWEP.ViewModel = hasCStrike and "models/weapons/cstrike/c_shot_m3super90.mdl" or "models/weapons/c_shotgun.mdl"
+SWEP.WorldModel = util.IsValidModel("models/weapons/w_shot_m3super90.mdl") and "models/weapons/w_shot_m3super90.mdl" or "models/weapons/w_shotgun.mdl"
 
-SWEP.IronSightsPos = Vector(-5.0, -3, 2.0)
+SWEP.IronSightsPos = hasCStrike and Vector(-7.65, -8, 3.5) or Vector(-8.96, -10, 4.15)
 SWEP.IronSightsAng = Vector(0, 0, 0)
