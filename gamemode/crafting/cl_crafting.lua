@@ -114,23 +114,30 @@ function GWRP.Crafting.OpenCraftingMenu(machine)
 
         local curHP = machine.GetMachineHealth and machine:GetMachineHealth() or 500
         local maxHP = machine.GetMaxMachineHealth and machine:GetMaxMachineHealth() or 500
+        local curTemp = machine.GetTemperature and machine:GetTemperature() or 20
         local eff = machine.GetEfficiency and machine:GetEfficiency() or 60
         local isNet = IsValid(machine.GetConnectedSwitch and machine:GetConnectedSwitch())
         local ip = machine.GetIPAddress and machine:GetIPAddress() or ""
         local port = machine.GetAssignedPort and machine:GetAssignedPort() or 0
 
-        -- Machine Health indicator
+        -- 1. Machine Health indicator
         draw.SimpleText("FABRICATOR STATUS", "GWRP_UI_Badge", 16, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         draw.SimpleText(string.format("Integrity: %d / %d HP", curHP, maxHP), "GWRP_UI_BodyBold", 16, 36, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-        -- Network line
-        local netX = 250
+        -- 2. Core Thermal indicator
+        local tempCol = (curTemp >= 75) and Color(239, 68, 68) or ((curTemp >= 50) and Color(245, 158, 11) or Color(52, 211, 153))
+        local tempStatus = (curTemp >= 75) and "CRITICAL" or ((curTemp >= 50) and "ELEVATED" or "OPTIMAL")
+        draw.SimpleText("CORE THERMAL", "GWRP_UI_Badge", 220, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(string.format("%d°C / 100°C [%s]", curTemp, tempStatus), "GWRP_UI_BodyBold", 220, 36, tempCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+        -- 3. Network line
+        local netX = 430
         draw.SimpleText("NETWORK CONNECTION", "GWRP_UI_Badge", netX, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         if isNet then
-            local netMsg = string.format("L2 Switch Port %d  |  IP: %s  |  %d%% Throughput", port, ip ~= "" and ip or "DHCP", eff)
+            local netMsg = string.format("L2 Switch Port %d  |  %s  |  %d%% Speed", port, ip ~= "" and ip or "DHCP", eff)
             draw.SimpleText(netMsg, "GWRP_UI_BodyBold", netX, 36, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         else
-            draw.SimpleText("Standalone (60% Speed) - Link to Switch via Wire Tool", "GWRP_UI_BodyBold", netX, 36, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Standalone (60% Speed) - Link to Switch", "GWRP_UI_BodyBold", netX, 36, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         end
     end
 

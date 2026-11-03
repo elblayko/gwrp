@@ -101,7 +101,7 @@ hook.Add("HUDPaint", "GWRP_PrinterValveHUD", function()
     if not IsValid(ent) then return end
 
     local class = ent:GetClass()
-    if not (string.StartWith(class, "gwrp_printer_") or ent.PrintAmount ~= nil) then return end
+    if not (string.StartWith(class, "gwrp_printer_") or ent.PrintAmount ~= nil or class == "gwrp_resource_machine") then return end
     if tr.HitPos:DistToSqr(ply:EyePos()) > (110 * 110) then return end
 
     local now = CurTime()

@@ -1,5 +1,5 @@
 --[[
-    gwrp_resource_machine/init.lua - Server Entity Extraction Engine & Networking
+    gwrp_resource_machine/init.lua - Server Entity Extraction Engine, Thermal Regulation & Venting
     Author: Toxic & Antigravity
 --]]
 
@@ -22,6 +22,22 @@ function ENT:Initialize()
     self:SetHasReadyItem(false)
     self:SetReadyItemID("")
     self:SetReadyItemName("")
+
+    -- Thermal Regulation & Venting Datatables
+    self:SetTemperature(20)
+    self:SetVentActive(false)
+    self:SetVentStartTime(0)
+    self:SetVentDuration(1.25)
+    self:SetVentSweetMin(0)
+    self:SetVentSweetMax(0)
+    self:SetValveJammedUntil(0)
+    self:SetThermalSpikeUntil(0)
+    self:SetIsTuned(false)
+    self:SetHasUndervolt(false)
+
+    self.ThermalTargetTemp = nil
+    self.NextThermalTick = 0
+    self.NextHeatTick = CurTime() + 12
 
     local phys = self:GetPhysicsObject()
     if IsValid(phys) then
@@ -57,7 +73,70 @@ function ENT:StartExtractionCycle()
     self:SetCycleDuration(dur)
 end
 
+-- ========================================================
+-- THERMAL SIMULATION & LINEAR DEGREE TRANSITIONS
+-- ========================================================
+
+function ENT:Think()
+    local now = CurTime()
+
+    -- Linear thermal transition (stepping up on fail, stepping down on vent success at 0.12s per degree)
+    if self.ThermalTargetTemp then
+        if now >= (self.NextThermalTick or 0) then
+            local cur = self:GetTemperature()
+            if cur < self.ThermalTargetTemp then
+                -- Raising linearly (+1°C every 0.12s)
+                local nextTemp = cur + 1
+                self:SetTemperature(nextTemp)
+                self.NextThermalTick = now + 0.12
+
+                if nextTemp >= self.MaxTemp then
+                    self.ThermalTargetTemp = nil
+                    self:Explode()
+                    return true
+                end
+            elseif cur > self.ThermalTargetTemp then
+                -- Lowering linearly (-1°C every 0.12s)
+                self:SetTemperature(cur - 1)
+                self.NextThermalTick = now + 0.12
+
+                if (self.NextCoolSound or 0) <= now then
+                    self.NextCoolSound = now + 0.5
+                    self:EmitSound("ambient/levels/canals/steam_hiss1.wav", 55, 120, 0.35)
+                end
+            else
+                self.ThermalTargetTemp = nil
+            end
+        end
+    end
+
+    -- Check if active sweet-spot sweep is running
+    if self:GetVentActive() then
+        -- Track key release from initial [E] press
+        if self.VentWaitingForRelease and IsValid(self.VentPlayer) then
+            if not self.VentPlayer:KeyDown(IN_USE) then
+                self.VentWaitingForRelease = false
+            end
+        end
+
+        local duration = math.max(0.1, self:GetVentDuration())
+        local progress = (now - self:GetVentStartTime()) / duration
+        if progress >= 1.0 then
+            -- Soft depressurization reset: no penalty, valve gently closes
+            self:SetVentActive(false)
+            self.VentWaitingForRelease = false
+            self.VentPlayer = nil
+            self:EmitSound("weapons/shotgun/shotgun_empty.wav", 55, 110, 0.4)
+        end
+    end
+
+    self:NextThink(now + 0.05)
+    return true
+end
+
 function ENT:ExtractionTick()
+    local now = CurTime()
+
     -- Check if ready item is still present
     if self:GetHasReadyItem() then
         if not IsValid(self.CurrentItem) then
@@ -68,6 +147,22 @@ function ENT:ExtractionTick()
             self:StartExtractionCycle()
         end
         return
+    end
+
+    -- Passive thermal rise during continuous synthesis operation
+    if now >= (self.NextHeatTick or 0) then
+        local interval = self:GetHasUndervolt() and 25 or 12
+        if self:GetIsTuned() then interval = interval + 6 end
+        self.NextHeatTick = now + interval
+
+        local curT = self:GetTemperature()
+        if curT < self.MaxTemp then
+            self:SetTemperature(curT + 1)
+            if self:GetTemperature() >= self.MaxTemp then
+                self:Explode()
+                return
+            end
+        end
     end
 
     -- Timer evaluation
@@ -89,7 +184,7 @@ function ENT:FinishExtraction()
 
     local center = self:OBBCenter()
     local maxs = self:OBBMaxs()
-    -- Calculate exact top surface of machine bounding box (resting right on top)
+    -- Calculate exact top surface of machine bounding box (resting flush on top)
     local topPos = self:LocalToWorld(Vector(center.x, center.y, maxs.z + 1.5))
     local topAng = Angle(0, self:GetAngles().y, 0)
 
@@ -112,6 +207,14 @@ function ENT:FinishExtraction()
         self:SetReadyItemID(matId)
         self:SetReadyItemName(itemName)
 
+        -- Cycle Heat Surge (+4°C standard, +1°C undervolted, -25% tuned)
+        local heatRise = self:GetHasUndervolt() and (GWRP.Config.PrinterHeatRiseUndervolted or 1) or (GWRP.Config.PrinterHeatRiseStandard or 4)
+        if self:GetIsTuned() then
+            heatRise = math.max(1, math.floor(heatRise * 0.75))
+        end
+        local newTemp = self:GetTemperature() + heatRise
+        self:SetTemperature(newTemp)
+
         -- Sound cues & steam release
         self:EmitSound("ambient/machines/steam_release_2.wav", 75, 105)
         self:EmitSound("buttons/lever7.wav", 70, 100)
@@ -121,6 +224,10 @@ function ENT:FinishExtraction()
         ed:SetNormal(self:GetUp())
         ed:SetScale(1.5)
         util.Effect("ElectricSpark", ed, true, true)
+
+        if newTemp >= self.MaxTemp then
+            self:Explode()
+        end
     end
 end
 
@@ -132,6 +239,33 @@ function ENT:OnMaterialTaken(matEnt)
     self:SetReadyItemID("")
     self:SetReadyItemName("")
     self:StartExtractionCycle()
+end
+
+-- ========================================================
+-- MAINTENANCE, REPAIR & HARDWARE UPGRADES
+-- ========================================================
+
+function ENT:CoolAndRepair(tempReduction)
+    tempReduction = tempReduction or 35
+    local curTemp = self:GetTemperature()
+    local newTemp = math.max(20, curTemp - tempReduction)
+    self:SetTemperature(newTemp)
+    self:SetVentActive(false)
+    self.VentWaitingForRelease = false
+    self.VentPlayer = nil
+    self.ThermalTargetTemp = nil
+    self:SetValveJammedUntil(0)
+    self:EmitSound("ambient/levels/canals/steam_hiss2.wav", 70, 110)
+end
+
+function ENT:InstallUndervoltModule(moduleEnt)
+    self:SetHasUndervolt(true)
+    self:EmitSound("ambient/energy/zap1.wav", 70, 115)
+end
+
+function ENT:TunePrinter(ply)
+    self:SetIsTuned(true)
+    self:EmitSound("buttons/button9.wav", 70, 110)
 end
 
 -- ========================================================
@@ -169,7 +303,7 @@ function ENT:DisconnectFromSwitch()
 end
 
 -- ========================================================
--- DAMAGE, DESTRUCTION & REPAIR
+-- DAMAGE, DESTRUCTION & EXPLOSION
 -- ========================================================
 
 function ENT:OnTakeDamage(dmginfo)
@@ -191,50 +325,170 @@ function ENT:OnTakeDamage(dmginfo)
     end
 end
 
-function ENT:DestroyMachine()
-    -- Free sitting item if present
+function ENT:Explode()
+    if self.Exploded then return end
+    self.Exploded = true
+    self:SetVentActive(false)
+    self.ThermalTargetTemp = nil
+
+    if self.HumSound then self.HumSound:Stop() end
+    timer.Remove("GWRP_ResourceMachine_" .. self:EntIndex())
+
+    self:DisconnectFromSwitch()
+
+    -- Drop sitting item
     if IsValid(self.CurrentItem) then
         constraint.RemoveAll(self.CurrentItem)
         self.CurrentItem.ParentMachine = nil
         local phys = self.CurrentItem:GetPhysicsObject()
-        if IsValid(phys) then
-            phys:Wake()
-            phys:ApplyForceCenter(Vector(0, 0, 50) + VectorRand() * 40)
-        end
+        if IsValid(phys) then phys:Wake() end
         self.CurrentItem = nil
     end
 
-    self:DisconnectFromSwitch()
+    local pos = self:GetPos()
+    local effect = EffectData()
+    effect:SetOrigin(pos)
+    util.Effect("Explosion", effect)
 
-    -- Visual explosion
-    local ed = EffectData()
-    ed:SetOrigin(self:GetPos() + Vector(0, 0, 25))
-    ed:SetScale(1.8)
-    util.Effect("Explosion", ed)
-    self:EmitSound("ambient/explosions/explode_4.wav", 80, 100)
-
+    util.BlastDamage(self, self, pos, 250, 85)
+    GWRP.NotifyAll("A Resource Fabricator overheated and suffered catastrophic engine failure!", NOTIFY_ERROR)
     self:Remove()
 end
 
+function ENT:DestroyMachine()
+    self:Explode()
+end
+
 -- ========================================================
--- PLAYER INTERACTION
+-- PLAYER INTERACTION & VENTING MECHANICS
 -- ========================================================
 
 function ENT:Use(activator, caller)
     if not IsValid(activator) or not activator:IsPlayer() or not activator:Alive() then return end
 
-    -- Open crafting menu on client
-    net.Start("GWRP_OpenCraftingUI")
-        net.WriteEntity(self)
-        net.WriteBool(self:GetHasReadyItem())
-        net.WriteString(self:GetReadyItemID())
-        net.WriteString(self:GetReadyItemName())
-    net.Send(activator)
+    local now = CurTime()
+    self.NextUsePerPlayer = self.NextUsePerPlayer or {}
+    if (self.NextUsePerPlayer[activator] or 0) > now then return end
+    self.NextUsePerPlayer[activator] = now + 0.22
 
-    self:EmitSound("buttons/button14.wav", 60, 105)
+    local curTemp = self:GetTemperature()
+
+    -- 1. If active sweet-spot sweep is running: THIS [E] PRESS IS THE TIMING ATTEMPT!
+    if self:GetVentActive() then
+        -- Debounce protection: ignore if held from sweep launch
+        if (now - self:GetVentStartTime()) < 0.22 or self.VentWaitingForRelease then
+            if not activator:KeyDown(IN_USE) then
+                self.VentWaitingForRelease = false
+            end
+            return
+        end
+
+        local duration = math.max(0.1, self:GetVentDuration())
+        local progress = math.Clamp((now - self:GetVentStartTime()) / duration, 0, 1)
+        local sMin = self:GetVentSweetMin()
+        local sMax = self:GetVentSweetMax()
+
+        if progress >= sMin and progress <= sMax then
+            -- SUCCESS: Clean exhaust vent (linear dissipation down towards 20°C)
+            local coolTarget = math.max(20, curTemp - 15)
+            self.ThermalTargetTemp = coolTarget
+            self.NextThermalTick = now
+            self:SetVentActive(false)
+            self.VentWaitingForRelease = false
+            self.VentPlayer = nil
+
+            self.NextVentAllowed = now + 1.5
+
+            -- Satisfying steam exhaust release
+            self:EmitSound("ambient/machines/steam_release_2.wav", 75, 105, 0.85)
+            self:EmitSound("ambient/levels/canals/steam_hiss2.wav", 70, 115, 0.7)
+
+            local ed = EffectData()
+            ed:SetOrigin(self:GetPos() + Vector(0, 0, 18))
+            ed:SetNormal(Vector(0, 0, 1))
+            ed:SetScale(0.9)
+            util.Effect("WheelDust", ed)
+
+            GWRP.Notify(activator, "Pressure vented! Engine core dissipating heat.", NOTIFY_GENERIC)
+            return
+        else
+            -- FAIL / MISS: Over-pressurization + valve jam!
+            self:SetVentActive(false)
+            self.VentWaitingForRelease = false
+            self.VentPlayer = nil
+            self:SetValveJammedUntil(now + 3.5)
+
+            -- Linearly raise temperature on fail (+4°C surge)
+            local failHeat = 4
+            self.ThermalTargetTemp = math.min(self.MaxTemp, curTemp + failHeat)
+            self.NextThermalTick = now
+
+            -- Short-circuit zap
+            self:EmitSound("ambient/levels/labs/electric_explosion1.wav", 85, 110, 0.95)
+            self:EmitSound("ambient/energy/zap1.wav", 80, 115, 0.85)
+
+            local ed = EffectData()
+            ed:SetOrigin(self:GetPos() + Vector(0, 0, 20))
+            ed:SetNormal(Vector(0, 0, 1))
+            ed:SetMagnitude(2)
+            ed:SetScale(1.5)
+            util.Effect("Sparks", ed)
+
+            GWRP.Notify(activator, "Valve over-pressurized! Relief valve jammed for 3.5s.", NOTIFY_ERROR)
+            return
+        end
+    end
+
+    -- 2. If holding SPRINT (Shift), or if temp is at ambient (20°C): open Crafting Workbench!
+    if activator:KeyDown(IN_SPEED) or curTemp <= 20 then
+        net.Start("GWRP_OpenCraftingUI")
+            net.WriteEntity(self)
+            net.WriteBool(self:GetHasReadyItem())
+            net.WriteString(self:GetReadyItemID())
+            net.WriteString(self:GetReadyItemName())
+        net.Send(activator)
+        self:EmitSound("buttons/button14.wav", 60, 105)
+        return
+    end
+
+    -- 3. If hot (curTemp > 20°C): tap [E] triggers the Vent Pressure gauge!
+    if curTemp > 20 then
+        -- Check if valve is jammed
+        if self:GetValveJammedUntil() > now then
+            local remain = math.ceil(self:GetValveJammedUntil() - now)
+            GWRP.Notify(activator, string.format("Relief valve jammed for %ds! Stand clear.", remain), NOTIFY_ERROR)
+            self:EmitSound("weapons/pistol/pistol_empty.wav", 65, 110, 0.6)
+            return
+        end
+
+        -- Check cooldown between vents
+        if (self.NextVentAllowed or 0) > now then
+            self:EmitSound("physics/metal/metal_box_impact_soft1.wav", 55, 120, 0.4)
+            return
+        end
+
+        -- Start the active sweet-spot sweep
+        local duration = 1.25
+        local sweetCenter = math.Rand(0.40, 0.72)
+        local sweetWidth = 0.18
+
+        self:SetVentDuration(duration)
+        self:SetVentStartTime(now)
+        self:SetVentSweetMin(sweetCenter - (sweetWidth / 2))
+        self:SetVentSweetMax(sweetCenter + (sweetWidth / 2))
+        self:SetVentActive(true)
+
+        self.VentWaitingForRelease = true
+        self.VentPlayer = activator
+
+        -- Valve latch click
+        self:EmitSound("weapons/slam/mine_mode.wav", 60, 115, 0.6)
+    end
 end
 
 function ENT:OnRemove()
+    self:SetVentActive(false)
+    self.ThermalTargetTemp = nil
     timer.Remove("GWRP_ResourceMachine_" .. self:EntIndex())
     self:DisconnectFromSwitch()
 

@@ -42,7 +42,7 @@ end
 local function IsPrinter(ent)
     if not IsValid(ent) then return false end
     local class = ent:GetClass()
-    if class == "gwrp_printer_bronze" or class == "gwrp_printer_silver" or class == "gwrp_printer_diamond" or ent.PrintAmount ~= nil then
+    if class == "gwrp_printer_bronze" or class == "gwrp_printer_silver" or class == "gwrp_printer_diamond" or ent.PrintAmount ~= nil or class == "gwrp_resource_machine" then
         return true
     end
     return false
