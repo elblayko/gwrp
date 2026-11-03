@@ -15,7 +15,6 @@ function SWEP:DrawHUD()
         local et = self:GetPickEndTime()
         local duration = math.max(et - st, 0.1)
         local progress = math.Clamp((CurTime() - st) / duration, 0, 1)
-        local remaining = math.max(0, math.ceil(et - CurTime()))
 
         local w, h = 320, 42
         local x = (ScrW() - w) / 2
@@ -34,8 +33,9 @@ function SWEP:DrawHUD()
 
         -- Status Text
         local pct = math.floor(progress * 100)
-        local text = string.format("Picking Lock: %d%% (%ds)", pct, remaining)
-        draw.SimpleText(text, "GWRP_UI_Btn", ScrW() / 2, y + h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        local text = string.format("Picking Lock: %d%%", pct)
+        draw.SimpleText(text, "GWRP_UI_Btn", ScrW() / 2, y + h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+            TEXT_ALIGN_CENTER)
     else
         -- Contextual prompt when aiming at a valid target
         local tr = ply:GetEyeTrace()
@@ -54,4 +54,3 @@ function SWEP:DrawHUD()
         end
     end
 end
-
