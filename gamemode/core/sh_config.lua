@@ -41,7 +41,7 @@ GWRP.Config.EntityQualities = {
     ["gwrp_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
     ["gwrp_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
     ["gwrp_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
-    ["gwrp_network_switch"] = { quality = 3, subType = "Network Appliance", stats = "3x Ports | L2 Layer" },
+    ["gwrp_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "3x Ports | L2 Layer" },
     ["gwrp_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-2 Terminal | Port Scanner" },
     ["gwrp_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
     ["gwrp_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },

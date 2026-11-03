@@ -10,7 +10,7 @@ ENT.Author = "Toxic"
 ENT.Spawnable = true
 
 -- Central Item Quality
-ENT.ItemQuality = "rare"
+ENT.ItemQuality = "uncommon"
 ENT.SwitchColor = Color(30, 144, 255) -- Vivid Network Blue
 
 function ENT:SetupDataTables()
