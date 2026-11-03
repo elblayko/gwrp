@@ -70,7 +70,8 @@ function GWRP.Network.GetBroadcastDomain(switchEnt)
                 local devClass = dev:GetClass()
                 local isPrinter = dev.PrintAmount ~= nil or string.find(devClass, "printer")
                 local isComputer = devClass == "gwrp_computer" or dev.IsComputer
-                local devType = isPrinter and "printer" or (isComputer and "computer" or "device")
+                local isSynthesizer = devClass == "gwrp_resource_machine" or string.find(devClass, "resource_machine")
+                local devType = isPrinter and "printer" or (isComputer and "computer" or (isSynthesizer and "synthesizer" or "device"))
 
                 local hostId = 10 + portNum
                 local devIP = (dev.GetIPAddress and dev:GetIPAddress() ~= "") and dev:GetIPAddress() or GWRP.Network.FormatIP(subnet, hostId)
@@ -94,11 +95,26 @@ function GWRP.Network.GetBroadcastDomain(switchEnt)
                         service = "telnet",
                         version = "CyberDeck Terminal Shell"
                     })
+                elseif isSynthesizer then
+                    local eff = dev.GetEfficiency and dev:GetEfficiency() or 60
+                    local temp = dev.GetTemperature and dev:GetTemperature() or 20
+                    table.insert(services, {
+                        port = 502,
+                        proto = "tcp",
+                        service = "modbus",
+                        version = string.format("Modbus/TCP SCADA OT Synthesizer (Eff: %d%%, Temp: %dC)", eff, temp)
+                    })
+                    table.insert(services, {
+                        port = 4840,
+                        proto = "tcp",
+                        service = "opcua",
+                        version = "OPC-UA Material Fabrication Service"
+                    })
                 end
 
                 table.insert(devices, {
                     entity = dev,
-                    name = dev.PrintName or (isPrinter and "Money Printer" or (isComputer and "Personal Computer" or "Network Device")),
+                    name = dev.PrintName or (isPrinter and "Money Printer" or (isComputer and "Personal Computer" or (isSynthesizer and "Resource Fabricator" or "Network Device"))),
                     type = devType,
                     ip = devIP,
                     mac = devMAC,
