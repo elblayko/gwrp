@@ -83,7 +83,6 @@ function ENT:Draw()
             if isUv then table.insert(tags, "UV") end
             if isOc then table.insert(tags, "OC") end
             if isTuned then table.insert(tags, "TUNED") end
-            if isDamped then table.insert(tags, "DAMPED") end
             local modTag = #tags > 0 and (" (" .. table.concat(tags, "+") .. ")") or ""
             local tempTxt = "Temp: " .. temp .. "°C" .. modTag
             draw.SimpleText(tempTxt, "GWRP_FontSmall", -90, 24, tempCol, TEXT_ALIGN_LEFT)
