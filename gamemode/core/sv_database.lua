@@ -120,19 +120,47 @@ function GWRP.Database.Call(procedureName, params)
 end
 
 -- ========================================================
--- ATOMIC TRANSACTION WRAPPERS
+-- ATOMIC TRANSACTION WRAPPERS & ACID ENGINE
 -- ========================================================
 
+GWRP.Database.TransactionDepth = GWRP.Database.TransactionDepth or 0
+
 function GWRP.Database.BeginTransaction()
-    return sql.Query("BEGIN TRANSACTION;")
+    if GWRP.Database.TransactionDepth == 0 then
+        sql.Query("BEGIN IMMEDIATE TRANSACTION;")
+    end
+    GWRP.Database.TransactionDepth = GWRP.Database.TransactionDepth + 1
+    return true
 end
 
 function GWRP.Database.CommitTransaction()
-    return sql.Query("COMMIT;")
+    if GWRP.Database.TransactionDepth <= 0 then
+        GWRP.Database.TransactionDepth = 0
+        return false
+    end
+    GWRP.Database.TransactionDepth = GWRP.Database.TransactionDepth - 1
+    if GWRP.Database.TransactionDepth == 0 then
+        return sql.Query("COMMIT;")
+    end
+    return true
 end
 
 function GWRP.Database.RollbackTransaction()
+    GWRP.Database.TransactionDepth = 0
     return sql.Query("ROLLBACK;")
+end
+
+-- Safely executes a function inside an atomic transaction with automatic rollback on error
+function GWRP.Database.WithTransaction(callback)
+    GWRP.Database.BeginTransaction()
+    local success, res1, res2 = pcall(callback)
+    if not success then
+        GWRP.Database.RollbackTransaction()
+        ErrorNoHalt(string.format("[GWRP-DB ACID ERROR] Transaction rolled back due to error: %s\n", tostring(res1)))
+        return false, res1
+    end
+    GWRP.Database.CommitTransaction()
+    return res1, res2
 end
 
 -- ========================================================
@@ -140,17 +168,21 @@ end
 -- ========================================================
 
 function GWRP.Database.Init()
+    -- Enable Foreign Key Relational Integrity & Durability Pragmas (ACID)
+    sql.Query("PRAGMA foreign_keys = ON;")
+    sql.Query("PRAGMA synchronous = NORMAL;")
+
     -- 1. Players Table
     sql.Query([[
         CREATE TABLE IF NOT EXISTS gwrp_players (
             steamid TEXT PRIMARY KEY,
             name TEXT,
-            money INTEGER DEFAULT 1000,
+            money INTEGER DEFAULT 1000 CHECK (money >= 0),
             respect INTEGER DEFAULT 0,
             gang TEXT DEFAULT '',
             job TEXT DEFAULT 'citizen',
-            level INTEGER DEFAULT 1,
-            xp INTEGER DEFAULT 0,
+            level INTEGER DEFAULT 1 CHECK (level >= 1),
+            xp INTEGER DEFAULT 0 CHECK (xp >= 0),
             last_seen INTEGER
         );
     ]])
@@ -171,7 +203,7 @@ function GWRP.Database.Init()
         CREATE TABLE IF NOT EXISTS gwrp_gangs (
             name TEXT PRIMARY KEY,
             leader_steamid TEXT,
-            bank INTEGER DEFAULT 0,
+            bank INTEGER DEFAULT 0 CHECK (bank >= 0),
             respect INTEGER DEFAULT 0,
             created_at INTEGER
         );
@@ -192,11 +224,11 @@ function GWRP.Database.Init()
         CREATE TABLE IF NOT EXISTS gwrp_inventory (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             steamid TEXT,
-            bag_index INTEGER DEFAULT 0,
-            slot_index INTEGER DEFAULT 1,
+            bag_index INTEGER DEFAULT 0 CHECK (bag_index >= 0),
+            slot_index INTEGER DEFAULT 1 CHECK (slot_index >= 1),
             item_id TEXT,
             item_type TEXT,
-            amount INTEGER DEFAULT 1,
+            amount INTEGER DEFAULT 1 CHECK (amount > 0),
             item_data TEXT DEFAULT '{}'
         );
     ]])
@@ -377,15 +409,18 @@ end
 -- ========================================================
 
 function GWRP.Database.CreateGang(gangName, leaderSteamID)
-    GWRP.Database.Call("UPSERT_GANG", {
-        gangName,
-        leaderSteamID,
-        gangName,
-        os.time()
-    })
+    return GWRP.Database.WithTransaction(function()
+        GWRP.Database.Call("UPSERT_GANG", {
+            gangName,
+            leaderSteamID,
+            gangName,
+            os.time()
+        })
 
-    GWRP.Database.AddGangMember(leaderSteamID, gangName, "leader")
-    print(string.format("[GWRP-DB] Gang '%s' created via stored procedure (Leader: %s).", gangName, leaderSteamID))
+        GWRP.Database.AddGangMember(leaderSteamID, gangName, "leader")
+        print(string.format("[GWRP-DB] Gang '%s' created via stored procedure (Leader: %s).", gangName, leaderSteamID))
+        return true
+    end)
 end
 
 function GWRP.Database.GetGang(gangName)
@@ -397,27 +432,33 @@ function GWRP.Database.GetGang(gangName)
 end
 
 function GWRP.Database.AddGangMember(steamID, gangName, rank)
-    GWRP.Database.Call("ADD_GANG_MEMBER", {
-        steamID,
-        gangName,
-        rank or "member",
-        os.time()
-    })
+    return GWRP.Database.WithTransaction(function()
+        GWRP.Database.Call("ADD_GANG_MEMBER", {
+            steamID,
+            gangName,
+            rank or "member",
+            os.time()
+        })
 
-    GWRP.Database.Call("UPDATE_PLAYER_GANG", {
-        gangName,
-        os.time(),
-        steamID
-    })
+        GWRP.Database.Call("UPDATE_PLAYER_GANG", {
+            gangName,
+            os.time(),
+            steamID
+        })
+        return true
+    end)
 end
 
 function GWRP.Database.RemoveGangMember(steamID)
-    GWRP.Database.Call("REMOVE_GANG_MEMBER", { steamID })
-    GWRP.Database.Call("UPDATE_PLAYER_GANG", {
-        "",
-        os.time(),
-        steamID
-    })
+    return GWRP.Database.WithTransaction(function()
+        GWRP.Database.Call("REMOVE_GANG_MEMBER", { steamID })
+        GWRP.Database.Call("UPDATE_PLAYER_GANG", {
+            "",
+            os.time(),
+            steamID
+        })
+        return true
+    end)
 end
 
 function GWRP.Database.GetGangMember(steamID)
@@ -437,10 +478,13 @@ function GWRP.Database.AddGangBank(gangName, amount)
 end
 
 function GWRP.Database.DisbandGang(gangName)
-    GWRP.Database.Call("DELETE_GANG", { gangName })
-    GWRP.Database.Call("CLEAR_GANG_MEMBERS", { gangName })
-    GWRP.Database.Call("CLEAR_PLAYERS_GANG", { gangName })
-    print(string.format("[GWRP-DB] Gang '%s' disbanded via stored procedure.", gangName))
+    return GWRP.Database.WithTransaction(function()
+        GWRP.Database.Call("DELETE_GANG", { gangName })
+        GWRP.Database.Call("CLEAR_GANG_MEMBERS", { gangName })
+        GWRP.Database.Call("CLEAR_PLAYERS_GANG", { gangName })
+        print(string.format("[GWRP-DB] Gang '%s' disbanded via stored procedure.", gangName))
+        return true
+    end)
 end
 
 function GWRP.Database.GetAllGangs()
@@ -481,91 +525,95 @@ function GWRP.Database.SetPlayerBags(steamID, bag1, bag2, bag3, bag4)
 end
 
 function GWRP.Database.AddInventoryItem(steamID, itemId, itemType, amount, itemData, targetBag, targetSlot)
-    amount = amount or 1
-    local iType = itemType or "generic"
-    local iData = type(itemData) == "table" and util.TableToJSON(itemData) or (itemData or "{}")
+    return GWRP.Database.WithTransaction(function()
+        amount = amount or 1
+        local iType = itemType or "generic"
+        local iData = type(itemData) == "table" and util.TableToJSON(itemData) or (itemData or "{}")
 
-    -- If target slot is explicitly provided and empty:
-    if targetBag and targetSlot then
-        local slotOccupant = GWRP.Database.GetInventorySlot(steamID, targetBag, targetSlot)
-        if not slotOccupant then
-            GWRP.Database.Call("INSERT_INVENTORY_ITEM", { steamID, targetBag, targetSlot, itemId, iType, amount, iData })
-            return true
-        end
-    end
-
-    -- First: check if an identical stack exists and can be incremented
-    local existing = GWRP.Database.Call("GET_INVENTORY_ITEM", { steamID, itemId })
-    if existing and existing[1] then
-        local rowId = tonumber(existing[1].id)
-        GWRP.Database.Call("INCREMENT_INVENTORY_ITEM", { amount, rowId })
-        return true
-    end
-
-    -- Otherwise, find first available slot in equipped bags (Bag 0: slots 1..16, Bags 1..4: slots 1..capacity)
-    local allItems = GWRP.Database.GetInventory(steamID)
-    local occupied = {}
-    for _, it in ipairs(allItems) do
-        local b = tonumber(it.bag_index) or 0
-        local s = tonumber(it.slot_index) or 1
-        occupied[b .. "_" .. s] = true
-    end
-
-    local playerBags = GWRP.Database.GetPlayerBags(steamID)
-    local getCap = GWRP.Inventory.GetBagCapacity or function() return 0 end
-    local bagCapacities = {
-        [0] = 16, -- Default Backpack
-        [1] = getCap(playerBags.bag1),
-        [2] = getCap(playerBags.bag2),
-        [3] = getCap(playerBags.bag3),
-        [4] = getCap(playerBags.bag4)
-    }
-
-    local freeBag, freeSlot = nil, nil
-    for b = 0, 4 do
-        local cap = bagCapacities[b] or 0
-        if cap > 0 then
-            for s = 1, cap do
-                if not occupied[b .. "_" .. s] then
-                    freeBag = b
-                    freeSlot = s
-                    break
-                end
+        -- If target slot is explicitly provided and empty:
+        if targetBag and targetSlot then
+            local slotOccupant = GWRP.Database.GetInventorySlot(steamID, targetBag, targetSlot)
+            if not slotOccupant then
+                GWRP.Database.Call("INSERT_INVENTORY_ITEM", { steamID, targetBag, targetSlot, itemId, iType, amount, iData })
+                return true
             end
         end
-        if freeBag then break end
-    end
 
-    if freeBag and freeSlot then
-        GWRP.Database.Call("INSERT_INVENTORY_ITEM", { steamID, freeBag, freeSlot, itemId, iType, amount, iData })
-        return true
-    end
+        -- First: check if an identical stack exists and can be incremented
+        local existing = GWRP.Database.Call("GET_INVENTORY_ITEM", { steamID, itemId })
+        if existing and existing[1] then
+            local rowId = tonumber(existing[1].id)
+            GWRP.Database.Call("INCREMENT_INVENTORY_ITEM", { amount, rowId })
+            return true
+        end
 
-    return false -- Bags are completely full!
+        -- Otherwise, find first available slot in equipped bags (Bag 0: slots 1..16, Bags 1..4: slots 1..capacity)
+        local allItems = GWRP.Database.GetInventory(steamID)
+        local occupied = {}
+        for _, it in ipairs(allItems) do
+            local b = tonumber(it.bag_index) or 0
+            local s = tonumber(it.slot_index) or 1
+            occupied[b .. "_" .. s] = true
+        end
+
+        local playerBags = GWRP.Database.GetPlayerBags(steamID)
+        local getCap = GWRP.Inventory.GetBagCapacity or function() return 0 end
+        local bagCapacities = {
+            [0] = 16, -- Default Backpack
+            [1] = getCap(playerBags.bag1),
+            [2] = getCap(playerBags.bag2),
+            [3] = getCap(playerBags.bag3),
+            [4] = getCap(playerBags.bag4)
+        }
+
+        local freeBag, freeSlot = nil, nil
+        for b = 0, 4 do
+            local cap = bagCapacities[b] or 0
+            if cap > 0 then
+                for s = 1, cap do
+                    if not occupied[b .. "_" .. s] then
+                        freeBag = b
+                        freeSlot = s
+                        break
+                    end
+                end
+            end
+            if freeBag then break end
+        end
+
+        if freeBag and freeSlot then
+            GWRP.Database.Call("INSERT_INVENTORY_ITEM", { steamID, freeBag, freeSlot, itemId, iType, amount, iData })
+            return true
+        end
+
+        return false -- Bags are completely full!
+    end)
 end
 
 function GWRP.Database.MoveInventorySlot(steamID, fromBag, fromSlot, toBag, toSlot)
-    local sourceItem = GWRP.Database.GetInventorySlot(steamID, fromBag, fromSlot)
-    if not sourceItem then return false end
+    return GWRP.Database.WithTransaction(function()
+        local sourceItem = GWRP.Database.GetInventorySlot(steamID, fromBag, fromSlot)
+        if not sourceItem then return false end
 
-    local destItem = GWRP.Database.GetInventorySlot(steamID, toBag, toSlot)
-    if not destItem then
-        -- Empty destination slot: direct move
-        GWRP.Database.Call("UPDATE_INVENTORY_SLOT_POS", { toBag, toSlot, tonumber(sourceItem.id) })
-        return true
-    else
-        -- If same item ID and stackable: combine stacks
-        if sourceItem.item_id == destItem.item_id then
-            GWRP.Database.Call("INCREMENT_INVENTORY_ITEM", { tonumber(sourceItem.amount) or 1, tonumber(destItem.id) })
-            GWRP.Database.Call("DELETE_INVENTORY_ITEM", { tonumber(sourceItem.id) })
+        local destItem = GWRP.Database.GetInventorySlot(steamID, toBag, toSlot)
+        if not destItem then
+            -- Empty destination slot: direct move
+            GWRP.Database.Call("UPDATE_INVENTORY_SLOT_POS", { toBag, toSlot, tonumber(sourceItem.id) })
             return true
         else
-            -- Swap slots
-            GWRP.Database.Call("UPDATE_INVENTORY_SLOT_POS", { toBag, toSlot, tonumber(sourceItem.id) })
-            GWRP.Database.Call("UPDATE_INVENTORY_SLOT_POS", { fromBag, fromSlot, tonumber(destItem.id) })
-            return true
+            -- If same item ID and stackable: combine stacks
+            if sourceItem.item_id == destItem.item_id then
+                GWRP.Database.Call("INCREMENT_INVENTORY_ITEM", { tonumber(sourceItem.amount) or 1, tonumber(destItem.id) })
+                GWRP.Database.Call("DELETE_INVENTORY_ITEM", { tonumber(sourceItem.id) })
+                return true
+            else
+                -- Swap slots
+                GWRP.Database.Call("UPDATE_INVENTORY_SLOT_POS", { toBag, toSlot, tonumber(sourceItem.id) })
+                GWRP.Database.Call("UPDATE_INVENTORY_SLOT_POS", { fromBag, fromSlot, tonumber(destItem.id) })
+                return true
+            end
         end
-    end
+    end)
 end
 
 function GWRP.Database.RemoveInventoryItemAtSlot(steamID, bagIndex, slotIndex, amount)
@@ -615,29 +663,32 @@ end
 
 function GWRP.Database.SaveTurfZones(mapName, zonesTable)
     local mapKey = string.lower(mapName)
-    GWRP.Database.Call("CLEAR_MAP_TURFS", { mapKey })
+    return GWRP.Database.WithTransaction(function()
+        GWRP.Database.Call("CLEAR_MAP_TURFS", { mapKey })
 
-    for id, zone in pairs(zonesTable) do
-        local idNum = tonumber(id) or 1
-        local name = zone.name or ("Turf #" .. idNum)
-        local px = zone.pos and zone.pos.x or 0
-        local py = zone.pos and zone.pos.y or 0
-        local pz = zone.pos and zone.pos.z or 0
-        local radius = tonumber(zone.radius) or 450
-        local owner = zone.owner or "neutral"
+        for id, zone in pairs(zonesTable) do
+            local idNum = tonumber(id) or 1
+            local name = zone.name or ("Turf #" .. idNum)
+            local px = zone.pos and zone.pos.x or 0
+            local py = zone.pos and zone.pos.y or 0
+            local pz = zone.pos and zone.pos.z or 0
+            local radius = tonumber(zone.radius) or 450
+            local owner = zone.owner or "neutral"
 
-        GWRP.Database.Call("INSERT_MAP_TURF", {
-            mapKey,
-            idNum,
-            name,
-            px,
-            py,
-            pz,
-            radius,
-            owner
-        })
-    end
-    print(string.format("[GWRP-DB] Committed %d turf zones via canned queries for map '%s'.", table.Count(zonesTable), mapName))
+            GWRP.Database.Call("INSERT_MAP_TURF", {
+                mapKey,
+                idNum,
+                name,
+                px,
+                py,
+                pz,
+                radius,
+                owner
+            })
+        end
+        print(string.format("[GWRP-DB] Committed %d turf zones via atomic transaction for map '%s'.", table.Count(zonesTable), mapName))
+        return true
+    end)
 end
 
 function GWRP.Database.LoadTurfZones(mapName)
