@@ -3,19 +3,19 @@
     Author: Toxic
 --]]
 
-GWRP.Inventory = GWRP.Inventory or {}
-GWRP.Inventory.ClientItems = {}
-GWRP.Inventory.ClientBags = { bag1 = "", bag2 = "", bag3 = "", bag4 = "" }
-GWRP.Inventory.Slots = {}
+GW.Inventory = GW.Inventory or {}
+GW.Inventory.ClientItems = {}
+GW.Inventory.ClientBags = { bag1 = "", bag2 = "", bag3 = "", bag4 = "" }
+GW.Inventory.Slots = {}
 
 -- ========================================================
 -- NETWORK SYNC RECEIVER (SLOTS & BAGS)
 -- ========================================================
 
-net.Receive("GWRP_SyncInventory", function()
+net.Receive("GW_SyncInventory", function()
     local count = net.ReadUInt(16)
-    GWRP.Inventory.ClientItems = {}
-    GWRP.Inventory.Slots = {}
+    GW.Inventory.ClientItems = {}
+    GW.Inventory.Slots = {}
 
     for i = 1, count do
         local id = net.ReadUInt(32)
@@ -36,11 +36,11 @@ net.Receive("GWRP_SyncInventory", function()
             item_data = util.JSONToTable(rawData) or {}
         }
 
-        table.insert(GWRP.Inventory.ClientItems, itemEntry)
-        GWRP.Inventory.Slots[bagIndex .. "_" .. slotIndex] = itemEntry
+        table.insert(GW.Inventory.ClientItems, itemEntry)
+        GW.Inventory.Slots[bagIndex .. "_" .. slotIndex] = itemEntry
     end
 
-    GWRP.Inventory.ClientBags = {
+    GW.Inventory.ClientBags = {
         bag1 = net.ReadString(),
         bag2 = net.ReadString(),
         bag3 = net.ReadString(),
@@ -48,25 +48,25 @@ net.Receive("GWRP_SyncInventory", function()
     }
 
     -- Refresh Bag Window if open
-    if GWRP.UI and GWRP.UI.RefreshBag then
-        GWRP.UI.RefreshBag()
+    if GW.UI and GW.UI.RefreshBag then
+        GW.UI.RefreshBag()
     end
 
     -- If F4 menu is open on inventory tab, refresh it
-    if IsValid(GWRP.UI.F4Frame) and GWRP.UI.ActiveF4Tab == "inventory" then
-        if GWRP.UI.RefreshInventoryTab then
-            GWRP.UI.RefreshInventoryTab()
-        elseif IsValid(GWRP.UI.CurrentContentPanel) then
-            GWRP.UI.CurrentContentPanel:Clear()
-            GWRP.UI.RenderContentTab(GWRP.UI.CurrentContentPanel, "inventory", GWRP.UI.F4Frame)
+    if IsValid(GW.UI.F4Frame) and GW.UI.ActiveF4Tab == "inventory" then
+        if GW.UI.RefreshInventoryTab then
+            GW.UI.RefreshInventoryTab()
+        elseif IsValid(GW.UI.CurrentContentPanel) then
+            GW.UI.CurrentContentPanel:Clear()
+            GW.UI.RenderContentTab(GW.UI.CurrentContentPanel, "inventory", GW.UI.F4Frame)
         end
     end
 
-    hook.Run("GWRP_InventorySynced")
+    hook.Run("GW_InventorySynced")
 end)
 
-function GWRP.Inventory.MoveSlot(fromBag, fromSlot, toBag, toSlot)
-    net.Start("GWRP_MoveInventorySlot")
+function GW.Inventory.MoveSlot(fromBag, fromSlot, toBag, toSlot)
+    net.Start("GW_MoveInventorySlot")
         net.WriteUInt(fromBag, 8)
         net.WriteUInt(fromSlot, 8)
         net.WriteUInt(toBag, 8)
@@ -74,59 +74,59 @@ function GWRP.Inventory.MoveSlot(fromBag, fromSlot, toBag, toSlot)
     net.SendToServer()
 end
 
-function GWRP.Inventory.DropSlot(bagIndex, slotIndex)
-    net.Start("GWRP_DropInventorySlot")
+function GW.Inventory.DropSlot(bagIndex, slotIndex)
+    net.Start("GW_DropInventorySlot")
         net.WriteUInt(bagIndex, 8)
         net.WriteUInt(slotIndex, 8)
     net.SendToServer()
 end
 
-function GWRP.Inventory.UseSlot(bagIndex, slotIndex)
-    net.Start("GWRP_UseInventorySlot")
+function GW.Inventory.UseSlot(bagIndex, slotIndex)
+    net.Start("GW_UseInventorySlot")
         net.WriteUInt(bagIndex, 8)
         net.WriteUInt(slotIndex, 8)
     net.SendToServer()
 end
 
-function GWRP.Inventory.DropItem(rowId)
-    net.Start("GWRP_DropInventoryItem")
+function GW.Inventory.DropItem(rowId)
+    net.Start("GW_DropInventoryItem")
         net.WriteUInt(rowId, 32)
     net.SendToServer()
 end
 
-function GWRP.Inventory.UseItem(rowId)
-    net.Start("GWRP_UseInventoryItem")
+function GW.Inventory.UseItem(rowId)
+    net.Start("GW_UseInventoryItem")
         net.WriteUInt(rowId, 32)
     net.SendToServer()
 end
 
 -- Shortcuts: /inv, /inventory, /bag, console "inventory", console "bag"
 concommand.Add("inventory", function()
-    if GWRP.UI and GWRP.UI.ToggleBag then
-        GWRP.UI.ToggleBag()
+    if GW.UI and GW.UI.ToggleBag then
+        GW.UI.ToggleBag()
     else
-        GWRP.UI.ActiveF4Tab = "inventory"
-        GWRP.UI.ToggleF4Menu()
+        GW.UI.ActiveF4Tab = "inventory"
+        GW.UI.ToggleF4Menu()
     end
 end)
 
 concommand.Add("inv", function()
-    if GWRP.UI and GWRP.UI.ToggleBag then
-        GWRP.UI.ToggleBag()
+    if GW.UI and GW.UI.ToggleBag then
+        GW.UI.ToggleBag()
     else
-        GWRP.UI.ActiveF4Tab = "inventory"
-        GWRP.UI.ToggleF4Menu()
+        GW.UI.ActiveF4Tab = "inventory"
+        GW.UI.ToggleF4Menu()
     end
 end)
 
 concommand.Add("bag", function()
-    if GWRP.UI and GWRP.UI.ToggleBag then
-        GWRP.UI.ToggleBag()
+    if GW.UI and GW.UI.ToggleBag then
+        GW.UI.ToggleBag()
     end
 end)
 
 concommand.Add("bags", function()
-    if GWRP.UI and GWRP.UI.ToggleBag then
-        GWRP.UI.ToggleBag()
+    if GW.UI and GW.UI.ToggleBag then
+        GW.UI.ToggleBag()
     end
 end)

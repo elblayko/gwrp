@@ -2,9 +2,9 @@
     cl_economy.lua - Client Currency Formatters
 --]]
 
-GWRP.EconomyClient = GWRP.EconomyClient or {}
+GW.EconomyClient = GW.EconomyClient or {}
 
-function GWRP.FormatMoney(amount)
+function GW.FormatMoney(amount)
     local formatted = tostring(math.floor(amount or 0))
     local k
     while true do

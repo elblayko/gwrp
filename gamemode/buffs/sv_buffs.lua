@@ -3,7 +3,7 @@
     Author: Toxic
 --]]
 
-GWRP.Buffs = GWRP.Buffs or {}
+GW.Buffs = GW.Buffs or {}
 
 -- ========================================================
 -- BUFF APPLICATION, REMOVAL & SYNC API
@@ -17,15 +17,15 @@ if meta then
     -- @param customData (table|nil) Metadata payload
     -- @param initialStacks (number|nil) Starting stack count
     function meta:AddBuff(buffId, duration, customData, initialStacks)
-        local def = GWRP.Buffs.Get(buffId)
+        local def = GW.Buffs.Get(buffId)
         if not def then
             print("[GWRP-Buffs ERROR] Cannot add unregistered buff: " .. tostring(buffId))
             return false
         end
 
-        self.GWRP_ActiveBuffs = self.GWRP_ActiveBuffs or {}
+        self.GW_ActiveBuffs = self.GW_ActiveBuffs or {}
         local now = CurTime()
-        local inst = self.GWRP_ActiveBuffs[buffId]
+        local inst = self.GW_ActiveBuffs[buffId]
         local dur = duration or def.duration
         local isFirst = (inst == nil)
 
@@ -57,7 +57,7 @@ if meta then
                 data = customData or {},
                 appliedAtUnix = os.time()
             }
-            self.GWRP_ActiveBuffs[buffId] = inst
+            self.GW_ActiveBuffs[buffId] = inst
             def.OnApplied(self, inst, true)
         end
 
@@ -67,7 +67,7 @@ if meta then
         end
 
         -- Network single addition to client
-        net.Start("GWRP_SyncBuffAdded")
+        net.Start("GW_SyncBuffAdded")
             net.WriteString(buffId)
             net.WriteFloat(inst.duration)
             net.WriteFloat(inst.expiresAt > 0 and (inst.expiresAt - now) or -1)
@@ -76,10 +76,10 @@ if meta then
         net.Send(self)
 
         -- Persist to SQLite if enabled
-        if def.persist ~= false and GWRP.Database and GWRP.Database.SavePlayerBuff then
+        if def.persist ~= false and GW.Database and GW.Database.SavePlayerBuff then
             local remaining = inst.expiresAt > 0 and math.max(0, inst.expiresAt - now) or -1
             local expiresUnix = (inst.expiresAt > 0) and (os.time() + math.ceil(remaining)) or 0
-            GWRP.Database.SavePlayerBuff(
+            GW.Database.SavePlayerBuff(
                 self:SteamID(),
                 buffId,
                 inst.duration,
@@ -98,16 +98,16 @@ if meta then
     -- @param buffId (string) Unique ID
     -- @param reason (string|nil) "expired", "manual", "cleansed", "death"
     function meta:RemoveBuff(buffId, reason)
-        self.GWRP_ActiveBuffs = self.GWRP_ActiveBuffs or {}
-        local inst = self.GWRP_ActiveBuffs[buffId]
+        self.GW_ActiveBuffs = self.GW_ActiveBuffs or {}
+        local inst = self.GW_ActiveBuffs[buffId]
         if not inst then return false end
 
-        local def = GWRP.Buffs.Get(buffId)
+        local def = GW.Buffs.Get(buffId)
         if def then
             def.OnRemoved(self, inst, reason or "manual")
         end
 
-        self.GWRP_ActiveBuffs[buffId] = nil
+        self.GW_ActiveBuffs[buffId] = nil
 
         -- Speed recalculation
         if def and def.ModifySpeed then
@@ -115,14 +115,14 @@ if meta then
         end
 
         -- Network removal to client
-        net.Start("GWRP_SyncBuffRemoved")
+        net.Start("GW_SyncBuffRemoved")
             net.WriteString(buffId)
             net.WriteString(reason or "manual")
         net.Send(self)
 
         -- Delete from SQLite
-        if def and def.persist ~= false and GWRP.Database and GWRP.Database.DeletePlayerBuff then
-            GWRP.Database.DeletePlayerBuff(self:SteamID(), buffId)
+        if def and def.persist ~= false and GW.Database and GW.Database.DeletePlayerBuff then
+            GW.Database.DeletePlayerBuff(self:SteamID(), buffId)
         end
 
         return true
@@ -131,9 +131,9 @@ if meta then
     --- Clears all active buffs from the player.
     -- @param onlyNonPersistent (boolean|nil) If true, preserves persistDeath buffs
     function meta:ClearBuffs(onlyNonPersistent)
-        self.GWRP_ActiveBuffs = self.GWRP_ActiveBuffs or {}
-        for buffId, inst in pairs(self.GWRP_ActiveBuffs) do
-            local def = GWRP.Buffs.Get(buffId)
+        self.GW_ActiveBuffs = self.GW_ActiveBuffs or {}
+        for buffId, inst in pairs(self.GW_ActiveBuffs) do
+            local def = GW.Buffs.Get(buffId)
             if not (onlyNonPersistent and def and def.persistDeath) then
                 self:RemoveBuff(buffId, "clear")
             end
@@ -142,11 +142,11 @@ if meta then
 
     --- Synchronizes all active buffs on this player to their client.
     function meta:SyncAllBuffs()
-        self.GWRP_ActiveBuffs = self.GWRP_ActiveBuffs or {}
+        self.GW_ActiveBuffs = self.GW_ActiveBuffs or {}
         local list = {}
         local now = CurTime()
 
-        for buffId, inst in pairs(self.GWRP_ActiveBuffs) do
+        for buffId, inst in pairs(self.GW_ActiveBuffs) do
             table.insert(list, {
                 id = buffId,
                 duration = inst.duration,
@@ -156,7 +156,7 @@ if meta then
             })
         end
 
-        net.Start("GWRP_SyncAllBuffs")
+        net.Start("GW_SyncAllBuffs")
             net.WriteUInt(#list, 8)
             for _, b in ipairs(list) do
                 net.WriteString(b.id)
@@ -174,15 +174,15 @@ end
 -- ========================================================
 
 local nextThinkCheck = 0
-hook.Add("Think", "GWRP_BuffsThinkEngine", function()
+hook.Add("Think", "GW_BuffsThinkEngine", function()
     local now = CurTime()
     if now < nextThinkCheck then return end
     nextThinkCheck = now + 0.1 -- 10Hz throttle
 
     for _, ply in ipairs(player.GetAll()) do
-        if IsValid(ply) and ply.GWRP_ActiveBuffs then
-            for buffId, inst in pairs(ply.GWRP_ActiveBuffs) do
-                local def = GWRP.Buffs.Get(buffId)
+        if IsValid(ply) and ply.GW_ActiveBuffs then
+            for buffId, inst in pairs(ply.GW_ActiveBuffs) do
+                local def = GW.Buffs.Get(buffId)
                 if def then
                     -- 1. Check Duration Expiration
                     if inst.expiresAt > 0 and now >= inst.expiresAt then
@@ -204,7 +204,7 @@ end)
 -- ========================================================
 
 -- Player Spawn: Ensure speeds match active buffs
-hook.Add("PlayerSpawn", "GWRP_BuffsApplySpeedsOnSpawn", function(ply)
+hook.Add("PlayerSpawn", "GW_BuffsApplySpeedsOnSpawn", function(ply)
     timer.Simple(0.1, function()
         if IsValid(ply) then
             ply:RecalculateSpeed()
@@ -213,10 +213,10 @@ hook.Add("PlayerSpawn", "GWRP_BuffsApplySpeedsOnSpawn", function(ply)
 end)
 
 -- Entity Take Damage: Apply active buff damage modifiers
-hook.Add("EntityTakeDamage", "GWRP_BuffsDamageModifiers", function(target, dmginfo)
-    if IsValid(target) and target:IsPlayer() and target.GWRP_ActiveBuffs then
-        for buffId, inst in pairs(target.GWRP_ActiveBuffs) do
-            local def = GWRP.Buffs.Get(buffId)
+hook.Add("EntityTakeDamage", "GW_BuffsDamageModifiers", function(target, dmginfo)
+    if IsValid(target) and target:IsPlayer() and target.GW_ActiveBuffs then
+        for buffId, inst in pairs(target.GW_ActiveBuffs) do
+            local def = GW.Buffs.Get(buffId)
             if def and def.ModifyDamageTaken then
                 local mult = def.ModifyDamageTaken(target, inst, dmginfo)
                 if isnumber(mult) then
@@ -228,11 +228,11 @@ hook.Add("EntityTakeDamage", "GWRP_BuffsDamageModifiers", function(target, dmgin
 end)
 
 -- Player Death: Remove non-death-persistent buffs (Wanted persists)
-hook.Add("PlayerDeath", "GWRP_BuffsHandleDeath", function(victim, inflictor, attacker)
-    if not IsValid(victim) or not victim.GWRP_ActiveBuffs then return end
+hook.Add("PlayerDeath", "GW_BuffsHandleDeath", function(victim, inflictor, attacker)
+    if not IsValid(victim) or not victim.GW_ActiveBuffs then return end
 
-    for buffId, inst in pairs(victim.GWRP_ActiveBuffs) do
-        local def = GWRP.Buffs.Get(buffId)
+    for buffId, inst in pairs(victim.GW_ActiveBuffs) do
+        local def = GW.Buffs.Get(buffId)
         if def and not def.persistDeath then
             victim:RemoveBuff(buffId, "death")
         end
@@ -240,17 +240,17 @@ hook.Add("PlayerDeath", "GWRP_BuffsHandleDeath", function(victim, inflictor, att
 end)
 
 -- Disconnect: Commit exact remaining time to SQLite
-hook.Add("PlayerDisconnected", "GWRP_BuffsSaveOnDisconnect", function(ply)
-    if not IsValid(ply) or not ply.GWRP_ActiveBuffs then return end
+hook.Add("PlayerDisconnected", "GW_BuffsSaveOnDisconnect", function(ply)
+    if not IsValid(ply) or not ply.GW_ActiveBuffs then return end
     local steamID = ply:SteamID()
     local now = CurTime()
 
-    for buffId, inst in pairs(ply.GWRP_ActiveBuffs) do
-        local def = GWRP.Buffs.Get(buffId)
-        if def and def.persist ~= false and GWRP.Database and GWRP.Database.SavePlayerBuff then
+    for buffId, inst in pairs(ply.GW_ActiveBuffs) do
+        local def = GW.Buffs.Get(buffId)
+        if def and def.persist ~= false and GW.Database and GW.Database.SavePlayerBuff then
             local remaining = inst.expiresAt > 0 and math.max(0, inst.expiresAt - now) or -1
             local expiresUnix = (inst.expiresAt > 0) and (os.time() + math.ceil(remaining)) or 0
-            GWRP.Database.SavePlayerBuff(
+            GW.Database.SavePlayerBuff(
                 steamID,
                 buffId,
                 inst.duration,
@@ -265,15 +265,15 @@ hook.Add("PlayerDisconnected", "GWRP_BuffsSaveOnDisconnect", function(ply)
 end)
 
 -- Player Initial Spawn: Restore persisted buffs from SQLite
-hook.Add("PlayerInitialSpawn", "GWRP_BuffsLoadOnJoin", function(ply)
+hook.Add("PlayerInitialSpawn", "GW_BuffsLoadOnJoin", function(ply)
     timer.Simple(1.5, function()
-        if not IsValid(ply) or not GWRP.Database or not GWRP.Database.GetPlayerBuffs then return end
+        if not IsValid(ply) or not GW.Database or not GW.Database.GetPlayerBuffs then return end
         local steamID = ply:SteamID()
-        local savedBuffs = GWRP.Database.GetPlayerBuffs(steamID) or {}
+        local savedBuffs = GW.Database.GetPlayerBuffs(steamID) or {}
 
         for _, row in ipairs(savedBuffs) do
             local buffId = row.buff_id
-            local def = GWRP.Buffs.Get(buffId)
+            local def = GW.Buffs.Get(buffId)
             if def then
                 local remaining = tonumber(row.remaining) or 0
                 local stacks = tonumber(row.stacks) or 1
@@ -287,7 +287,7 @@ hook.Add("PlayerInitialSpawn", "GWRP_BuffsLoadOnJoin", function(ply)
 
                     if offlineRemaining <= 0 then
                         -- Expired while offline: prune from database
-                        GWRP.Database.DeletePlayerBuff(steamID, buffId)
+                        GW.Database.DeletePlayerBuff(steamID, buffId)
                     else
                         ply:AddBuff(buffId, offlineRemaining, data, stacks)
                     end
@@ -296,7 +296,7 @@ hook.Add("PlayerInitialSpawn", "GWRP_BuffsLoadOnJoin", function(ply)
                     if remaining > 0 or remaining == -1 then
                         ply:AddBuff(buffId, remaining, data, stacks)
                     else
-                        GWRP.Database.DeletePlayerBuff(steamID, buffId)
+                        GW.Database.DeletePlayerBuff(steamID, buffId)
                     end
                 end
             end
@@ -310,18 +310,18 @@ end)
 -- CLIENT CANCEL BUFF NET RECEIVER (RIGHT-CLICK DISMISS)
 -- ========================================================
 
-net.Receive("GWRP_CancelBuff", function(len, ply)
+net.Receive("GW_CancelBuff", function(len, ply)
     if not IsValid(ply) or not ply:Alive() then return end
-    if not GWRP.CheckRateLimit(ply, "buff_cancel", 5) then return end
+    if not GW.CheckRateLimit(ply, "buff_cancel", 5) then return end
 
     local buffId = net.ReadString()
-    local def = GWRP.Buffs.Get(buffId)
+    local def = GW.Buffs.Get(buffId)
 
     if not def then return end
 
     -- Verify buff can be canceled (Debuffs cannot be canceled!)
     if not def.canCancel then
-        GWRP.Notify(ply, "You cannot dismiss this debuff!", NOTIFY_ERROR)
+        GW.Notify(ply, "You cannot dismiss this debuff!", NOTIFY_ERROR)
         return
     end
 
@@ -335,13 +335,13 @@ end)
 -- POLICE /WANTED & /UNWANTED CHAT COMMANDS
 -- ========================================================
 
-hook.Add("PlayerSay", "GWRP_BuffsPoliceCommands", function(ply, text)
+hook.Add("PlayerSay", "GW_BuffsPoliceCommands", function(ply, text)
     local lower = string.lower(string.Trim(text))
 
     -- /wanted <player> [reason]
     if string.StartWith(lower, "/wanted ") or string.StartWith(lower, "!wanted ") then
         if not ply:IsPolice() and not ply:IsAdmin() then
-            GWRP.Notify(ply, "Only Law Enforcement officers can flag suspects as wanted!", NOTIFY_ERROR)
+            GW.Notify(ply, "Only Law Enforcement officers can flag suspects as wanted!", NOTIFY_ERROR)
             return ""
         end
 
@@ -349,7 +349,7 @@ hook.Add("PlayerSay", "GWRP_BuffsPoliceCommands", function(ply, text)
         table.remove(args, 1) -- Remove command name
         local targetName = args[1]
         if not targetName then
-            GWRP.Notify(ply, "Usage: /wanted <name> [reason]", NOTIFY_HINT)
+            GW.Notify(ply, "Usage: /wanted <name> [reason]", NOTIFY_HINT)
             return ""
         end
 
@@ -367,12 +367,12 @@ hook.Add("PlayerSay", "GWRP_BuffsPoliceCommands", function(ply, text)
         end
 
         if not IsValid(targetPly) then
-            GWRP.Notify(ply, "Player not found matching '" .. targetName .. "'!", NOTIFY_ERROR)
+            GW.Notify(ply, "Player not found matching '" .. targetName .. "'!", NOTIFY_ERROR)
             return ""
         end
 
         if targetPly:IsPolice() and not ply:IsAdmin() then
-            GWRP.Notify(ply, "You cannot flag fellow law enforcement officers as wanted!", NOTIFY_ERROR)
+            GW.Notify(ply, "You cannot flag fellow law enforcement officers as wanted!", NOTIFY_ERROR)
             return ""
         end
 
@@ -385,7 +385,7 @@ hook.Add("PlayerSay", "GWRP_BuffsPoliceCommands", function(ply, text)
     -- /unwanted <player>
     elseif string.StartWith(lower, "/unwanted ") or string.StartWith(lower, "!unwanted ") then
         if not ply:IsPolice() and not ply:IsAdmin() then
-            GWRP.Notify(ply, "Only Law Enforcement officers can revoke wanted status!", NOTIFY_ERROR)
+            GW.Notify(ply, "Only Law Enforcement officers can revoke wanted status!", NOTIFY_ERROR)
             return ""
         end
 
@@ -393,7 +393,7 @@ hook.Add("PlayerSay", "GWRP_BuffsPoliceCommands", function(ply, text)
         table.remove(args, 1)
         local targetName = args[1]
         if not targetName then
-            GWRP.Notify(ply, "Usage: /unwanted <name>", NOTIFY_HINT)
+            GW.Notify(ply, "Usage: /unwanted <name>", NOTIFY_HINT)
             return ""
         end
 
@@ -406,15 +406,15 @@ hook.Add("PlayerSay", "GWRP_BuffsPoliceCommands", function(ply, text)
         end
 
         if not IsValid(targetPly) then
-            GWRP.Notify(ply, "Player not found matching '" .. targetName .. "'!", NOTIFY_ERROR)
+            GW.Notify(ply, "Player not found matching '" .. targetName .. "'!", NOTIFY_ERROR)
             return ""
         end
 
         if targetPly:HasBuff("wanted") then
             targetPly:RemoveBuff("wanted", "cleared_by_police")
-            GWRP.Notify(ply, "Revoked wanted status for " .. targetPly:Nick() .. ".", NOTIFY_GENERIC)
+            GW.Notify(ply, "Revoked wanted status for " .. targetPly:Nick() .. ".", NOTIFY_GENERIC)
         else
-            GWRP.Notify(ply, targetPly:Nick() .. " is not currently wanted.", NOTIFY_ERROR)
+            GW.Notify(ply, targetPly:Nick() .. " is not currently wanted.", NOTIFY_ERROR)
         end
         return ""
     end

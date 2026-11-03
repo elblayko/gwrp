@@ -3,14 +3,14 @@
     Author: Toxic & Antigravity
 --]]
 
-GWRP = GWRP or {}
-GWRP.Crafting = GWRP.Crafting or {}
+GW = GW or {}
+GW.Crafting = GW.Crafting or {}
 
 -- ========================================================
 -- 1. MATERIAL DEFINITIONS & VISUAL COLOR PALETTES
 -- ========================================================
 
-GWRP.Crafting.Materials = {
+GW.Crafting.Materials = {
     ["crafting_ingot_zinc"] = {
         name = "Zinc Ingot",
         type = "material",
@@ -65,7 +65,7 @@ GWRP.Crafting.Materials = {
         model = "models/gangwars/crafting/blup.mdl",
         color = Color(255, 255, 255),
         hasTint = false,
-        weapon = "weapon_gwrp_glock",
+        weapon = "weapon_gw_glock",
         desc = "Technical engineering schematic detailing the Glock-18 firearm assembly.",
         stats = "Schematic: Glock-18"
     },
@@ -77,7 +77,7 @@ GWRP.Crafting.Materials = {
         model = "models/gangwars/crafting/blup.mdl",
         color = Color(255, 255, 255),
         hasTint = false,
-        weapon = "weapon_gwrp_deagle",
+        weapon = "weapon_gw_deagle",
         desc = "Technical schematic for calibrating .50 Action Express magnum components.",
         stats = "Schematic: Desert Eagle"
     },
@@ -89,7 +89,7 @@ GWRP.Crafting.Materials = {
         model = "models/gangwars/crafting/blup.mdl",
         color = Color(255, 255, 255),
         hasTint = false,
-        weapon = "weapon_gwrp_shotgun",
+        weapon = "weapon_gw_shotgun",
         desc = "Technical schematic detailing the combat pump shotgun action assembly.",
         stats = "Schematic: SPAS-12"
     },
@@ -101,15 +101,15 @@ GWRP.Crafting.Materials = {
         model = "models/gangwars/crafting/blup.mdl",
         color = Color(255, 255, 255),
         hasTint = false,
-        weapon = "weapon_gwrp_ak47",
+        weapon = "weapon_gw_ak47",
         desc = "Military schematic detailing gas-piston assembly for the Kalashnikov rifle.",
         stats = "Schematic: AK-47 Kalashnikov"
     }
 }
 
 -- Helper: Retrieve color tint for a material entity or item icon
-function GWRP.Crafting.GetMaterialColor(matId)
-    local def = GWRP.Crafting.Materials[matId]
+function GW.Crafting.GetMaterialColor(matId)
+    local def = GW.Crafting.Materials[matId]
     if def and def.hasTint and def.color then
         return def.color
     end
@@ -117,14 +117,14 @@ function GWRP.Crafting.GetMaterialColor(matId)
 end
 
 -- Merge into the central inventory item definitions
-GWRP.Inventory = GWRP.Inventory or {}
-GWRP.Inventory.Items = GWRP.Inventory.Items or {}
-for id, data in pairs(GWRP.Crafting.Materials) do
-    GWRP.Inventory.Items[id] = data
+GW.Inventory = GW.Inventory or {}
+GW.Inventory.Items = GW.Inventory.Items or {}
+for id, data in pairs(GW.Crafting.Materials) do
+    GW.Inventory.Items[id] = data
 end
 
 -- Add the machine itself to inventory items
-GWRP.Inventory.Items["gwrp_resource_machine"] = {
+GW.Inventory.Items["gw_resource_machine"] = {
     name = "Resource Fabricator",
     type = "entity",
     subType = "Automated Extractor",
@@ -140,7 +140,7 @@ GWRP.Inventory.Items["gwrp_resource_machine"] = {
 
 -- Extraction weights (Total = 100)
 -- Zinc: 48% (Common Base) | Iron: 24% (Structural) | Steel: 12% (Military Alloy) | Blueprints: 10% | Carbon Rod: 6% (Exotic)
-GWRP.Crafting.DropTable = {
+GW.Crafting.DropTable = {
     { id = "crafting_ingot_zinc",  weight = 48 },
     { id = "crafting_ingot_iron",  weight = 24 },
     { id = "crafting_ingot_steel", weight = 12 },
@@ -157,9 +157,9 @@ GWRP.Crafting.DropTable = {
     { id = "crafting_carbon_rod",  weight = 6 }
 }
 
-function GWRP.Crafting.RollRandomResource()
+function GW.Crafting.RollRandomResource()
     local totalWeight = 0
-    for _, entry in ipairs(GWRP.Crafting.DropTable) do
+    for _, entry in ipairs(GW.Crafting.DropTable) do
         totalWeight = totalWeight + (entry.weight or 0)
     end
     if totalWeight <= 0 then return "crafting_ingot_zinc" end
@@ -168,7 +168,7 @@ function GWRP.Crafting.RollRandomResource()
     local roll = math.Rand(0, totalWeight)
     local cumulative = 0
 
-    for _, entry in ipairs(GWRP.Crafting.DropTable) do
+    for _, entry in ipairs(GW.Crafting.DropTable) do
         cumulative = cumulative + entry.weight
         if roll <= cumulative then
             if entry.isBlueprintPool then
@@ -188,14 +188,14 @@ end
 -- 3. CRAFTING RECIPES CATALOG
 -- ========================================================
 
-GWRP.Crafting.Recipes = {
+GW.Crafting.Recipes = {
     -- 1. FIREARMS (Requires weapon schematic blueprint + ingots)
     {
         id = "craft_glock",
         name = "Glock-18 Sidearm",
         category = "Weapons",
         resultType = "weapon",
-        resultId = "weapon_gwrp_glock",
+        resultId = "weapon_gw_glock",
         quality = 1,
         model = "models/weapons/w_pist_glock18.mdl",
         desc = "Standard semi-automatic sidearm. Reliable 17-round capacity.",
@@ -209,7 +209,7 @@ GWRP.Crafting.Recipes = {
         name = "Desert Eagle .50 AE",
         category = "Weapons",
         resultType = "weapon",
-        resultId = "weapon_gwrp_deagle",
+        resultId = "weapon_gw_deagle",
         quality = 2,
         model = "models/weapons/w_pist_deagle.mdl",
         desc = "Heavy caliber .50 magnum sidearm with heavy armor-piercing kinetic impact.",
@@ -224,7 +224,7 @@ GWRP.Crafting.Recipes = {
         name = "SPAS-12 Combat Shotgun",
         category = "Weapons",
         resultType = "weapon",
-        resultId = "weapon_gwrp_shotgun",
+        resultId = "weapon_gw_shotgun",
         quality = 3,
         model = "models/weapons/w_shot_m3super90.mdl",
         desc = "Close-quarters combat pump shotgun delivering devastating buckshot spread.",
@@ -239,7 +239,7 @@ GWRP.Crafting.Recipes = {
         name = "AK-47 Kalashnikov",
         category = "Weapons",
         resultType = "weapon",
-        resultId = "weapon_gwrp_ak47",
+        resultId = "weapon_gw_ak47",
         quality = 4,
         model = "models/weapons/w_rif_ak47.mdl",
         desc = "Full-auto gas-operated military assault rifle with high armor penetration.",
@@ -256,7 +256,7 @@ GWRP.Crafting.Recipes = {
         name = "Courier Satchel",
         category = "Bags",
         resultType = "bag",
-        resultId = "gwrp_bag_small",
+        resultId = "gw_bag_small",
         quality = 2,
         model = "models/props_c17/BriefCase001a.mdl",
         desc = "Compact leather satchel expanding personal inventory by +6 slots.",
@@ -269,7 +269,7 @@ GWRP.Crafting.Recipes = {
         name = "Tactical Duffel Bag",
         category = "Bags",
         resultType = "bag",
-        resultId = "gwrp_bag_medium",
+        resultId = "gw_bag_medium",
         quality = 3,
         model = "models/props_c17/Suitcase001a.mdl",
         desc = "Reinforced tactical duffel expanding personal inventory by +10 slots.",
@@ -282,7 +282,7 @@ GWRP.Crafting.Recipes = {
         name = "Military Rucksack",
         category = "Bags",
         resultType = "bag",
-        resultId = "gwrp_bag_large",
+        resultId = "gw_bag_large",
         quality = 4,
         model = "models/props_c17/Suitcase_Passenger_Physics.mdl",
         desc = "Heavy-duty tactical rucksack expanding personal inventory by +16 slots.",
@@ -298,7 +298,7 @@ GWRP.Crafting.Recipes = {
         name = "Tactical Lockpick",
         category = "Gear",
         resultType = "weapon",
-        resultId = "weapon_gwrp_lockpick",
+        resultId = "weapon_gw_lockpick",
         quality = 2,
         model = "models/weapons/w_crowbar.mdl",
         desc = "Mechanical lock bypass tool used to breach locked doors and security pins.",
@@ -311,7 +311,7 @@ GWRP.Crafting.Recipes = {
         name = "Field Medical Kit",
         category = "Gear",
         resultType = "weapon",
-        resultId = "weapon_gwrp_medkit",
+        resultId = "weapon_gw_medkit",
         quality = 1,
         model = "models/weapons/w_medkit.mdl",
         desc = "Reusable clinical field pack restoring up to +25 Health per treatment.",
@@ -347,8 +347,8 @@ GWRP.Crafting.Recipes = {
     }
 }
 
-function GWRP.Crafting.GetRecipe(recipeId)
-    for _, recipe in ipairs(GWRP.Crafting.Recipes) do
+function GW.Crafting.GetRecipe(recipeId)
+    for _, recipe in ipairs(GW.Crafting.Recipes) do
         if recipe.id == recipeId then
             return recipe
         end

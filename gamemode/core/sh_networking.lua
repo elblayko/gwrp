@@ -4,10 +4,10 @@
     Author: Toxic
 --]]
 
-GWRP.Network = GWRP.Network or {}
+GW.Network = GW.Network or {}
 
 -- Generates a deterministic subnet identifier (1..254) for a given network switch
-function GWRP.Network.GetSubnetID(switchEnt)
+function GW.Network.GetSubnetID(switchEnt)
     if not IsValid(switchEnt) then return 1 end
     if switchEnt.GetSubnetID and switchEnt:GetSubnetID() > 0 then
         return switchEnt:GetSubnetID()
@@ -18,18 +18,18 @@ function GWRP.Network.GetSubnetID(switchEnt)
 end
 
 -- Formats IPv4 address string given a subnet and host offset
-function GWRP.Network.FormatIP(subnetId, hostId)
+function GW.Network.FormatIP(subnetId, hostId)
     return string.format("192.168.%d.%d", subnetId, hostId)
 end
 
 -- Gateway IP for a switch
-function GWRP.Network.GetGatewayIP(switchEnt)
-    local subnet = GWRP.Network.GetSubnetID(switchEnt)
+function GW.Network.GetGatewayIP(switchEnt)
+    local subnet = GW.Network.GetSubnetID(switchEnt)
     return string.format("192.168.%d.1", subnet)
 end
 
 -- Generates a simulated MAC address for realism in network tools (nmap, ifconfig)
-function GWRP.Network.FormatMAC(ent, subnetId, hostId)
+function GW.Network.FormatMAC(ent, subnetId, hostId)
     local idx = IsValid(ent) and ent:EntIndex() or 1
     local sub = subnetId or 1
     local hst = hostId or 10
@@ -37,8 +37,8 @@ function GWRP.Network.FormatMAC(ent, subnetId, hostId)
 end
 
 -- Traverses and retrieves all active devices within the broadcast domain of a switch (including SFP-uplinked switches)
-function GWRP.Network.GetBroadcastDomain(switchEnt, visited)
-    if not IsValid(switchEnt) or switchEnt:GetClass() ~= "gwrp_network_switch" then
+function GW.Network.GetBroadcastDomain(switchEnt, visited)
+    if not IsValid(switchEnt) or switchEnt:GetClass() ~= "gw_network_switch" then
         return {}
     end
 
@@ -46,7 +46,7 @@ function GWRP.Network.GetBroadcastDomain(switchEnt, visited)
     if visited[switchEnt] then return {} end
     visited[switchEnt] = true
 
-    local subnet = GWRP.Network.GetSubnetID(switchEnt)
+    local subnet = GW.Network.GetSubnetID(switchEnt)
     local devices = {}
 
     -- 1. The Switch itself (Default Gateway)
@@ -54,8 +54,8 @@ function GWRP.Network.GetBroadcastDomain(switchEnt, visited)
         entity = switchEnt,
         name = switchEnt.PrintName or "L3 Network Switch (2-Cu + 2-SFP)",
         type = "switch",
-        ip = GWRP.Network.GetGatewayIP(switchEnt),
-        mac = GWRP.Network.FormatMAC(switchEnt, subnet, 1),
+        ip = GW.Network.GetGatewayIP(switchEnt),
+        mac = GW.Network.FormatMAC(switchEnt, subnet, 1),
         port = 0,
         status = "ONLINE",
         services = {
@@ -71,24 +71,24 @@ function GWRP.Network.GetBroadcastDomain(switchEnt, visited)
             local dev = portData.device or portData.printer
             if IsValid(dev) then
                 local devClass = dev:GetClass()
-                if devClass == "gwrp_network_switch" then
+                if devClass == "gw_network_switch" then
                     -- Interconnected switch trunk on SFP Combo Port 3
                     if not visited[dev] then
-                        local trunkedDevices = GWRP.Network.GetBroadcastDomain(dev, visited)
+                        local trunkedDevices = GW.Network.GetBroadcastDomain(dev, visited)
                         for _, devData in ipairs(trunkedDevices) do
                             table.insert(devices, devData)
                         end
                     end
                 else
                     local isPrinter = dev.PrintAmount ~= nil or string.find(devClass, "printer")
-                    local isComputer = devClass == "gwrp_computer" or dev.IsComputer
-                    local isSynthesizer = devClass == "gwrp_resource_machine" or string.find(devClass, "resource_machine")
-                    local isUplink = devClass == "gwrp_wan_uplink" or dev.IsWANUplink
+                    local isComputer = devClass == "gw_computer" or dev.IsComputer
+                    local isSynthesizer = devClass == "gw_resource_machine" or string.find(devClass, "resource_machine")
+                    local isUplink = devClass == "gw_wan_uplink" or dev.IsWANUplink
                     local devType = isPrinter and "printer" or (isComputer and "computer" or (isSynthesizer and "synthesizer" or (isUplink and "wan_uplink" or "device")))
 
                     local hostId = 10 + portNum
-                    local devIP = (dev.GetIPAddress and dev:GetIPAddress() ~= "") and dev:GetIPAddress() or GWRP.Network.FormatIP(subnet, hostId)
-                    local devMAC = GWRP.Network.FormatMAC(dev, subnet, hostId)
+                    local devIP = (dev.GetIPAddress and dev:GetIPAddress() ~= "") and dev:GetIPAddress() or GW.Network.FormatIP(subnet, hostId)
+                    local devMAC = GW.Network.FormatMAC(dev, subnet, hostId)
 
                     local services = {}
                     if isPrinter then
@@ -161,8 +161,8 @@ function GWRP.Network.GetBroadcastDomain(switchEnt, visited)
     local sfpData = switchEnt.Ports and switchEnt.Ports[4]
     if sfpData then
         local uplink = sfpData.device or sfpData.switch
-        if IsValid(uplink) and uplink:GetClass() == "gwrp_network_switch" and not visited[uplink] then
-            local trunkedDevices = GWRP.Network.GetBroadcastDomain(uplink, visited)
+        if IsValid(uplink) and uplink:GetClass() == "gw_network_switch" and not visited[uplink] then
+            local trunkedDevices = GW.Network.GetBroadcastDomain(uplink, visited)
             for _, devData in ipairs(trunkedDevices) do
                 table.insert(devices, devData)
             end
@@ -176,15 +176,15 @@ end
 -- 4. WAN SATELLITE MESH & INTER-SUBNET ROUTING
 -- ========================================================
 
-GWRP.Network.WANUplinks = GWRP.Network.WANUplinks or {}
+GW.Network.WANUplinks = GW.Network.WANUplinks or {}
 
 -- Recalculates all active wireless WAN mesh groups
-function GWRP.Network.RecalculateWANMesh()
+function GW.Network.RecalculateWANMesh()
     local cleanList = {}
     local keyGroups = {}
 
-    for _, uplink in ipairs(GWRP.Network.WANUplinks) do
-        if IsValid(uplink) and uplink:GetClass() == "gwrp_wan_uplink" then
+    for _, uplink in ipairs(GW.Network.WANUplinks) do
+        if IsValid(uplink) and uplink:GetClass() == "gw_wan_uplink" then
             table.insert(cleanList, uplink)
             local key = uplink:GetEncryptionKey()
             if key and key ~= "" then
@@ -195,7 +195,7 @@ function GWRP.Network.RecalculateWANMesh()
         end
     end
 
-    GWRP.Network.WANUplinks = cleanList
+    GW.Network.WANUplinks = cleanList
 
     for _, group in pairs(keyGroups) do
         local totalInGroup = #group
@@ -226,15 +226,15 @@ function GWRP.Network.RecalculateWANMesh()
 end
 
 -- Finds the active WAN uplink connected to a switch (if any)
-function GWRP.Network.GetUplinkForSwitch(switchEnt)
-    if not IsValid(switchEnt) or switchEnt:GetClass() ~= "gwrp_network_switch" then return nil end
+function GW.Network.GetUplinkForSwitch(switchEnt)
+    if not IsValid(switchEnt) or switchEnt:GetClass() ~= "gw_network_switch" then return nil end
     if not switchEnt.Ports then return nil end
 
     for portNum = 1, 3 do
         local pData = switchEnt.Ports[portNum]
         if pData then
             local dev = pData.device
-            if IsValid(dev) and dev:GetClass() == "gwrp_wan_uplink" then
+            if IsValid(dev) and dev:GetClass() == "gw_wan_uplink" then
                 return dev
             end
         end
@@ -243,8 +243,8 @@ function GWRP.Network.GetUplinkForSwitch(switchEnt)
 end
 
 -- Retrieves devices in peer subnets reachable across an active WAN mesh
-function GWRP.Network.GetWANMeshDevices(switchEnt)
-    local uplink = GWRP.Network.GetUplinkForSwitch(switchEnt)
+function GW.Network.GetWANMeshDevices(switchEnt)
+    local uplink = GW.Network.GetUplinkForSwitch(switchEnt)
     if not IsValid(uplink) or not uplink:GetIsOnline() then
         return {}
     end
@@ -255,14 +255,14 @@ function GWRP.Network.GetWANMeshDevices(switchEnt)
     local remoteDevices = {}
     local visitedSwitches = { [switchEnt] = true }
 
-    for _, otherUplink in ipairs(GWRP.Network.WANUplinks or {}) do
+    for _, otherUplink in ipairs(GW.Network.WANUplinks or {}) do
         if IsValid(otherUplink) and otherUplink ~= uplink then
             local otherKey = string.Trim(string.upper(otherUplink:GetEncryptionKey() or ""))
             if otherKey == myKey then
                 local peerSwitch = otherUplink:GetConnectedSwitch()
                 if IsValid(peerSwitch) and not visitedSwitches[peerSwitch] then
                     visitedSwitches[peerSwitch] = true
-                    local peerDevices = GWRP.Network.GetBroadcastDomain(peerSwitch)
+                    local peerDevices = GW.Network.GetBroadcastDomain(peerSwitch)
                     for _, devData in ipairs(peerDevices) do
                         devData.isRemoteWAN = true
                         devData.viaWAN = otherUplink
@@ -277,10 +277,10 @@ function GWRP.Network.GetWANMeshDevices(switchEnt)
 end
 
 -- Retrieves all reachable devices (Local Broadcast Domain + Remote WAN Mesh Subnets)
-function GWRP.Network.GetAllReachableDevices(switchEnt)
+function GW.Network.GetAllReachableDevices(switchEnt)
     if not IsValid(switchEnt) then return {} end
-    local localDevs = GWRP.Network.GetBroadcastDomain(switchEnt)
-    local wanDevs = GWRP.Network.GetWANMeshDevices(switchEnt)
+    local localDevs = GW.Network.GetBroadcastDomain(switchEnt)
+    local wanDevs = GW.Network.GetWANMeshDevices(switchEnt)
 
     local all = {}
     for _, d in ipairs(localDevs) do table.insert(all, d) end
@@ -289,9 +289,9 @@ function GWRP.Network.GetAllReachableDevices(switchEnt)
 end
 
 -- Searches for any host by IP address reachable from a switch
-function GWRP.Network.FindReachableDeviceByIP(switchEnt, targetIP)
+function GW.Network.FindReachableDeviceByIP(switchEnt, targetIP)
     if not targetIP or targetIP == "" then return nil end
-    local devices = GWRP.Network.GetAllReachableDevices(switchEnt)
+    local devices = GW.Network.GetAllReachableDevices(switchEnt)
     for _, dev in ipairs(devices) do
         if dev.ip == targetIP then
             return dev
@@ -301,8 +301,8 @@ function GWRP.Network.FindReachableDeviceByIP(switchEnt, targetIP)
 end
 
 -- Scans wireless spectrum for active WAN transmitters within maximum sniffing distance (for airmon / wan scan)
-function GWRP.Network.GetActiveWANSpectrum(origin, maxDist)
-    maxDist = maxDist or (GWRP.Config and GWRP.Config.WLANSniffMaxDistance) or 2500
+function GW.Network.GetActiveWANSpectrum(origin, maxDist)
+    maxDist = maxDist or (GW.Config and GW.Config.WLANSniffMaxDistance) or 2500
 
     local originPos = nil
     local localUplink = nil
@@ -312,14 +312,14 @@ function GWRP.Network.GetActiveWANSpectrum(origin, maxDist)
     elseif isentity(origin) and IsValid(origin) then
         if origin:IsPlayer() then
             originPos = origin:GetPos()
-        elseif origin:GetClass() == "weapon_gwrp_cyberphone" then
+        elseif origin:GetClass() == "weapon_gw_cyberphone" then
             local owner = origin:GetOwner()
             originPos = (IsValid(owner) and owner:GetPos()) or origin:GetPos()
-        elseif origin:GetClass() == "gwrp_computer" then
+        elseif origin:GetClass() == "gw_computer" then
             originPos = origin:GetPos()
             local sw = origin:GetConnectedSwitch()
-            if IsValid(sw) and GWRP.Network.GetUplinkForSwitch then
-                localUplink = GWRP.Network.GetUplinkForSwitch(sw)
+            if IsValid(sw) and GW.Network.GetUplinkForSwitch then
+                localUplink = GW.Network.GetUplinkForSwitch(sw)
             end
         else
             originPos = origin:GetPos()
@@ -327,7 +327,7 @@ function GWRP.Network.GetActiveWANSpectrum(origin, maxDist)
     end
 
     local spectrum = {}
-    for _, uplink in ipairs(GWRP.Network.WANUplinks or {}) do
+    for _, uplink in ipairs(GW.Network.WANUplinks or {}) do
         if IsValid(uplink) then
             local upPos = uplink:GetPos()
             local dist = originPos and originPos:Distance(upPos) or nil

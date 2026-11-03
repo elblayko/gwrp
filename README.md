@@ -170,25 +170,25 @@ On shutdown, every player plus the turf map profile is committed.
 | Buff ticks | per buff | HoT, poison and so on, persisted so offline time is handled correctly (`tickOffline`). |
 
 ### State and networking
-- Player state (money, job, gang, level, XP) is held in **networked vars** (`GWRP_Money`, `GWRP_Job`, `GWRP_Gang`, `GWRP_Level`, `GWRP_XP`) and saved to SQLite.
-- Client actions (buy, change job, door actions, admin actions) use **net messages** with **per-action rate limiting** (`GWRP.CheckRateLimit`) and server-side validation (level, job, distance, affordability).
+- Player state (money, job, gang, level, XP) is held in **networked vars** (`GW_Money`, `GW_Job`, `GW_Gang`, `GW_Level`, `GW_XP`) and saved to SQLite.
+- Client actions (buy, change job, door actions, admin actions) use **net messages** with **per-action rate limiting** (`GW.CheckRateLimit`) and server-side validation (level, job, distance, affordability).
 - Admin net actions require `IsAdmin()`/`IsSuperAdmin()`.
 
 ### Persistence
 
 [core/sv_database.lua](gamemode/core/sv_database.lua) provides:
-- `?`-placeholder **prepared statements** with sanitization, plus a **catalog of named procedures** (`GWRP.Database.Call("GET_PLAYER", {steamid})`).
+- `?`-placeholder **prepared statements** with sanitization, plus a **catalog of named procedures** (`GW.Database.Call("GET_PLAYER", {steamid})`).
 - **Nested transactions** (`WithTransaction`) with automatic rollback.
 - **Migrations** for added columns.
 
 | Table | Purpose |
 |---|---|
-| `gwrp_players` | money, respect, gang, job, level, xp, last_seen |
-| `gwrp_gangs` / `gwrp_gang_members` | gang registry, bank, leader, member ranks |
-| `gwrp_inventory` / `gwrp_player_bags` | slot-grid items and equipped bags |
-| `gwrp_turfs` | per-map turf zones and owners |
-| `gwrp_player_buffs` | persistent buffs and debuffs |
-| `gwrp_settings` | key/value settings |
+| `gw_players` | money, respect, gang, job, level, xp, last_seen |
+| `gw_gangs` / `gw_gang_members` | gang registry, bank, leader, member ranks |
+| `gw_inventory` / `gw_player_bags` | slot-grid items and equipped bags |
+| `gw_turfs` | per-map turf zones and owners |
+| `gw_player_buffs` | persistent buffs and debuffs |
+| `gw_settings` | key/value settings |
 
 Turf zones are also exported to `data/gangwarsrp/maps/<map>.json` as a backup. Load order is **SQLite → JSON → built-in template**.
 
@@ -247,7 +247,7 @@ Main settings are in [gamemode/core/sh_config.lua](gamemode/core/sh_config.lua).
 | `Level.*` | see file | Max level, XP curve, rewards |
 | `DefaultShopMarkupPercent` | 65 | Default kiosk markup |
 
-Jobs are in [sh_factions.lua](gamemode/factions/sh_factions.lua). Shop items are in `GWRP.ShopItems` in `sh_config.lua`.
+Jobs are in [sh_factions.lua](gamemode/factions/sh_factions.lua). Shop items are in `GW.ShopItems` in `sh_config.lua`.
 
 ---
 
@@ -273,11 +273,11 @@ Jobs are in [sh_factions.lua](gamemode/factions/sh_factions.lua). Shop items are
 ### Admin (admin or superadmin)
 | Command | Description |
 |---|---|
-| `/admin`, `/debug`, `gwrp_admin` | Open the admin/debug HUD |
-| `/turfsetup`, `/adminsetup`, `gwrp_turfsetup` | Open the turf editor |
+| `/admin`, `/debug`, `gw_admin` | Open the admin/debug HUD |
+| `/turfsetup`, `/adminsetup`, `gw_turfsetup` | Open the turf editor |
 | `/setmoney`, `/addmoney <player> <amt>` | Wallet control |
 | `/setlevel <player> <lvl>`, `/addxp <player> <amt>` | Progression control |
-| `gwrp_setlevel`, `gwrp_addxp` | Console equivalents |
+| `gw_setlevel`, `gw_addxp` | Console equivalents |
 
 The admin HUD also provides: set job/gang/health/armor, godmode, goto/bring/respawn, trigger payday/dividends and spawn entities.
 
@@ -322,12 +322,12 @@ All jobs receive fists, keys, physgun, gravity gun and toolgun. Police also spaw
 
 ## Extending the Gamemode
 
-- **Add a job:** add an entry to `GWRP.Jobs` in `factions/sh_factions.lua` (name, level, faction, salary, weapons, models, max, desc).
-- **Add a shop item:** add to `GWRP.ShopItems` in `core/sh_config.lua` (`type` = weapon/ammo/entity/shipment/consumable/armor/medkit/buff).
-- **Add a crafting recipe or material:** edit `GWRP.Crafting.Materials`, `DropTable` and `Recipes` in `crafting/sh_crafting.lua`.
-- **Add a buff:** call `GWRP.Buffs.Register(id, {...})` in `buffs/sh_buff_definitions.lua`. Hooks include `OnApplied`, `OnTick`, `OnRemoved`, `ModifySpeed` and `ModifyDamageTaken`.
-- **Add an entity or weapon:** create a folder under `entities/entities/` or `entities/weapons/` with `shared.lua`, `init.lua` and `cl_init.lua`. Register item data in `sh_inventory.lua` or `GWRP.Config.EntityQualities`.
-- **Add a DB query:** add a named statement to `GWRP.Database.Procedures`, then call it via `GWRP.Database.Call`.
+- **Add a job:** add an entry to `GW.Jobs` in `factions/sh_factions.lua` (name, level, faction, salary, weapons, models, max, desc).
+- **Add a shop item:** add to `GW.ShopItems` in `core/sh_config.lua` (`type` = weapon/ammo/entity/shipment/consumable/armor/medkit/buff).
+- **Add a crafting recipe or material:** edit `GW.Crafting.Materials`, `DropTable` and `Recipes` in `crafting/sh_crafting.lua`.
+- **Add a buff:** call `GW.Buffs.Register(id, {...})` in `buffs/sh_buff_definitions.lua`. Hooks include `OnApplied`, `OnTick`, `OnRemoved`, `ModifySpeed` and `ModifyDamageTaken`.
+- **Add an entity or weapon:** create a folder under `entities/entities/` or `entities/weapons/` with `shared.lua`, `init.lua` and `cl_init.lua`. Register item data in `sh_inventory.lua` or `GW.Config.EntityQualities`.
+- **Add a DB query:** add a named statement to `GW.Database.Procedures`, then call it via `GW.Database.Call`.
 
 ---
 

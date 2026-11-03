@@ -3,12 +3,12 @@
     Door Raycast HUD Tag is handled natively in cl_hud.lua (matching printer & clinic pod HUD elements)
 --]]
 
-GWRP.Doors = GWRP.Doors or {}
+GW.Doors = GW.Doors or {}
 
 -- Remove legacy 3D2D in-world door text hook to prevent text clipping into door frames
-hook.Remove("PostDrawOpaqueRenderables", "GWRP_DrawDoorText")
+hook.Remove("PostDrawOpaqueRenderables", "GW_DrawDoorText")
 
-function GWRP.Doors.OpenDoorMenu()
+function GW.Doors.OpenDoorMenu()
     local ply = LocalPlayer()
     if not IsValid(ply) then return end
 
@@ -17,15 +17,15 @@ function GWRP.Doors.OpenDoorMenu()
     if not IsValid(ent) or not ent:isDoor() then return end
     if tr.HitPos:DistToSqr(ply:EyePos()) > (180 * 180) and ply:GetPos():DistToSqr(ent:GetPos()) > (180 * 180) then return end
 
-    if IsValid(GWRP.Doors.ActiveMenu) then
-        GWRP.Doors.ActiveMenu:Remove()
+    if IsValid(GW.Doors.ActiveMenu) then
+        GW.Doors.ActiveMenu:Remove()
     end
 
-    local owner = ent:GetNWEntity("GWRP_DoorOwner")
-    local gangName = ent:GetNWString("GWRP_DoorFaction", "")
+    local owner = ent:GetNWEntity("GW_DoorOwner")
+    local gangName = ent:GetNWString("GW_DoorFaction", "")
     local isOwned = IsValid(owner)
     local isOwner = isOwned and (owner == ply)
-    local cost = (GWRP.Config and GWRP.Config.DoorCost) or 15
+    local cost = (GW.Config and GW.Config.DoorCost) or 15
 
     local w, h = 380, 200
     local frame = vgui.Create("DFrame")
@@ -34,7 +34,7 @@ function GWRP.Doors.OpenDoorMenu()
     frame:SetTitle("")
     frame:MakePopup()
     frame:ShowCloseButton(false)
-    GWRP.Doors.ActiveMenu = frame
+    GW.Doors.ActiveMenu = frame
 
     local accentCol = isOwner and Color(52, 211, 153) or (isOwned and Color(251, 191, 36) or Color(6, 182, 212))
 
@@ -51,9 +51,9 @@ function GWRP.Doors.OpenDoorMenu()
         draw.RoundedBox(4, 18, 14, 52, 20, Color(accentCol.r, accentCol.g, accentCol.b, 35))
         surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 140)
         surface.DrawOutlinedRect(18, 14, 52, 20, 1)
-        draw.SimpleText("DOOR", "GWRP_UI_Badge", 44, 24, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("DOOR", "GW_UI_Badge", 44, 24, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        draw.SimpleText("Property Management", "GWRP_UI_Sub", 80, 24, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Property Management", "GW_UI_Sub", 80, 24, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
         -- Subtitle Info
         local subInfo
@@ -65,7 +65,7 @@ function GWRP.Doors.OpenDoorMenu()
         else
             subInfo = string.format("Owner: %s%s", owner:Nick(), (gangName ~= "" and (" [" .. gangName .. "]") or ""))
         end
-        draw.SimpleText(subInfo, "GWRP_UI_Caption", 18, 48, Color(148, 163, 184))
+        draw.SimpleText(subInfo, "GW_UI_Caption", 18, 48, Color(148, 163, 184))
     end
 
     -- Close Button [X]
@@ -76,7 +76,7 @@ function GWRP.Doors.OpenDoorMenu()
     closeBtn.Paint = function(s, bw, bh)
         local bg = s:IsHovered() and Color(239, 68, 68, 200) or Color(30, 41, 59, 160)
         draw.RoundedBox(4, 0, 0, bw, bh, bg)
-        draw.SimpleText("✕", "GWRP_UI_Badge", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("✕", "GW_UI_Badge", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     closeBtn.DoClick = function()
         frame:Close()
@@ -98,7 +98,7 @@ function GWRP.Doors.OpenDoorMenu()
         local descLabel = vgui.Create("DLabel", card)
         descLabel:SetPos(16, 14)
         descLabel:SetSize(w - 68, 22)
-        descLabel:SetFont("GWRP_FontSmall")
+        descLabel:SetFont("GW_FontSmall")
         descLabel:SetTextColor(Color(226, 232, 240))
         descLabel:SetText("Purchase this door to lock, unlock, and secure access.")
 
@@ -114,14 +114,14 @@ function GWRP.Doors.OpenDoorMenu()
 
             local txt = canAfford and ("PURCHASE PROPERTY ($" .. string.Comma(cost) .. ")") or ("CANNOT AFFORD ($" .. string.Comma(cost) .. ")")
             local txtCol = canAfford and Color(248, 250, 252) or Color(148, 163, 184)
-            draw.SimpleText(txt, "GWRP_UI_Btn", bw / 2, bh / 2, txtCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(txt, "GW_UI_Btn", bw / 2, bh / 2, txtCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         buyBtn.DoClick = function()
             if not ply:CanAfford(cost) then
                 surface.PlaySound("buttons/button10.wav")
                 return
             end
-            net.Start("GWRP_DoorAction")
+            net.Start("GW_DoorAction")
                 net.WriteEntity(ent)
                 net.WriteString("buy")
             net.SendToServer()
@@ -135,7 +135,7 @@ function GWRP.Doors.OpenDoorMenu()
         local descLabel = vgui.Create("DLabel", card)
         descLabel:SetPos(16, 14)
         descLabel:SetSize(w - 68, 22)
-        descLabel:SetFont("GWRP_FontSmall")
+        descLabel:SetFont("GW_FontSmall")
         descLabel:SetTextColor(Color(226, 232, 240))
         descLabel:SetText("You are the registered owner of this property.")
 
@@ -146,10 +146,10 @@ function GWRP.Doors.OpenDoorMenu()
         sellBtn.Paint = function(s, bw, bh)
             local bg = s:IsHovered() and Color(239, 68, 68, 200) or Color(185, 28, 28, 160)
             draw.RoundedBox(6, 0, 0, bw, bh, bg)
-            draw.SimpleText("SELL PROPERTY (+$" .. string.Comma(refund) .. ")", "GWRP_UI_Btn", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("SELL PROPERTY (+$" .. string.Comma(refund) .. ")", "GW_UI_Btn", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         sellBtn.DoClick = function()
-            net.Start("GWRP_DoorAction")
+            net.Start("GW_DoorAction")
                 net.WriteEntity(ent)
                 net.WriteString("sell")
             net.SendToServer()
@@ -161,14 +161,14 @@ function GWRP.Doors.OpenDoorMenu()
         local descLabel = vgui.Create("DLabel", card)
         descLabel:SetPos(16, 20)
         descLabel:SetSize(w - 68, 24)
-        descLabel:SetFont("GWRP_FontSmall")
+        descLabel:SetFont("GW_FontSmall")
         descLabel:SetTextColor(Color(248, 250, 252))
         descLabel:SetText("Private Residence - No Unauthorized Access")
 
         local subDesc = vgui.Create("DLabel", card)
         subDesc:SetPos(16, 50)
         subDesc:SetSize(w - 68, 22)
-        subDesc:SetFont("GWRP_UI_Caption")
+        subDesc:SetFont("GW_UI_Caption")
         subDesc:SetTextColor(Color(148, 163, 184))
         subDesc:SetText("This property is currently occupied and managed by another citizen.")
     end

@@ -3,10 +3,10 @@
     Author: Toxic
 --]]
 
-GWRP.Inventory = GWRP.Inventory or {}
+GW.Inventory = GW.Inventory or {}
 
 -- Item Quality Tiers & Color Palette
-GWRP.Inventory.Quality = {
+GW.Inventory.Quality = {
     POOR = { id = 0, name = "Poor", color = Color(157, 157, 157) },
     COMMON = { id = 1, name = "Common", color = Color(248, 250, 252) },
     UNCOMMON = { id = 2, name = "Uncommon", color = Color(30, 255, 0) },
@@ -15,19 +15,19 @@ GWRP.Inventory.Quality = {
     LEGENDARY = { id = 5, name = "Legendary", color = Color(255, 128, 0) }
 }
 
-function GWRP.Inventory.GetQualityColor(q)
+function GW.Inventory.GetQualityColor(q)
     if type(q) == "table" and q.color then return q.color end
-    if q == 0 or q == "poor" then return GWRP.Inventory.Quality.POOR.color end
-    if q == 2 or q == "uncommon" then return GWRP.Inventory.Quality.UNCOMMON.color end
-    if q == 3 or q == "rare" then return GWRP.Inventory.Quality.RARE.color end
-    if q == 4 or q == "epic" then return GWRP.Inventory.Quality.EPIC.color end
-    if q == 5 or q == "legendary" then return GWRP.Inventory.Quality.LEGENDARY.color end
-    return GWRP.Inventory.Quality.COMMON.color
+    if q == 0 or q == "poor" then return GW.Inventory.Quality.POOR.color end
+    if q == 2 or q == "uncommon" then return GW.Inventory.Quality.UNCOMMON.color end
+    if q == 3 or q == "rare" then return GW.Inventory.Quality.RARE.color end
+    if q == 4 or q == "epic" then return GW.Inventory.Quality.EPIC.color end
+    if q == 5 or q == "legendary" then return GW.Inventory.Quality.LEGENDARY.color end
+    return GW.Inventory.Quality.COMMON.color
 end
 
-GWRP.Inventory.Items = {
+GW.Inventory.Items = {
     -- 1. Firearms & Weapons
-    ["weapon_gwrp_glock"] = {
+    ["weapon_gw_glock"] = {
         name = "Glock-18",
         level = 1,
         type = "weapon",
@@ -37,7 +37,7 @@ GWRP.Inventory.Items = {
         desc = "Standard semi-automatic sidearm.",
         stats = "Damage: 22 | Capacity: 17 rounds"
     },
-    ["weapon_gwrp_deagle"] = {
+    ["weapon_gw_deagle"] = {
         name = "Desert Eagle",
         level = 5,
         type = "weapon",
@@ -47,7 +47,7 @@ GWRP.Inventory.Items = {
         desc = "Heavy caliber .50 magnum pistol.",
         stats = "Damage: 45 | Heavy Armor Piercing"
     },
-    ["weapon_gwrp_ak47"] = {
+    ["weapon_gw_ak47"] = {
         name = "AK-47 Kalashnikov",
         level = 8,
         type = "weapon",
@@ -57,7 +57,7 @@ GWRP.Inventory.Items = {
         desc = "Full-auto gas-operated assault rifle.",
         stats = "Damage: 34 | Full-Auto 600 RPM"
     },
-    ["weapon_gwrp_shotgun"] = {
+    ["weapon_gw_shotgun"] = {
         name = "SPAS-12 Shotgun",
         level = 3,
         type = "weapon",
@@ -67,7 +67,7 @@ GWRP.Inventory.Items = {
         desc = "Close-quarters combat pump shotgun.",
         stats = "Damage: 8x12 | Close Quarters Spread"
     },
-    ["weapon_gwrp_lockpick"] = {
+    ["weapon_gw_lockpick"] = {
         name = "Tactical Lockpick",
         level = 2,
         type = "weapon",
@@ -77,7 +77,7 @@ GWRP.Inventory.Items = {
         desc = "Tool used to infiltrate locked doors and structures.",
         stats = "Breaches locked doors in 8-15 seconds"
     },
-    ["weapon_gwrp_medkit"] = {
+    ["weapon_gw_medkit"] = {
         name = "Field Medical Kit",
         level = 1,
         type = "weapon",
@@ -97,7 +97,7 @@ GWRP.Inventory.Items = {
         desc = "Electrified crowd control baton.",
         stats = "Non-lethal electrical stun shock"
     },
-    ["weapon_gwrp_wiretool"] = {
+    ["weapon_gw_wiretool"] = {
         name = "Copper Wiring Tool",
         level = 1,
         type = "weapon",
@@ -107,7 +107,7 @@ GWRP.Inventory.Items = {
         desc = "Connects money printers to network switches via copper cables.",
         stats = "Left-Click: Run Wire | Right-Click: Unplug"
     },
-    ["weapon_gwrp_repairtool"] = {
+    ["weapon_gw_repairtool"] = {
         name = "Cryo-Thermal Calibrator",
         level = 2,
         type = "weapon",
@@ -117,7 +117,7 @@ GWRP.Inventory.Items = {
         desc = "Handheld field calibrator. Cools overheating printers (-35°C), repairs integrity, and enables Cyber-Tuning.",
         stats = "Primary: Flash-Cool (-100% Heat) | Secondary: Cyber-Tuning"
     },
-    ["weapon_gwrp_scanner"] = {
+    ["weapon_gw_scanner"] = {
         name = "Contraband Scanner",
         level = 1,
         type = "weapon",
@@ -127,7 +127,7 @@ GWRP.Inventory.Items = {
         desc = "Police acoustic & thermal scanner. Triangulates illegal money printers and broadcasts raid markers to dispatch.",
         stats = "Primary: Triangulate Signal | Secondary: Police Raid Dispatch"
     },
-    ["weapon_gwrp_ram"] = {
+    ["weapon_gw_ram"] = {
         name = "Tactical Battering Ram",
         level = 4,
         type = "weapon",
@@ -139,7 +139,7 @@ GWRP.Inventory.Items = {
     },
 
     -- 2. Money Printers & Networking Appliances
-    ["gwrp_network_switch"] = {
+    ["gw_network_switch"] = {
         name = "L3 Network Switch (2-Cu + 2-SFP)",
         type = "switch",
         subType = "Network Appliance",
@@ -148,7 +148,7 @@ GWRP.Inventory.Items = {
         desc = "Layer-3 hardware switch featuring 2 dedicated copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink.",
         stats = "2x Copper + 2x SFP (Combo + Uplink) | Layer-3 Switch"
     },
-    ["gwrp_wan_uplink"] = {
+    ["gw_wan_uplink"] = {
         name = "Satellite WAN Uplink",
         type = "uplink",
         subType = "Wireless Gateway",
@@ -157,7 +157,7 @@ GWRP.Inventory.Items = {
         desc = "Encrypted satellite transceiver dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to establish long-range wireless mesh tunnels across the map.",
         stats = "Long-Range L3 Mesh | WPA3 Encrypted"
     },
-    ["gwrp_module_undervolt"] = {
+    ["gw_module_undervolt"] = {
         name = "Undervolt Hardware Module",
         type = "module",
         subType = "Hardware Upgrade",
@@ -166,7 +166,7 @@ GWRP.Inventory.Items = {
         desc = "Microcontroller module that drops printer operating voltage.",
         stats = "+400% Lifespan | -75% Heat Output"
     },
-    ["gwrp_module_overclock"] = {
+    ["gw_module_overclock"] = {
         name = "Overclock Hardware Module",
         type = "module",
         subType = "Hardware Upgrade",
@@ -175,7 +175,7 @@ GWRP.Inventory.Items = {
         desc = "High-frequency microcontroller that maximizes printer hashing yield.",
         stats = "+50% Cash Yield Rate | +60% Heat Output"
     },
-    ["gwrp_printer_bronze"] = {
+    ["gw_printer_bronze"] = {
         name = "Money Printer",
         level = 1,
         type = "printer",
@@ -185,7 +185,7 @@ GWRP.Inventory.Items = {
         desc = "Generates recurring cash revenue.",
         stats = "Yield: $150 / 60s | Max Temp: 100C"
     },
-    ["gwrp_printer_silver"] = {
+    ["gw_printer_silver"] = {
         name = "Silver Money Printer",
         level = 4,
         type = "printer",
@@ -195,7 +195,7 @@ GWRP.Inventory.Items = {
         desc = "High efficiency commercial money printer.",
         stats = "Yield: $350 / 60s | Max Temp: 100C"
     },
-    ["gwrp_printer_diamond"] = {
+    ["gw_printer_diamond"] = {
         name = "Diamond Money Printer",
         level = 8,
         type = "printer",
@@ -207,7 +207,7 @@ GWRP.Inventory.Items = {
     },
 
     -- 3. Shipments
-    ["gwrp_shipment"] = {
+    ["gw_shipment"] = {
         name = "Weapon Crate",
         type = "shipment",
         subType = "Wholesale Container",
@@ -218,7 +218,7 @@ GWRP.Inventory.Items = {
     },
 
     -- 4. Equipable Bag Containers
-    ["gwrp_bag_small"] = {
+    ["gw_bag_small"] = {
         name = "Courier Satchel",
         type = "bag",
         subType = "Equipable Container",
@@ -228,7 +228,7 @@ GWRP.Inventory.Items = {
         desc = "Compact leather satchel expanding inventory by 6 slots.",
         stats = "+6 Inventory Slots"
     },
-    ["gwrp_bag_medium"] = {
+    ["gw_bag_medium"] = {
         name = "Tactical Duffel Bag",
         type = "bag",
         subType = "Equipable Container",
@@ -238,7 +238,7 @@ GWRP.Inventory.Items = {
         desc = "Reinforced duffel bag expanding inventory by 10 slots.",
         stats = "+10 Inventory Slots"
     },
-    ["gwrp_bag_large"] = {
+    ["gw_bag_large"] = {
         name = "Military Rucksack",
         type = "bag",
         subType = "Equipable Container",
@@ -307,25 +307,25 @@ GWRP.Inventory.Items = {
     }
 }
 
-function GWRP.Inventory.GetBagCapacity(bagId)
+function GW.Inventory.GetBagCapacity(bagId)
     if not bagId or bagId == "" then return 0 end
-    local item = GWRP.Inventory.Items[bagId]
+    local item = GW.Inventory.Items[bagId]
     if item and item.capacity then
         return item.capacity
     end
     return 0
 end
 
-function GWRP.Inventory.GetItemData(itemId)
-    if GWRP.Inventory.Items[itemId] then
-        local it = GWRP.Inventory.Items[itemId]
+function GW.Inventory.GetItemData(itemId)
+    if GW.Inventory.Items[itemId] then
+        local it = GW.Inventory.Items[itemId]
         it.level = it.level or 1
         return it
     end
 
     local wep = (weapons and (weapons.Get(itemId) or weapons.GetStored(itemId))) or nil
     if wep then
-        local q = (wep.ItemQuality and GWRP.NormalizeQuality and GWRP.NormalizeQuality(wep.ItemQuality)) or 1
+        local q = (wep.ItemQuality and GW.NormalizeQuality and GW.NormalizeQuality(wep.ItemQuality)) or 1
         return {
             name = wep.PrintName or itemId,
             level = wep.RequiredLevel or 1,
@@ -341,7 +341,7 @@ function GWRP.Inventory.GetItemData(itemId)
     -- Dynamic Scripted Entity Resolution (Checks ENT.ItemQuality in shared.lua)
     local sent = (scripted_ents and (scripted_ents.Get(itemId) or scripted_ents.GetStored(itemId))) or nil
     if sent and sent.t then
-        local q = (sent.t.ItemQuality and GWRP.NormalizeQuality and GWRP.NormalizeQuality(sent.t.ItemQuality)) or 1
+        local q = (sent.t.ItemQuality and GW.NormalizeQuality and GW.NormalizeQuality(sent.t.ItemQuality)) or 1
         return {
             name = sent.t.PrintName or itemId,
             level = sent.t.RequiredLevel or 1,
@@ -355,10 +355,10 @@ function GWRP.Inventory.GetItemData(itemId)
     end
 
     -- Central Registry Fallback
-    if GWRP.Config and GWRP.Config.EntityQualities and GWRP.Config.EntityQualities[itemId] then
-        local cfg = GWRP.Config.EntityQualities[itemId]
+    if GW.Config and GW.Config.EntityQualities and GW.Config.EntityQualities[itemId] then
+        local cfg = GW.Config.EntityQualities[itemId]
         if cfg and cfg.quality then
-            local q = (GWRP.NormalizeQuality and GWRP.NormalizeQuality(cfg.quality)) or 1
+            local q = (GW.NormalizeQuality and GW.NormalizeQuality(cfg.quality)) or 1
             return {
                 name = itemId,
                 type = "entity",

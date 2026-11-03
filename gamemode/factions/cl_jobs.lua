@@ -2,10 +2,10 @@
     cl_jobs.lua - Client Job Cache & Team Color Helpers
 --]]
 
-GWRP.JobsClient = GWRP.JobsClient or {}
+GW.JobsClient = GW.JobsClient or {}
 
-function GWRP.GetTeamColor(ply)
-    if not IsValid(ply) then return GWRP.Colors.White end
+function GW.GetTeamColor(ply)
+    if not IsValid(ply) then return GW.Colors.White end
     local job = ply:GetJobData()
-    return job and job.faction and job.faction.color or GWRP.Colors.White
+    return job and job.faction and job.faction.color or GW.Colors.White
 end

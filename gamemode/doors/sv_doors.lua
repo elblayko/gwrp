@@ -3,52 +3,52 @@
     Author: Toxic
 --]]
 
-GWRP.Doors = GWRP.Doors or {}
+GW.Doors = GW.Doors or {}
 
-function GWRP.Doors.Init()
+function GW.Doors.Init()
     print("[GWRP-Doors] Initialized session-based door management.")
 end
 
-function GWRP.Doors.SyncToPlayer(ply)
+function GW.Doors.SyncToPlayer(ply)
     -- Doors use standard SetNWEntity/SetNWString for seamless client prediction
 end
 
-net.Receive("GWRP_DoorAction", function(len, ply)
-    if not GWRP.CheckRateLimit(ply, "door_action", 3) then return end
+net.Receive("GW_DoorAction", function(len, ply)
+    if not GW.CheckRateLimit(ply, "door_action", 3) then return end
     local ent = net.ReadEntity()
     local action = net.ReadString()
 
     if not IsValid(ent) or not ent:isDoor() then return end
     if ply:GetPos():DistToSqr(ent:GetPos()) > (120 * 120) then return end
 
-    local currentOwner = ent:GetNWEntity("GWRP_DoorOwner")
+    local currentOwner = ent:GetNWEntity("GW_DoorOwner")
 
     if action == "buy" then
         if IsValid(currentOwner) then
-            GWRP.Notify(ply, "This door is already owned!", NOTIFY_ERROR)
+            GW.Notify(ply, "This door is already owned!", NOTIFY_ERROR)
             return
         end
-        if not ply:CanAfford(GWRP.Config.DoorCost) then
-            GWRP.Notify(ply, "You cannot afford this door ($" .. GWRP.Config.DoorCost .. ")!", NOTIFY_ERROR)
+        if not ply:CanAfford(GW.Config.DoorCost) then
+            GW.Notify(ply, "You cannot afford this door ($" .. GW.Config.DoorCost .. ")!", NOTIFY_ERROR)
             return
         end
 
-        ply:AddMoney(-GWRP.Config.DoorCost)
-        ent:SetNWEntity("GWRP_DoorOwner", ply)
+        ply:AddMoney(-GW.Config.DoorCost)
+        ent:SetNWEntity("GW_DoorOwner", ply)
         local gang = ply:GetGang()
         local factionTag = (gang ~= "") and gang or ply:GetFaction().id
-        ent:SetNWString("GWRP_DoorFaction", factionTag)
+        ent:SetNWString("GW_DoorFaction", factionTag)
 
-        GWRP.Notify(ply, "Door purchased! Press F2 to manage.", NOTIFY_GENERIC)
+        GW.Notify(ply, "Door purchased! Press F2 to manage.", NOTIFY_GENERIC)
     elseif action == "sell" then
         if currentOwner ~= ply then return end
-        local refund = math.floor(GWRP.Config.DoorCost * 0.7)
+        local refund = math.floor(GW.Config.DoorCost * 0.7)
         ply:AddMoney(refund)
 
-        ent:SetNWEntity("GWRP_DoorOwner", NULL)
-        ent:SetNWString("GWRP_DoorFaction", "")
+        ent:SetNWEntity("GW_DoorOwner", NULL)
+        ent:SetNWString("GW_DoorFaction", "")
         ent:Fire("unlock", "", 0)
 
-        GWRP.Notify(ply, "Door sold for +$" .. refund .. "!", NOTIFY_GENERIC)
+        GW.Notify(ply, "Door sold for +$" .. refund .. "!", NOTIFY_GENERIC)
     end
 end)

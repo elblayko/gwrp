@@ -3,13 +3,13 @@
     Author: Toxic
 --]]
 
-GWRP.UI = GWRP.UI or {}
-GWRP.UI.F4Frame = nil
-GWRP.UI.ActiveF4Tab = "jobs"
-GWRP.UI.SearchQuery = ""
+GW.UI = GW.UI or {}
+GW.UI.F4Frame = nil
+GW.UI.ActiveF4Tab = "jobs"
+GW.UI.SearchQuery = ""
 
 -- Text Formatting Helpers: Word Wrap & Boundary Protection
-function GWRP.UI.WrapText(text, font, maxW)
+function GW.UI.WrapText(text, font, maxW)
     if not text or text == "" then return {} end
     surface.SetFont(font)
     local words = string.Explode(" ", text)
@@ -31,7 +31,7 @@ function GWRP.UI.WrapText(text, font, maxW)
     return lines
 end
 
-function GWRP.UI.FitText(text, font, maxW)
+function GW.UI.FitText(text, font, maxW)
     if not text or text == "" then return "" end
     surface.SetFont(font)
     local tw = surface.GetTextSize(text)
@@ -43,10 +43,10 @@ function GWRP.UI.FitText(text, font, maxW)
     return s .. "..."
 end
 
-function GWRP.UI.ToggleF4Menu()
-    if IsValid(GWRP.UI.F4Frame) then
-        GWRP.UI.F4Frame:Close()
-        GWRP.UI.F4Frame = nil
+function GW.UI.ToggleF4Menu()
+    if IsValid(GW.UI.F4Frame) then
+        GW.UI.F4Frame:Close()
+        GW.UI.F4Frame = nil
         return
     end
 
@@ -54,8 +54,8 @@ function GWRP.UI.ToggleF4Menu()
     if not IsValid(ply) then return end
 
     -- Ensure fonts are always initialized and scaled
-    if GWRP.UI.CreateFonts then
-        GWRP.UI.CreateFonts()
+    if GW.UI.CreateFonts then
+        GW.UI.CreateFonts()
     end
 
     local scrW, scrH = ScrW(), ScrH()
@@ -70,9 +70,9 @@ function GWRP.UI.ToggleF4Menu()
     frame:SetDraggable(true)
     frame:MakePopup()
     frame.OnClose = function()
-        GWRP.UI.F4Frame = nil
+        GW.UI.F4Frame = nil
     end
-    GWRP.UI.F4Frame = frame
+    GW.UI.F4Frame = frame
 
     -- Main Container Paint (Glassmorphic Obsidian Palette)
     frame.Paint = function(s, w, h)
@@ -89,17 +89,17 @@ function GWRP.UI.ToggleF4Menu()
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
         -- Title & Brand Tag (Large, Clean Font)
-        draw.SimpleText("GangWars RP", "GWRP_UI_Title", 24, 20, Color(248, 250, 252), TEXT_ALIGN_LEFT)
+        draw.SimpleText("GangWars RP", "GW_UI_Title", 24, 20, Color(248, 250, 252), TEXT_ALIGN_LEFT)
         draw.RoundedBox(4, 240, 24, 114, 24, Color(6, 182, 212, 35))
         surface.SetDrawColor(6, 182, 212, 120)
         surface.DrawOutlinedRect(240, 24, 114, 24, 1)
-        draw.SimpleText("v2.0 Standalone", "GWRP_UI_Badge", 297, 36, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("v2.0 Standalone", "GW_UI_Badge", 297, 36, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
         -- Player Wallet & Gang Pill (Center Header)
         local curMoney = IsValid(ply) and ply:GetMoney() or 0
         local curGang = IsValid(ply) and ply:GetGang() or ""
         local curJob = IsValid(ply) and ply:GetJobData() or {}
-        local gangCol = (curGang ~= "") and GWRP.GetGangColor(curGang) or (curJob.faction and curJob.faction.color or GWRP.Colors.White)
+        local gangCol = (curGang ~= "") and GW.GetGangColor(curGang) or (curJob.faction and curJob.faction.color or GW.Colors.White)
 
         local pillText = "$" .. string.Comma(curMoney)
         if curGang ~= "" then
@@ -110,7 +110,7 @@ function GWRP.UI.ToggleF4Menu()
         draw.RoundedBox(18, pillX - 180, 14, 360, 42, Color(24, 32, 47, 240))
         surface.SetDrawColor(gangCol.r, gangCol.g, gangCol.b, 100)
         surface.DrawOutlinedRect(pillX - 180, 14, 360, 42, 1)
-        draw.SimpleText(pillText, "GWRP_UI_Header", pillX, 35, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(pillText, "GW_UI_Header", pillX, 35, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     -- Close Button (Top-Right X)
@@ -121,7 +121,7 @@ function GWRP.UI.ToggleF4Menu()
     btnClose.Paint = function(s, w, h)
         local bgCol = s:IsHovered() and Color(239, 68, 68, 220) or Color(30, 41, 59, 160)
         draw.RoundedBox(6, 0, 0, w, h, bgCol)
-        draw.SimpleText("X", "GWRP_UI_Title", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("X", "GW_UI_Title", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     btnClose.DoClick = function()
         frame:Close()
@@ -136,12 +136,12 @@ function GWRP.UI.ToggleF4Menu()
         btnAdmin.Paint = function(s, w, h)
             local bg = s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200)
             draw.RoundedBox(6, 0, 0, w, h, bg)
-            draw.SimpleText("Admin HUD", "GWRP_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Admin HUD", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         btnAdmin.DoClick = function()
             frame:Close()
-            if GWRP.Turf and GWRP.Turf.OpenSetupMenu then
-                GWRP.Turf.OpenSetupMenu()
+            if GW.Turf and GW.Turf.OpenSetupMenu then
+                GW.Turf.OpenSetupMenu()
             end
         end
     end
@@ -159,15 +159,15 @@ function GWRP.UI.ToggleF4Menu()
 
         -- Bottom Info Card
         draw.RoundedBox(6, 12, h - 80, w - 24, 68, Color(11, 15, 25, 220))
-        draw.SimpleText("Map: " .. game.GetMap(), "GWRP_UI_Caption", 22, h - 60, Color(148, 163, 184))
-        draw.SimpleText("Online: " .. #player.GetAll() .. " players", "GWRP_UI_Caption", 22, h - 34, Color(74, 222, 128))
+        draw.SimpleText("Map: " .. game.GetMap(), "GW_UI_Caption", 22, h - 60, Color(148, 163, 184))
+        draw.SimpleText("Online: " .. #player.GetAll() .. " players", "GW_UI_Caption", 22, h - 34, Color(74, 222, 128))
     end
 
-    local invItems = GWRP.Inventory and GWRP.Inventory.ClientItems or {}
+    local invItems = GW.Inventory and GW.Inventory.ClientItems or {}
     local invBadge = #invItems > 0 and tostring(#invItems) or "0"
 
     local tabs = {
-        { id = "jobs", title = "Careers & Jobs", badge = table.Count(GWRP.Jobs or {}) },
+        { id = "jobs", title = "Careers & Jobs", badge = table.Count(GW.Jobs or {}) },
         { id = "inventory", title = "Inventory", badge = invBadge },
         { id = "weapons", title = "Ammo & Gear", badge = "Ammo" },
         { id = "shipments", title = "Shipments", badge = "10x Bulk" },
@@ -187,12 +187,12 @@ function GWRP.UI.ToggleF4Menu()
         surface.SetDrawColor(30, 41, 59, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
     end
-    GWRP.UI.CurrentContentPanel = contentPanel
+    GW.UI.CurrentContentPanel = contentPanel
 
     local function SwitchTab(tabId)
-        GWRP.UI.ActiveF4Tab = tabId
+        GW.UI.ActiveF4Tab = tabId
         contentPanel:Clear()
-        GWRP.UI.RenderContentTab(contentPanel, tabId, frame)
+        GW.UI.RenderContentTab(contentPanel, tabId, frame)
     end
 
     local maxNavH = (frameH - 96) - 96
@@ -208,7 +208,7 @@ function GWRP.UI.ToggleF4Menu()
         btnTab:SetText("")
 
         btnTab.Paint = function(s, w, h)
-            local isActive = (GWRP.UI.ActiveF4Tab == tab.id)
+            local isActive = (GW.UI.ActiveF4Tab == tab.id)
             local isHovered = s:IsHovered()
 
             local bgCol = isActive and Color(30, 41, 59, 255) or (isHovered and Color(24, 32, 47, 180) or Color(0, 0, 0, 0))
@@ -221,13 +221,13 @@ function GWRP.UI.ToggleF4Menu()
 
             -- Clean Title in Large Readable Sub Font
             local textCol = isActive and Color(248, 250, 252) or (isHovered and Color(226, 232, 240) or Color(148, 163, 184))
-            draw.SimpleText(tab.title, "GWRP_UI_Sub", 18, h / 2, textCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(tab.title, "GW_UI_Sub", 18, h / 2, textCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Badge Tag
             if tab.badge then
                 local badgeText = tostring(tab.badge)
                 draw.RoundedBox(4, w - 66, (h - 24) / 2, 56, 24, Color(11, 15, 25, 200))
-                draw.SimpleText(badgeText, "GWRP_UI_Badge", w - 38, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(badgeText, "GW_UI_Badge", w - 38, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
         end
 
@@ -239,14 +239,14 @@ function GWRP.UI.ToggleF4Menu()
     end
 
     -- Initial tab load
-    SwitchTab(GWRP.UI.ActiveF4Tab or "jobs")
+    SwitchTab(GW.UI.ActiveF4Tab or "jobs")
 end
 
-function GWRP.UI.RefreshInventoryTab()
-    if not IsValid(GWRP.UI.F4Frame) or GWRP.UI.ActiveF4Tab ~= "inventory" then return end
-    if IsValid(GWRP.UI.CurrentContentPanel) then
-        GWRP.UI.CurrentContentPanel:Clear()
-        GWRP.UI.RenderContentTab(GWRP.UI.CurrentContentPanel, "inventory", GWRP.UI.F4Frame)
+function GW.UI.RefreshInventoryTab()
+    if not IsValid(GW.UI.F4Frame) or GW.UI.ActiveF4Tab ~= "inventory" then return end
+    if IsValid(GW.UI.CurrentContentPanel) then
+        GW.UI.CurrentContentPanel:Clear()
+        GW.UI.RenderContentTab(GW.UI.CurrentContentPanel, "inventory", GW.UI.F4Frame)
     end
 end
 
@@ -254,7 +254,7 @@ end
 -- TAB CONTENT RENDERER
 -- ==========================================
 
-function GWRP.UI.RenderContentTab(container, tabId, mainFrame)
+function GW.UI.RenderContentTab(container, tabId, mainFrame)
     local ply = LocalPlayer()
     local contW, contH = container:GetWide(), container:GetTall()
 
@@ -275,7 +275,7 @@ function GWRP.UI.RenderContentTab(container, tabId, mainFrame)
             buffs = "Debug Status Effects & Tests",
             rules = "City Ordinances & Server Code of Conduct"
         }
-        draw.SimpleText(titles[tabId] or "Catalog", "GWRP_UI_Header", 0, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(titles[tabId] or "Catalog", "GW_UI_Header", 0, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     if tabId ~= "rules" then
@@ -289,12 +289,12 @@ function GWRP.UI.RenderContentTab(container, tabId, mainFrame)
                 draw.RoundedBox(6, 0, 0, w, h, bg)
                 surface.SetDrawColor(245, 215, 130, 200)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
-                draw.SimpleText("Open Bag (B)", "GWRP_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText("Open Bag (B)", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
             btnBag.DoClick = function()
                 mainFrame:Close()
-                if GWRP.UI.ToggleBag then
-                    GWRP.UI.ToggleBag()
+                if GW.UI.ToggleBag then
+                    GW.UI.ToggleBag()
                 end
             end
         end
@@ -303,7 +303,7 @@ function GWRP.UI.RenderContentTab(container, tabId, mainFrame)
         txtSearch:SetSize(280, 42)
         txtSearch:SetPos(topBar:GetWide() - 280, 4)
         txtSearch:SetPlaceholderText(tabId == "inventory" and "Search inventory..." or "Search catalog...")
-        txtSearch:SetFont("GWRP_UI_Sub")
+        txtSearch:SetFont("GW_UI_Sub")
         txtSearch.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
             surface.SetDrawColor(30, 41, 59, 200)
@@ -311,14 +311,14 @@ function GWRP.UI.RenderContentTab(container, tabId, mainFrame)
             s:DrawTextEntryText(Color(248, 250, 252), Color(6, 182, 212), Color(248, 250, 252))
         end
         txtSearch.OnChange = function(s)
-            GWRP.UI.SearchQuery = string.lower(string.Trim(s:GetText()))
+            GW.UI.SearchQuery = string.lower(string.Trim(s:GetText()))
             local targetScroll = container:GetChildren()[2]
             if IsValid(targetScroll) then
                 targetScroll:Clear()
                 if tabId == "inventory" then
-                    GWRP.UI.PopulateInventoryGrid(targetScroll, mainFrame, GWRP.UI.SearchQuery)
+                    GW.UI.PopulateInventoryGrid(targetScroll, mainFrame, GW.UI.SearchQuery)
                 else
-                    GWRP.UI.PopulateGrid(targetScroll, tabId, mainFrame, GWRP.UI.SearchQuery)
+                    GW.UI.PopulateGrid(targetScroll, tabId, mainFrame, GW.UI.SearchQuery)
                 end
             end
         end
@@ -338,11 +338,11 @@ function GWRP.UI.RenderContentTab(container, tabId, mainFrame)
     sbar.btnDown.Paint = function() end
 
     if tabId == "rules" then
-        GWRP.UI.RenderRulesContent(scroll)
+        GW.UI.RenderRulesContent(scroll)
     elseif tabId == "inventory" then
-        GWRP.UI.PopulateInventoryGrid(scroll, mainFrame, "")
+        GW.UI.PopulateInventoryGrid(scroll, mainFrame, "")
     else
-        GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, "")
+        GW.UI.PopulateGrid(scroll, tabId, mainFrame, "")
     end
 end
 
@@ -350,13 +350,13 @@ end
 -- INVENTORY GRID POPULATION
 -- ==========================================
 
-function GWRP.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
-    local items = GWRP.Inventory and GWRP.Inventory.ClientItems or {}
+function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
+    local items = GW.Inventory and GW.Inventory.ClientItems or {}
 
     -- Filter items based on searchFilter
     local filtered = {}
     for _, it in ipairs(items) do
-        local def = GWRP.Inventory.GetItemData(it.item_id)
+        local def = GW.Inventory.GetItemData(it.item_id)
         local match = true
         if searchFilter and searchFilter ~= "" then
             local q = string.lower(searchFilter)
@@ -381,10 +381,10 @@ function GWRP.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-            draw.SimpleText("Inventory is Empty", "GWRP_UI_Title", w / 2, 50, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            draw.SimpleText("Right-click world items (weapons, money printers, crates) with your Hands to store them.", "GWRP_UI_Sub", w / 2, 95, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            draw.SimpleText("All stored items automatically persist to your SQLite character profile across restarts.", "GWRP_UI_Sub", w / 2, 130, Color(6, 182, 212), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            draw.SimpleText("Press F4 or type /inv at any time to open your inventory.", "GWRP_UI_Caption", w / 2, 175, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Inventory is Empty", "GW_UI_Title", w / 2, 50, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Right-click world items (weapons, money printers, crates) with your Hands to store them.", "GW_UI_Sub", w / 2, 95, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("All stored items automatically persist to your SQLite character profile across restarts.", "GW_UI_Sub", w / 2, 130, Color(6, 182, 212), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Press F4 or type /inv at any time to open your inventory.", "GW_UI_Caption", w / 2, 175, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         return
     end
@@ -416,7 +416,7 @@ function GWRP.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
         local def = entry.def
         local rowId = it.id
         local itemType = it.item_type or "generic"
-        local accentCol = GWRP.Inventory.GetQualityColor(def.quality)
+        local accentCol = GW.Inventory.GetQualityColor(def.quality)
         local typeLabel = typeLabels[itemType] or "Item"
 
         local card = layout:Add("DPanel")
@@ -433,19 +433,19 @@ function GWRP.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
             local contentW = w - contentX - 16
 
             -- Row 1: Type Pill & Amount Pill
-            surface.SetFont("GWRP_UI_Badge")
+            surface.SetFont("GW_UI_Badge")
             local tw = surface.GetTextSize(typeLabel) + 16
             draw.RoundedBox(4, contentX, 14, tw, 22, Color(accentCol.r, accentCol.g, accentCol.b, 35))
-            draw.SimpleText(typeLabel, "GWRP_UI_Badge", contentX + tw / 2, 25, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(typeLabel, "GW_UI_Badge", contentX + tw / 2, 25, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             local amtText = "x" .. tostring(it.amount or 1)
             local amtW = surface.GetTextSize(amtText) + 16
             draw.RoundedBox(4, contentX + tw + 8, 14, amtW, 22, Color(30, 41, 59, 200))
-            draw.SimpleText(amtText, "GWRP_UI_Badge", contentX + tw + 8 + amtW / 2, 25, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(amtText, "GW_UI_Badge", contentX + tw + 8 + amtW / 2, 25, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             -- Row 2: Title
-            local fitTitle = GWRP.UI.FitText(def.name, "GWRP_UI_Header", contentW)
-            draw.SimpleText(fitTitle, "GWRP_UI_Header", contentX, 44, Color(248, 250, 252), TEXT_ALIGN_LEFT)
+            local fitTitle = GW.UI.FitText(def.name, "GW_UI_Header", contentW)
+            draw.SimpleText(fitTitle, "GW_UI_Header", contentX, 44, Color(248, 250, 252), TEXT_ALIGN_LEFT)
 
             -- Row 3: Detail description or metadata
             local metaStr = def.desc or ""
@@ -457,9 +457,9 @@ function GWRP.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
                 metaStr = "Loaded: " .. it.item_data.clip1 .. " rounds"
             end
 
-            local lines = GWRP.UI.WrapText(metaStr, "GWRP_UI_Caption", contentW)
+            local lines = GW.UI.WrapText(metaStr, "GW_UI_Caption", contentW)
             for i = 1, math.min(#lines, 2) do
-                draw.SimpleText(lines[i], "GWRP_UI_Caption", contentX, 76 + (i - 1) * 18, Color(148, 163, 184))
+                draw.SimpleText(lines[i], "GW_UI_Caption", contentX, 76 + (i - 1) * 18, Color(148, 163, 184))
             end
         end
 
@@ -497,10 +497,10 @@ function GWRP.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
         btnDrop.Paint = function(s, w, h)
             local bg = s:IsHovered() and Color(239, 68, 68, 240) or Color(185, 28, 28, 190)
             draw.RoundedBox(6, 0, 0, w, h, bg)
-            draw.SimpleText("Drop", "GWRP_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Drop", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         btnDrop.DoClick = function()
-            GWRP.Inventory.DropItem(rowId)
+            GW.Inventory.DropItem(rowId)
         end
 
         -- If item is a weapon, show Equip button
@@ -512,10 +512,10 @@ function GWRP.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
             btnEquip.Paint = function(s, w, h)
                 local bg = s:IsHovered() and Color(16, 185, 129, 240) or Color(5, 150, 105, 190)
                 draw.RoundedBox(6, 0, 0, w, h, bg)
-                draw.SimpleText("Equip", "GWRP_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText("Equip", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
             btnEquip.DoClick = function()
-                GWRP.Inventory.UseItem(rowId)
+                GW.Inventory.UseItem(rowId)
             end
         end
     end
@@ -525,7 +525,7 @@ end
 -- GRID POPULATION (JOBS, WEPS, PRINTERS)
 -- ==========================================
 
-function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
+function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
     local ply = LocalPlayer()
     local layout = vgui.Create("DIconLayout", scroll)
     layout:Dock(FILL)
@@ -538,7 +538,7 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
         -- Organize and sort jobs by faction (Citizens -> Street Gangs -> Law Enforcement)
         local jobList = {}
-        for jobId, job in pairs(GWRP.Jobs or {}) do
+        for jobId, job in pairs(GW.Jobs or {}) do
             if searchFilter ~= "" and not string.find(string.lower(job.name), searchFilter, 1, true) then
                 continue
             end
@@ -561,7 +561,7 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
             local card = layout:Add("DPanel")
             card:SetSize(cardW, 220)
 
-            local fCol = (job.faction and job.faction.color) or GWRP.Colors.White
+            local fCol = (job.faction and job.faction.color) or GW.Colors.White
             local isMyJob = (myJob == jobId)
             local maxTextW = cardW - 146
 
@@ -609,23 +609,23 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
                 -- Row 1 Left: Faction Pill
                 local fName = job.faction and job.faction.name or "Civilian"
-                surface.SetFont("GWRP_UI_Badge")
+                surface.SetFont("GW_UI_Badge")
                 local badgeW = surface.GetTextSize(fName) + 20
                 draw.RoundedBox(4, 138, 14, badgeW, 22, Color(fCol.r, fCol.g, fCol.b, 35))
-                draw.SimpleText(fName, "GWRP_UI_Badge", 138 + badgeW / 2, 25, fCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(fName, "GW_UI_Badge", 138 + badgeW / 2, 25, fCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
                 -- Row 1 Right: Slot Availability Pill
-                surface.SetFont("GWRP_UI_Badge")
+                surface.SetFont("GW_UI_Badge")
                 local slotW = surface.GetTextSize(slotText) + 18
                 local slotX = cardW - 16 - slotW
                 draw.RoundedBox(4, slotX, 14, slotW, 22, Color(slotCol.r, slotCol.g, slotCol.b, 35))
                 surface.SetDrawColor(slotCol.r, slotCol.g, slotCol.b, 90)
                 surface.DrawOutlinedRect(slotX, 14, slotW, 22, 1)
-                draw.SimpleText(slotText, "GWRP_UI_Badge", slotX + slotW / 2, 25, slotCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(slotText, "GW_UI_Badge", slotX + slotW / 2, 25, slotCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
                 -- Row 2: Job Name (Full Row Width - Never Collides)
-                local cleanJobName = GWRP.UI.FitText(job.name, "GWRP_UI_Header", maxTextW)
-                draw.SimpleText(cleanJobName, "GWRP_UI_Header", 138, 42, Color(248, 250, 252))
+                local cleanJobName = GW.UI.FitText(job.name, "GW_UI_Header", maxTextW)
+                draw.SimpleText(cleanJobName, "GW_UI_Header", 138, 42, Color(248, 250, 252))
 
                 -- Row 3: Salary & Armor Stats Line
                 local statsText = "Salary: +$" .. (job.salary or 45) .. " / 90s"
@@ -635,12 +635,12 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 if job.runSpeed then
                     statsText = statsText .. "   |   Sprint: " .. job.runSpeed
                 end
-                draw.SimpleText(statsText, "GWRP_UI_Sub", 138, 72, Color(74, 222, 128))
+                draw.SimpleText(statsText, "GW_UI_Sub", 138, 72, Color(74, 222, 128))
 
                 -- Row 4: Multi-Line Word-Wrapped Description (No Text Clipping / Overflow)
-                local descLines = GWRP.UI.WrapText(job.desc or "", "GWRP_UI_Caption", maxTextW)
+                local descLines = GW.UI.WrapText(job.desc or "", "GW_UI_Caption", maxTextW)
                 for i = 1, math.min(#descLines, 3) do
-                    draw.SimpleText(descLines[i], "GWRP_UI_Caption", 138, 98 + (i - 1) * 20, Color(148, 163, 184))
+                    draw.SimpleText(descLines[i], "GW_UI_Caption", 138, 98 + (i - 1) * 20, Color(148, 163, 184))
                 end
             end
 
@@ -668,23 +668,23 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 local btnCol = isMyJob and Color(30, 41, 59, 200) or (not hasJobLvl and Color(51, 65, 85, 180) or (isFull and Color(51, 65, 85, 180) or (s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200))))
                 draw.RoundedBox(6, 0, 0, w, h, btnCol)
                 local rawText = isMyJob and "Current Active Role" or (not hasJobLvl and ("Requires Level " .. reqJobLvl) or (isFull and ("Role Full (" .. currentCount .. "/" .. maxSlots .. ")") or ("Enlist as " .. job.name)))
-                local fitBtnText = GWRP.UI.FitText(rawText, "GWRP_UI_Btn", w - 20)
-                draw.SimpleText(fitBtnText, "GWRP_UI_Btn", w / 2, h / 2, (not hasJobLvl or (isFull and not isMyJob)) and Color(156, 163, 175) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                local fitBtnText = GW.UI.FitText(rawText, "GW_UI_Btn", w - 20)
+                draw.SimpleText(fitBtnText, "GW_UI_Btn", w / 2, h / 2, (not hasJobLvl or (isFull and not isMyJob)) and Color(156, 163, 175) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
 
             btnEnlist.DoClick = function()
                 if isMyJob then return end
                 if not hasJobLvl then
-                    GWRP.Notify(ply, string.format("You must be Level %d to become a %s!", reqJobLvl, job.name), NOTIFY_ERROR)
+                    GW.Notify(ply, string.format("You must be Level %d to become a %s!", reqJobLvl, job.name), NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
                 if isFull then
-                    GWRP.Notify(ply, "That role is currently full! (" .. currentCount .. "/" .. maxSlots .. ")", NOTIFY_ERROR)
+                    GW.Notify(ply, "That role is currently full! (" .. currentCount .. "/" .. maxSlots .. ")", NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
-                net.Start("GWRP_ChangeJob")
+                net.Start("GW_ChangeJob")
                     net.WriteString(jobId)
                 net.SendToServer()
                 mainFrame:Close()
@@ -698,7 +698,7 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
         local myLevel = IsValid(ply) and ply:GetLevel() or 1
 
         local itemsList = {}
-        for itemId, item in pairs(GWRP.ShopItems or {}) do
+        for itemId, item in pairs(GW.ShopItems or {}) do
             -- Filter by tab type
             if tabId == "weapons" and (item.category == "networking" or item.category == "supplies" or (item.type ~= "weapon" and item.type ~= "ammo")) then continue end
             if tabId == "shipments" and item.type ~= "shipment" then continue end
@@ -723,13 +723,13 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 canBuyJob = table.HasValue(item.jobs, plyJob)
                 local names = {}
                 for _, jId in ipairs(item.jobs) do
-                    local jData = GWRP.Jobs[jId]
+                    local jData = GW.Jobs[jId]
                     if jData then table.insert(names, jData.name) end
                 end
                 reqJobName = table.concat(names, " / ")
             elseif item.job then
                 canBuyJob = (plyJob == item.job)
-                local jData = GWRP.Jobs[item.job]
+                local jData = GW.Jobs[item.job]
                 reqJobName = jData and jData.name or item.job
             end
 
@@ -821,7 +821,7 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
 
                 -- Item Type Pill
-                local isItemDebuff = (item.isDebuff or (item.buffId and GWRP.Buffs and GWRP.Buffs.Registry and GWRP.Buffs.Registry[item.buffId] and GWRP.Buffs.Registry[item.buffId].isDebuff) or string.find(string.lower(item.name), "debuff", 1, true))
+                local isItemDebuff = (item.isDebuff or (item.buffId and GW.Buffs and GW.Buffs.Registry and GW.Buffs.Registry[item.buffId] and GW.Buffs.Registry[item.buffId].isDebuff) or string.find(string.lower(item.name), "debuff", 1, true))
                 local typePillLabels = {
                     weapon = "Weapon",
                     ammo = "Ammo",
@@ -855,24 +855,24 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 end
 
                 draw.RoundedBox(4, 16, 14, 80, 26, Color(pCol.r, pCol.g, pCol.b, 35))
-                draw.SimpleText(pLabel, "GWRP_UI_Badge", 56, 27, pCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(pLabel, "GW_UI_Badge", 56, 27, pCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
                 -- Item Name in Header Font (Auto-Fitted to prevent clipping)
-                local fitItemName = GWRP.UI.FitText(item.name, "GWRP_UI_Header", cardW - 116)
-                draw.SimpleText(fitItemName, "GWRP_UI_Header", 108, 14, Color(248, 250, 252))
+                local fitItemName = GW.UI.FitText(item.name, "GW_UI_Header", cardW - 116)
+                draw.SimpleText(fitItemName, "GW_UI_Header", 108, 14, Color(248, 250, 252))
 
                 -- Big Bold Price Tag
                 local priceStr = (item.cost == 0) and "FREE" or ("$" .. string.Comma(item.cost))
-                draw.SimpleText(priceStr, "GWRP_UI_Price", 18, 54, Color(74, 222, 128))
+                draw.SimpleText(priceStr, "GW_UI_Price", 18, 54, Color(74, 222, 128))
 
                 -- Convenience / Street Retail Markup Indicator Pill
-                local markupPct = GWRP.GetItemMarkupPercent and GWRP.GetItemMarkupPercent(item)
+                local markupPct = GW.GetItemMarkupPercent and GW.GetItemMarkupPercent(item)
                 if markupPct and markupPct > 0 then
-                    surface.SetFont("GWRP_UI_Price")
+                    surface.SetFont("GW_UI_Price")
                     local pw, _ = surface.GetTextSize(priceStr)
                     local badgeX = 18 + pw + 12
                     local markupTxt = "+" .. markupPct .. "% Shop Markup"
-                    surface.SetFont("GWRP_UI_Badge")
+                    surface.SetFont("GW_UI_Badge")
                     local mw, mh = surface.GetTextSize(markupTxt)
                     local badgeW = mw + 16
                     local badgeH = 22
@@ -882,7 +882,7 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                     draw.RoundedBox(4, badgeX, badgeY, badgeW, badgeH, Color(245, 158, 11, 40))
                     surface.SetDrawColor(245, 158, 11, 140)
                     surface.DrawOutlinedRect(badgeX, badgeY, badgeW, badgeH, 1)
-                    draw.SimpleText(markupTxt, "GWRP_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText(markupTxt, "GW_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 end
 
                 -- Level or Job Requirement Pill (Aligned above action button)
@@ -891,22 +891,22 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                     draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
                     surface.SetDrawColor(239, 68, 68, 90)
                     surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                    local fitDualTag = GWRP.UI.FitText(dualTag, "GWRP_UI_Caption", 186)
-                    draw.SimpleText(fitDualTag, "GWRP_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    local fitDualTag = GW.UI.FitText(dualTag, "GW_UI_Caption", 186)
+                    draw.SimpleText(fitDualTag, "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 elseif not canBuyLevel then
                     local lvlTag = "Requires Level " .. reqItemLevel
                     draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(245, 158, 11, 40))
                     surface.SetDrawColor(245, 158, 11, 140)
                     surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                    local fitLvlTag = GWRP.UI.FitText(lvlTag, "GWRP_UI_Caption", 186)
-                    draw.SimpleText(fitLvlTag, "GWRP_UI_Caption", cardW - 114, 64, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    local fitLvlTag = GW.UI.FitText(lvlTag, "GW_UI_Caption", 186)
+                    draw.SimpleText(fitLvlTag, "GW_UI_Caption", cardW - 114, 64, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 elseif not canBuyJob and reqJobName ~= "" then
                     local lockTag = "Requires: " .. reqJobName
                     draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
                     surface.SetDrawColor(239, 68, 68, 90)
                     surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                    local fitLockTag = GWRP.UI.FitText(lockTag, "GWRP_UI_Caption", 186)
-                    draw.SimpleText(fitLockTag, "GWRP_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    local fitLockTag = GW.UI.FitText(lockTag, "GW_UI_Caption", 186)
+                    draw.SimpleText(fitLockTag, "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 end
 
                 -- Detail subtitle (Word-Wrapped within left content area so it never collides with button)
@@ -934,17 +934,17 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 end
 
                 if subText ~= "" then
-                    local subLines = GWRP.UI.WrapText(subText, "GWRP_UI_Caption", leftContentW)
+                    local subLines = GW.UI.WrapText(subText, "GW_UI_Caption", leftContentW)
                     for i = 1, math.min(#subLines, 2) do
-                        draw.SimpleText(subLines[i], "GWRP_UI_Caption", 18, 96 + (i - 1) * 18, Color(148, 163, 184))
+                        draw.SimpleText(subLines[i], "GW_UI_Caption", 18, 96 + (i - 1) * 18, Color(148, 163, 184))
                     end
                 end
 
                 -- Savings tip when item has kiosk markup
                 if markupPct and markupPct > 0 and item.markupRole then
                     local tipText = "★ Tip: Buy from a " .. item.markupRole .. " to avoid this markup!"
-                    local fitTip = GWRP.UI.FitText(tipText, "GWRP_UI_Caption", leftContentW)
-                    draw.SimpleText(fitTip, "GWRP_UI_Caption", 18, 134, Color(251, 191, 36, 200))
+                    local fitTip = GW.UI.FitText(tipText, "GW_UI_Caption", leftContentW)
+                    draw.SimpleText(fitTip, "GW_UI_Caption", 18, 134, Color(251, 191, 36, 200))
                 end
             end
 
@@ -976,27 +976,27 @@ function GWRP.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 end
 
                 draw.RoundedBox(6, 0, 0, w, h, btnCol)
-                local fitBtnText = GWRP.UI.FitText(text, "GWRP_UI_Btn", w - 16)
-                draw.SimpleText(fitBtnText, "GWRP_UI_Btn", w / 2, h / 2, isLocked and Color(156, 163, 175) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                local fitBtnText = GW.UI.FitText(text, "GW_UI_Btn", w - 16)
+                draw.SimpleText(fitBtnText, "GW_UI_Btn", w / 2, h / 2, isLocked and Color(156, 163, 175) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
 
             btnBuy.DoClick = function()
                 if not canBuyLevel and not canBuyJob then
-                    GWRP.Notify(ply, string.format("You must be Level %d and employed as %s to purchase this!", reqItemLevel, reqJobName ~= "" and reqJobName or "Specialist"), NOTIFY_ERROR)
+                    GW.Notify(ply, string.format("You must be Level %d and employed as %s to purchase this!", reqItemLevel, reqJobName ~= "" and reqJobName or "Specialist"), NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
                 if not canBuyLevel then
-                    GWRP.Notify(ply, string.format("You must be Level %d to purchase this item!", reqItemLevel), NOTIFY_ERROR)
+                    GW.Notify(ply, string.format("You must be Level %d to purchase this item!", reqItemLevel), NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
                 if not canBuyJob then
-                    GWRP.Notify(ply, "Requires employment as: " .. (reqJobName ~= "" and reqJobName or "Specialist"), NOTIFY_ERROR)
+                    GW.Notify(ply, "Requires employment as: " .. (reqJobName ~= "" and reqJobName or "Specialist"), NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
-                net.Start("GWRP_BuyItem")
+                net.Start("GW_BuyItem")
                     net.WriteString(itemId)
                 net.SendToServer()
             end
@@ -1008,7 +1008,7 @@ end
 -- RULES TAB (SOPHISTICATED ACCORDION WITH WORD WRAP)
 -- ==========================================
 
-function GWRP.UI.RenderRulesContent(scroll)
+function GW.UI.RenderRulesContent(scroll)
     local container = vgui.Create("DPanel", scroll)
     container:Dock(FILL)
     container.Paint = function() end
@@ -1049,7 +1049,7 @@ function GWRP.UI.RenderRulesContent(scroll)
     local scrollW = scroll:GetWide() - 32
     for _, r in ipairs(rules) do
         local maxTextW = math.max(scrollW - 100, 400)
-        local lines = GWRP.UI.WrapText(r.desc, "GWRP_UI_Body", maxTextW)
+        local lines = GW.UI.WrapText(r.desc, "GW_UI_Body", maxTextW)
         local cardH = math.max(130, 68 + #lines * 24 + 16)
 
         local card = scroll:Add("DPanel")
@@ -1065,14 +1065,14 @@ function GWRP.UI.RenderRulesContent(scroll)
 
             -- Number badge
             draw.RoundedBox(4, 18, 16, 44, 34, Color(r.accent.r, r.accent.g, r.accent.b, 35))
-            draw.SimpleText(r.num, "GWRP_UI_Header", 40, 33, r.accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(r.num, "GW_UI_Header", 40, 33, r.accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             -- Title
-            draw.SimpleText(r.title, "GWRP_UI_Header", 76, 33, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(r.title, "GW_UI_Header", 76, 33, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Word-Wrapped Description
             for i, line in ipairs(lines) do
-                draw.SimpleText(line, "GWRP_UI_Body", 76, 62 + (i - 1) * 24, Color(148, 163, 184))
+                draw.SimpleText(line, "GW_UI_Body", 76, 62 + (i - 1) * 24, Color(148, 163, 184))
             end
         end
     end

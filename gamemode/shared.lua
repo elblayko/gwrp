@@ -10,8 +10,8 @@ GM.Website = ""
 
 DeriveGamemode("sandbox")
 
-GWRP = GWRP or {}
-GWRP.Version = "2.0.0 (2026)"
+GW = GW or {}
+GW.Version = "2.0.0 (2026)"
 
 -- Core Shared Includes (relative to gamemode/)
 include("core/sh_config.lua")
@@ -40,7 +40,7 @@ function GM:CanPlayerSuicide(ply)
 end
 
 -- Alias "fists" to GMod's "weapon_fists" for universal compatibility
-hook.Add("Initialize", "GWRP_RegisterFistsAlias", function()
+hook.Add("Initialize", "GW_RegisterFistsAlias", function()
     if weapons and weapons.Get and weapons.Register then
         local baseFists = weapons.Get("weapon_fists")
         if baseFists and not weapons.Get("fists") then
@@ -70,6 +70,6 @@ function GM:PlayerSetHandsModel(ply, ent)
     end
 end
 
-hook.Add("PlayerSetHandsModel", "GWRP_PlayerSetHandsModelHook", function(ply, ent)
+hook.Add("PlayerSetHandsModel", "GW_PlayerSetHandsModelHook", function(ply, ent)
     return GAMEMODE:PlayerSetHandsModel(ply, ent)
 end)

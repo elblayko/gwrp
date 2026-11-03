@@ -3,8 +3,8 @@
     Author: Toxic
 --]]
 
-GWRP.Buffs = GWRP.Buffs or {}
-GWRP.Buffs.Registry = GWRP.Buffs.Registry or {}
+GW.Buffs = GW.Buffs or {}
+GW.Buffs.Registry = GW.Buffs.Registry or {}
 
 -- ========================================================
 -- REGISTRY API
@@ -13,7 +13,7 @@ GWRP.Buffs.Registry = GWRP.Buffs.Registry or {}
 --- Registers a new buff or debuff definition into the framework.
 -- @param buffId (string) Unique identifier for the buff
 -- @param data (table) Specification definition
-function GWRP.Buffs.Register(buffId, data)
+function GW.Buffs.Register(buffId, data)
     if not buffId or buffId == "" then
         error("[GWRP-Buffs] Attempted to register buff with invalid ID!", 2)
         return
@@ -46,24 +46,24 @@ function GWRP.Buffs.Register(buffId, data)
     data.OnRemoved = data.OnRemoved or function(ply, instance, reason) end
     data.ModifySpeed = data.ModifySpeed or nil
 
-    GWRP.Buffs.Registry[buffId] = data
+    GW.Buffs.Registry[buffId] = data
 end
 
 --- Retrieves a buff definition from the registry.
 -- @param buffId (string) Unique identifier
 -- @return table|nil
-function GWRP.Buffs.Get(buffId)
-    return GWRP.Buffs.Registry[buffId]
+function GW.Buffs.Get(buffId)
+    return GW.Buffs.Registry[buffId]
 end
 
 --- Returns all registered buff specifications.
 -- @return table
-function GWRP.Buffs.GetAll()
-    return GWRP.Buffs.Registry
+function GW.Buffs.GetAll()
+    return GW.Buffs.Registry
 end
 
 --- Convenience Wrapper: Apply a buff to a player.
-function GWRP.Buffs.Apply(ply, buffId, duration, customData, initialStacks)
+function GW.Buffs.Apply(ply, buffId, duration, customData, initialStacks)
     if IsValid(ply) and ply.AddBuff then
         return ply:AddBuff(buffId, duration, customData, initialStacks)
     end
@@ -71,7 +71,7 @@ function GWRP.Buffs.Apply(ply, buffId, duration, customData, initialStacks)
 end
 
 --- Convenience Wrapper: Remove a buff from a player.
-function GWRP.Buffs.Remove(ply, buffId, reason)
+function GW.Buffs.Remove(ply, buffId, reason)
     if IsValid(ply) and ply.RemoveBuff then
         return ply:RemoveBuff(buffId, reason)
     end
@@ -86,7 +86,7 @@ local meta = FindMetaTable("Player")
 if meta then
     --- Returns table of all active buff instances on the player.
     function meta:GetBuffs()
-        return self.GWRP_ActiveBuffs or {}
+        return self.GW_ActiveBuffs or {}
     end
 
     --- Checks if the player currently has the specified buff active.
@@ -120,7 +120,7 @@ if meta then
         local buffs = self:GetBuffs()
 
         for buffId, inst in pairs(buffs) do
-            local def = GWRP.Buffs.Get(buffId)
+            local def = GW.Buffs.Get(buffId)
             if def and def.ModifySpeed then
                 local mod = def.ModifySpeed(self, inst)
                 if isnumber(mod) then

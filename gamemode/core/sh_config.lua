@@ -2,64 +2,64 @@
     sh_config.lua - Gamemode Constants, Economy Items & Balancing
 --]]
 
-GWRP.Config = GWRP.Config or {}
+GW.Config = GW.Config or {}
 
 -- Economy
-GWRP.Config.StartingMoney = 250
-GWRP.Config.PaydayInterval = 90 -- seconds between salary ticks
-GWRP.Config.DropMoneyOnDeathMax = 75
-GWRP.Config.GangCreationCost = 200 -- cost to register a new player gang
+GW.Config.StartingMoney = 250
+GW.Config.PaydayInterval = 90 -- seconds between salary ticks
+GW.Config.DropMoneyOnDeathMax = 75
+GW.Config.GangCreationCost = 200 -- cost to register a new player gang
 
 -- Turf Warfare
-GWRP.Config.TurfCaptureRadius = 450 -- Hammer units
-GWRP.Config.TurfCaptureTime = 15 -- seconds of holding uncontested to capture
-GWRP.Config.TurfDividendInterval = 90 -- seconds between turf payouts
-GWRP.Config.TurfDividendAmount = 25 -- cash given to each online gang member per owned turf
-GWRP.Config.TurfCaptureReward = 40 -- instant cash reward to capturing player
+GW.Config.TurfCaptureRadius = 450 -- Hammer units
+GW.Config.TurfCaptureTime = 15 -- seconds of holding uncontested to capture
+GW.Config.TurfDividendInterval = 90 -- seconds between turf payouts
+GW.Config.TurfDividendAmount = 25 -- cash given to each online gang member per owned turf
+GW.Config.TurfCaptureReward = 40 -- instant cash reward to capturing player
 
 -- Contraband Money Printers & Networking
-GWRP.Config.MaxPrintersPerPlayer = 4
-GWRP.Config.PoliceBountyPerPrinter = 125
-GWRP.Config.PoliceBountyPerSwitch = 50
-GWRP.Config.PoliceBountyPerModule = 25
-GWRP.Config.EntityHUDViewDistance = 380 -- Shared max 3D2D HUD visibility distance for printers & synthesizers
+GW.Config.MaxPrintersPerPlayer = 4
+GW.Config.PoliceBountyPerPrinter = 125
+GW.Config.PoliceBountyPerSwitch = 50
+GW.Config.PoliceBountyPerModule = 25
+GW.Config.EntityHUDViewDistance = 380 -- Shared max 3D2D HUD visibility distance for printers & synthesizers
 
 -- Thermal Regulation & Undervolt Module
-GWRP.Config.PrinterHeatRiseStandard = 4      -- +4C per cycle
-GWRP.Config.PrinterHeatRiseUndervolted = 1   -- +1C per cycle (+400% lifespan)
-GWRP.Config.ModuleUndervoltCost = 80
+GW.Config.PrinterHeatRiseStandard = 4      -- +4C per cycle
+GW.Config.PrinterHeatRiseUndervolted = 1   -- +1C per cycle (+400% lifespan)
+GW.Config.ModuleUndervoltCost = 80
 
 -- Network Switch & Efficiency Rates
-GWRP.Config.SwitchMaxPorts = 3 -- 2 copper ports + Port 3 combo SFP (10G/1G) + Port 4 10G SFP uplink
-GWRP.Config.MaxCableLength = 550 -- maximum length in hammer units before copper cable snaps
-GWRP.Config.MaxFiberCableLength = 800 -- maximum length in hammer units for SFP fiber optic cable
-GWRP.Config.WLANSniffMaxDistance = 2500 -- maximum distance in hammer units for airmon & computer WLAN traffic sniffing
-GWRP.Config.PrinterStandaloneEfficiency = 60 -- 1 printer or unlinked = 60%
-GWRP.Config.PrinterNetworkEfficiency2 = 80   -- 2 printers on switch = 80%
-GWRP.Config.PrinterNetworkEfficiency3 = 100  -- 3 printers on switch = 100%
+GW.Config.SwitchMaxPorts = 3 -- 2 copper ports + Port 3 combo SFP (10G/1G) + Port 4 10G SFP uplink
+GW.Config.MaxCableLength = 550 -- maximum length in hammer units before copper cable snaps
+GW.Config.MaxFiberCableLength = 800 -- maximum length in hammer units for SFP fiber optic cable
+GW.Config.WLANSniffMaxDistance = 2500 -- maximum distance in hammer units for airmon & computer WLAN traffic sniffing
+GW.Config.PrinterStandaloneEfficiency = 60 -- 1 printer or unlinked = 60%
+GW.Config.PrinterNetworkEfficiency2 = 80   -- 2 printers on switch = 80%
+GW.Config.PrinterNetworkEfficiency3 = 100  -- 3 printers on switch = 100%
 
 -- Centralized Entity Quality Registry (Entities can also set ENT.ItemQuality in their shared.lua)
-GWRP.Config.EntityQualities = {
-    ["gwrp_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
-    ["gwrp_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
-    ["gwrp_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
-    ["gwrp_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "2x Cu + 2x SFP (10G/Cu Combo + 10G Uplink) | L3 Layer" },
-    ["gwrp_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-3 Terminal | Port Scanner" },
-    ["gwrp_wan_uplink"] = { quality = 3, subType = "Wireless Gateway", stats = "Long-Range L3 Mesh | WPA3 Encrypted" },
-    ["gwrp_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
-    ["gwrp_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },
-    ["gwrp_resource_machine"] = { quality = 1, subType = "Automated Extractor", stats = "Extracts Metals & Blueprints | Network Capable" },
+GW.Config.EntityQualities = {
+    ["gw_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
+    ["gw_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
+    ["gw_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
+    ["gw_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "2x Cu + 2x SFP (10G/Cu Combo + 10G Uplink) | L3 Layer" },
+    ["gw_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-3 Terminal | Port Scanner" },
+    ["gw_wan_uplink"] = { quality = 3, subType = "Wireless Gateway", stats = "Long-Range L3 Mesh | WPA3 Encrypted" },
+    ["gw_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
+    ["gw_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },
+    ["gw_resource_machine"] = { quality = 1, subType = "Automated Extractor", stats = "Extracts Metals & Blueprints | Network Capable" },
 
     -- Explicit Exclusions (Never have item quality)
-    ["gwrp_flag_pole"] = false,
-    ["gwrp_cash_stack"] = false
+    ["gw_flag_pole"] = false,
+    ["gw_cash_stack"] = false
 }
 
 -- Door Pricing
-GWRP.Config.DoorCost = 15
+GW.Config.DoorCost = 15
 
 -- Leveling & Progression System (MMO Curve, Capped at Level 50)
-GWRP.Config.Level = {
+GW.Config.Level = {
     MaxLevel = 50,
     StartLevel = 1,
     BaseXP = 250,
@@ -74,21 +74,21 @@ GWRP.Config.Level = {
     XP_PrinterCollect = 20,
 }
 
-function GWRP.GetRequiredXP(level)
-    level = math.Clamp(tonumber(level) or 1, 1, GWRP.Config.Level.MaxLevel)
-    if level >= GWRP.Config.Level.MaxLevel then
+function GW.GetRequiredXP(level)
+    level = math.Clamp(tonumber(level) or 1, 1, GW.Config.Level.MaxLevel)
+    if level >= GW.Config.Level.MaxLevel then
         return 0 -- Max level cap reached
     end
     -- MMO Curve: Floor(250 * level ^ 1.65)
-    return math.floor(GWRP.Config.Level.BaseXP * (level ^ GWRP.Config.Level.Exponent))
+    return math.floor(GW.Config.Level.BaseXP * (level ^ GW.Config.Level.Exponent))
 end
 
 -- F4 Shop Retail Surcharge & Markup Settings
-GWRP.Config.ShowShopMarkup = true           -- Display markup badges and savings hints in F4 menu
-GWRP.Config.DefaultShopMarkupPercent = 65  -- Default surcharge percentage for public kiosk convenience items
+GW.Config.ShowShopMarkup = true           -- Display markup badges and savings hints in F4 menu
+GW.Config.DefaultShopMarkupPercent = 65  -- Default surcharge percentage for public kiosk convenience items
 
 -- Default Colors
-GWRP.Colors = {
+GW.Colors = {
     Background = Color(15, 23, 42, 230),
     Border = Color(56, 189, 248),
     HealthRed = Color(220, 38, 38),
@@ -100,12 +100,12 @@ GWRP.Colors = {
 }
 
 -- Dynamic Gang Color Generator: converts any gang name into a unique, persistent vivid color
-function GWRP.GetGangColor(gangName)
+function GW.GetGangColor(gangName)
     if not gangName or gangName == "" or gangName == "neutral" or gangName == "Unclaimed" then
-        return GWRP.Colors.Muted
+        return GW.Colors.Muted
     end
     if string.lower(gangName) == "police" then
-        return GWRP.Colors.MoneyGreen
+        return GW.Colors.MoneyGreen
     end
 
     local hash = 0
@@ -116,21 +116,21 @@ function GWRP.GetGangColor(gangName)
 end
 
 -- Helper: Retrieve configured or calculated shop markup percentage for an item
-function GWRP.GetItemMarkupPercent(item)
-    if not GWRP.Config.ShowShopMarkup then return nil end
+function GW.GetItemMarkupPercent(item)
+    if not GW.Config.ShowShopMarkup then return nil end
     if not item then return nil end
     if item.markupPercent then return item.markupPercent end
     if item.wholesaleCost and item.cost and item.cost > item.wholesaleCost then
         return math.Round(((item.cost - item.wholesaleCost) / item.wholesaleCost) * 100)
     end
     if item.isMarkedUp then
-        return GWRP.Config.DefaultShopMarkupPercent or 65
+        return GW.Config.DefaultShopMarkupPercent or 65
     end
     return nil
 end
 
 -- F4 Shop Items
-GWRP.ShopItems = {
+GW.ShopItems = {
     -- ========================================================
     -- 1. PUBLIC STREET SUPPLIES & BASIC TOOLS
     -- ========================================================
@@ -184,7 +184,7 @@ GWRP.ShopItems = {
         level = 1,
         cost = 180, 
         type = "shipment", 
-        weapon = "weapon_gwrp_glock", 
+        weapon = "weapon_gw_glock", 
         weaponName = "Glock-18", 
         count = 10, 
         jobs = { "arms_dealer" } 
@@ -194,7 +194,7 @@ GWRP.ShopItems = {
         level = 3,
         cost = 750, 
         type = "shipment", 
-        weapon = "weapon_gwrp_shotgun", 
+        weapon = "weapon_gw_shotgun", 
         weaponName = "Pump Shotgun", 
         count = 10, 
         jobs = { "arms_dealer" } 
@@ -208,7 +208,7 @@ GWRP.ShopItems = {
         level = 2,
         cost = 45, 
         type = "weapon", 
-        class = "weapon_gwrp_lockpick", 
+        class = "weapon_gw_lockpick", 
         jobs = { "black_market_dealer", "thief" }, 
         desc = "Mechanical lock bypass tool. Used to breach locked doors and security pins." 
     },
@@ -217,7 +217,7 @@ GWRP.ShopItems = {
         level = 2,
         cost = 120, 
         type = "shipment", 
-        weapon = "weapon_gwrp_lockpick", 
+        weapon = "weapon_gw_lockpick", 
         weaponName = "Tactical Lockpick", 
         count = 5, 
         jobs = { "black_market_dealer" } 
@@ -237,7 +237,7 @@ GWRP.ShopItems = {
         level = 5,
         cost = 420, 
         type = "shipment", 
-        weapon = "weapon_gwrp_deagle", 
+        weapon = "weapon_gw_deagle", 
         weaponName = "Desert Eagle", 
         count = 10, 
         jobs = { "black_market_dealer" } 
@@ -247,7 +247,7 @@ GWRP.ShopItems = {
         level = 8,
         cost = 1500, 
         type = "shipment", 
-        weapon = "weapon_gwrp_ak47", 
+        weapon = "weapon_gw_ak47", 
         weaponName = "AK-47", 
         count = 10, 
         jobs = { "black_market_dealer" } 
@@ -261,7 +261,7 @@ GWRP.ShopItems = {
         level = 1,
         cost = 150,
         type = "entity",
-        class = "gwrp_clinic_pod",
+        class = "gw_clinic_pod",
         category = "supplies",
         jobs = { "pharmacist" },
         desc = "Deployable automated triage clinic. Dispenses heals and combat bio-enhancements to passing citizens. Generates passive income for the Pharmacist."
@@ -271,7 +271,7 @@ GWRP.ShopItems = {
         level = 1,
         cost = 50, 
         type = "weapon", 
-        class = "weapon_gwrp_medkit", 
+        class = "weapon_gw_medkit", 
         jobs = { "pharmacist" }, 
         desc = "Deployable trauma kit used to treat injuries and administer combat adrenaline stims in the field." 
     },
@@ -292,7 +292,7 @@ GWRP.ShopItems = {
         level = 1,
         cost = 15, 
         type = "weapon", 
-        class = "weapon_gwrp_wiretool", 
+        class = "weapon_gw_wiretool", 
         category = "networking", 
         desc = "Cabling tool used to connect printers, switches, and computer terminals." 
     },
@@ -301,7 +301,7 @@ GWRP.ShopItems = {
         level = 2,
         cost = 30, 
         type = "weapon", 
-        class = "weapon_gwrp_repairtool", 
+        class = "weapon_gw_repairtool", 
         category = "networking", 
         desc = "Handheld cryo-calibrator. Cools printers (-35°C), repairs integrity, and allows Cyber Engineers to Supercharge hardware." 
     },
@@ -310,7 +310,7 @@ GWRP.ShopItems = {
         level = 2,
         cost = 120, 
         type = "entity", 
-        class = "gwrp_network_switch", 
+        class = "gw_network_switch", 
         category = "networking", 
         desc = "Layer-3 hardware switch featuring 2 copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink." 
     },
@@ -319,7 +319,7 @@ GWRP.ShopItems = {
         level = 5,
         cost = 200, 
         type = "entity", 
-        class = "gwrp_computer", 
+        class = "gw_computer", 
         category = "networking", 
         desc = "Hacking OS terminal; connect to switch for network operations & nmap." 
     },
@@ -328,7 +328,7 @@ GWRP.ShopItems = {
         level = 3,
         cost = 180, 
         type = "entity", 
-        class = "gwrp_wan_uplink", 
+        class = "gw_wan_uplink", 
         category = "networking", 
         desc = "Encrypted microwave satellite dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to link separate networks wirelessly across the map with matching keys." 
     },
@@ -337,7 +337,7 @@ GWRP.ShopItems = {
         level = 3,
         cost = 250, 
         type = "weapon", 
-        class = "weapon_gwrp_cyberphone", 
+        class = "weapon_gw_cyberphone", 
         category = "networking", 
         desc = "Handheld mobile CyberDeck handset exclusively for Cyber Engineers. Runs CyberDeck OS with built-in wireless spectrum reconnaissance and mobile Metasploit." 
     },
@@ -346,7 +346,7 @@ GWRP.ShopItems = {
         level = 3,
         cost = 80, 
         type = "entity", 
-        class = "gwrp_module_undervolt", 
+        class = "gw_module_undervolt", 
         category = "networking", 
         desc = "Microcontroller module that drops operating voltage (-75% heat, +400% lifespan)." 
     },
@@ -355,7 +355,7 @@ GWRP.ShopItems = {
         level = 4,
         cost = 150, 
         type = "entity", 
-        class = "gwrp_module_overclock", 
+        class = "gw_module_overclock", 
         category = "networking", 
         desc = "High-frequency module that boosts printer cash yield by +50% (+60% heat output)." 
     },
@@ -368,7 +368,7 @@ GWRP.ShopItems = {
         level = 1,
         cost = 250, 
         type = "entity", 
-        class = "gwrp_printer_bronze", 
+        class = "gw_printer_bronze", 
         category = "printers",
         desc = "Entry-level contraband printer. Generates steady cash revenue."
     },
@@ -377,7 +377,7 @@ GWRP.ShopItems = {
         level = 4,
         cost = 750, 
         type = "entity", 
-        class = "gwrp_printer_silver", 
+        class = "gw_printer_silver", 
         category = "printers",
         desc = "Commercial grade contraband printer. High efficiency throughput."
     },
@@ -386,7 +386,7 @@ GWRP.ShopItems = {
         level = 8,
         cost = 2200, 
         type = "entity", 
-        class = "gwrp_printer_diamond", 
+        class = "gw_printer_diamond", 
         category = "printers",
         desc = "Maximum tier industrial printer. High yields, benefits greatly from networking."
     },
@@ -396,7 +396,7 @@ GWRP.ShopItems = {
         cost = 500,
         max = 2,
         type = "entity",
-        class = "gwrp_resource_machine",
+        class = "gw_resource_machine",
         category = "printers",
         badge = "Legal Tech",
         desc = "Automated legal extractor & crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput."

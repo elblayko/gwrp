@@ -3,19 +3,19 @@
     Author: Toxic
 --]]
 
-GWRP.UI = GWRP.UI or {}
-GWRP.Buffs = GWRP.Buffs or {}
-GWRP.Buffs.Active = GWRP.Buffs.Active or {}
-GWRP.Buffs.CombatTexts = GWRP.Buffs.CombatTexts or {}
-GWRP.Buffs.HoveredBuff = nil
+GW.UI = GW.UI or {}
+GW.Buffs = GW.Buffs or {}
+GW.Buffs.Active = GW.Buffs.Active or {}
+GW.Buffs.CombatTexts = GW.Buffs.CombatTexts or {}
+GW.Buffs.HoveredBuff = nil
 
 -- Ensure unified gamemode typography is initialized
-if GWRP.UI.CreateFonts then
-    GWRP.UI.CreateFonts()
+if GW.UI.CreateFonts then
+    GW.UI.CreateFonts()
 end
 
 -- Fallback text wrappers if loaded before other UI files
-GWRP.UI.WrapText = GWRP.UI.WrapText or function(text, font, maxW)
+GW.UI.WrapText = GW.UI.WrapText or function(text, font, maxW)
     surface.SetFont(font)
     local words = string.Explode(" ", text)
     local lines = {}
@@ -38,7 +38,7 @@ GWRP.UI.WrapText = GWRP.UI.WrapText or function(text, font, maxW)
     return lines
 end
 
-GWRP.UI.FitText = GWRP.UI.FitText or function(text, font, maxW)
+GW.UI.FitText = GW.UI.FitText or function(text, font, maxW)
     surface.SetFont(font)
     local w, _ = surface.GetTextSize(text)
     if w <= maxW then return text end
@@ -57,9 +57,9 @@ end
 -- NETWORK RECEIVERS
 -- ========================================================
 
-net.Receive("GWRP_SyncAllBuffs", function()
+net.Receive("GW_SyncAllBuffs", function()
     local count = net.ReadUInt(8)
-    GWRP.Buffs.Active = {}
+    GW.Buffs.Active = {}
     local now = CurTime()
 
     for i = 1, count do
@@ -69,7 +69,7 @@ net.Receive("GWRP_SyncAllBuffs", function()
         local stacks = net.ReadUInt(8)
         local dataStr = net.ReadString()
 
-        GWRP.Buffs.Active[id] = {
+        GW.Buffs.Active[id] = {
             id = id,
             duration = duration,
             remaining = remaining,
@@ -80,7 +80,7 @@ net.Receive("GWRP_SyncAllBuffs", function()
     end
 end)
 
-net.Receive("GWRP_SyncBuffAdded", function()
+net.Receive("GW_SyncBuffAdded", function()
     local id = net.ReadString()
     local duration = net.ReadFloat()
     local remaining = net.ReadFloat()
@@ -88,7 +88,7 @@ net.Receive("GWRP_SyncBuffAdded", function()
     local dataStr = net.ReadString()
     local now = CurTime()
 
-    GWRP.Buffs.Active[id] = {
+    GW.Buffs.Active[id] = {
         id = id,
         duration = duration,
         remaining = remaining,
@@ -98,18 +98,18 @@ net.Receive("GWRP_SyncBuffAdded", function()
     }
 end)
 
-net.Receive("GWRP_SyncBuffRemoved", function()
+net.Receive("GW_SyncBuffRemoved", function()
     local id = net.ReadString()
     local reason = net.ReadString()
-    GWRP.Buffs.Active[id] = nil
+    GW.Buffs.Active[id] = nil
 end)
 
-net.Receive("GWRP_BuffCombatText", function()
+net.Receive("GW_BuffCombatText", function()
     local pos = net.ReadVector()
     local text = net.ReadString()
     local col = net.ReadColor()
 
-    table.insert(GWRP.Buffs.CombatTexts, {
+    table.insert(GW.Buffs.CombatTexts, {
         pos = pos,
         text = text,
         color = col,
@@ -123,9 +123,9 @@ local meta = FindMetaTable("Player")
 if meta then
     function meta:GetBuffs()
         if self == LocalPlayer() then
-            return GWRP.Buffs.Active
+            return GW.Buffs.Active
         end
-        return self.GWRP_ActiveBuffs or {}
+        return self.GW_ActiveBuffs or {}
     end
 
     function meta:HasBuff(buffId)
@@ -295,13 +295,13 @@ end
 -- MAIN HUD PAINT HOOK (UNIFIED OBSIDIAN TOP-RIGHT HUD)
 -- ========================================================
 
-hook.Add("HUDPaint", "GWRP_DrawBuffs", function()
+hook.Add("HUDPaint", "GW_DrawBuffs", function()
     local ply = LocalPlayer()
     if not IsValid(ply) or not ply:Alive() then return end
 
-    local activeBuffs = GWRP.Buffs.Active
+    local activeBuffs = GW.Buffs.Active
     if not activeBuffs or table.IsEmpty(activeBuffs) then
-        GWRP.Buffs.HoveredBuff = nil
+        GW.Buffs.HoveredBuff = nil
         return
     end
 
@@ -318,7 +318,7 @@ hook.Add("HUDPaint", "GWRP_DrawBuffs", function()
 
     local index = 0
     for buffId, inst in pairs(activeBuffs) do
-        local def = GWRP.Buffs.Get(buffId)
+        local def = GW.Buffs.Get(buffId)
         if def then
             local col = index % 8
             local row = math.floor(index / 8)
@@ -368,18 +368,18 @@ hook.Add("HUDPaint", "GWRP_DrawBuffs", function()
             -- 4. Stack Counter (Bottom-Right Pill Badge)
             local stacks = inst.stacks or 1
             if stacks > 1 then
-                surface.SetFont("GWRP_UI_Badge")
+                surface.SetFont("GW_UI_Badge")
                 local stTxt = tostring(stacks)
                 local stW = surface.GetTextSize(stTxt) + 8
                 draw.RoundedBox(4, slotX + iconSize - stW, slotY + iconSize - 16, stW, 16, Color(11, 15, 25, 240))
                 surface.SetDrawColor(borderCol.r, borderCol.g, borderCol.b, 180)
                 surface.DrawOutlinedRect(slotX + iconSize - stW, slotY + iconSize - 16, stW, 16, 1)
-                draw.SimpleText(stTxt, "GWRP_UI_Badge", slotX + iconSize - (stW / 2), slotY + iconSize - 9, Color(254, 240, 138), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(stTxt, "GW_UI_Badge", slotX + iconSize - (stW / 2), slotY + iconSize - 9, Color(254, 240, 138), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
 
             -- 5. Remaining Duration (Unified Caption Capsule Pill Underneath)
             local timeStr = FormatBuffTime(remaining)
-            surface.SetFont("GWRP_UI_Caption")
+            surface.SetFont("GW_UI_Caption")
             local tw, th = surface.GetTextSize(timeStr)
             local pillW = math.max(iconSize, tw + 10)
             local pillX = slotX + (iconSize - pillW) / 2
@@ -395,25 +395,25 @@ hook.Add("HUDPaint", "GWRP_DrawBuffs", function()
             draw.RoundedBox(4, pillX, pillY, pillW, 18, Color(11, 15, 25, 220))
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(pillX, pillY, pillW, 18, 1)
-            draw.SimpleText(timeStr, "GWRP_UI_Caption", pillX + (pillW / 2), pillY + 9, timerCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(timeStr, "GW_UI_Caption", pillX + (pillW / 2), pillY + 9, timerCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             index = index + 1
         end
     end
 
-    GWRP.Buffs.HoveredBuff = newHovered
+    GW.Buffs.HoveredBuff = newHovered
 
     -- ========================================================
     -- UNIFIED FLOATING GAMETOOLTIP (MATCHING CL_BAG.LUA THEME)
     -- ========================================================
-    if GWRP.Buffs.HoveredBuff then
-        local hb = GWRP.Buffs.HoveredBuff
+    if GW.Buffs.HoveredBuff then
+        local hb = GW.Buffs.HoveredBuff
         local def = hb.def
         local inst = hb.inst
         local remaining = (inst.expiresAt > 0) and math.max(0, inst.expiresAt - now) or -1
 
         local ttW = 330
-        local linesDesc = GWRP.UI.WrapText(def.desc or "", "GWRP_UI_Body", ttW - 32)
+        local linesDesc = GW.UI.WrapText(def.desc or "", "GW_UI_Body", ttW - 32)
         local ttH = 110 + (#linesDesc * 22)
         if def.canCancel then ttH = ttH + 24 end
 
@@ -430,39 +430,39 @@ hook.Add("HUDPaint", "GWRP_DrawBuffs", function()
         surface.SetDrawColor(30, 41, 59, 200)
         surface.DrawOutlinedRect(tx + 2, ty + 2, ttW - 4, ttH - 4, 1)
 
-        -- Row 1: Header Title in GWRP_UI_Header
-        local fitTitle = GWRP.UI.FitText(def.name, "GWRP_UI_Header", ttW - 32)
-        draw.SimpleText(fitTitle, "GWRP_UI_Header", tx + 16, ty + 14, Color(248, 250, 252))
+        -- Row 1: Header Title in GW_UI_Header
+        local fitTitle = GW.UI.FitText(def.name, "GW_UI_Header", ttW - 32)
+        draw.SimpleText(fitTitle, "GW_UI_Header", tx + 16, ty + 14, Color(248, 250, 252))
 
         -- Row 2: Category Pill Badge & Time Remaining Tag
         local isDebuff = def.isDebuff
         local badgeLabel = isDebuff and "DEBUFF" or "BUFF"
         local badgeCol = isDebuff and Color(239, 68, 68) or Color(16, 185, 129)
 
-        surface.SetFont("GWRP_UI_Badge")
+        surface.SetFont("GW_UI_Badge")
         local bW = surface.GetTextSize(badgeLabel) + 16
         draw.RoundedBox(4, tx + 16, ty + 44, bW, 22, Color(badgeCol.r, badgeCol.g, badgeCol.b, 35))
         surface.SetDrawColor(badgeCol.r, badgeCol.g, badgeCol.b, 160)
         surface.DrawOutlinedRect(tx + 16, ty + 44, bW, 22, 1)
-        draw.SimpleText(badgeLabel, "GWRP_UI_Badge", tx + 16 + (bW / 2), ty + 55, badgeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(badgeLabel, "GW_UI_Badge", tx + 16 + (bW / 2), ty + 55, badgeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
         local durStr = (remaining > 0) and ("Duration: " .. FormatBuffTime(remaining)) or "Permanent"
-        draw.SimpleText(durStr, "GWRP_UI_Caption", tx + ttW - 16, ty + 55, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(durStr, "GW_UI_Caption", tx + ttW - 16, ty + 55, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
         -- Row 3: Horizontal Slate Divider Line
         surface.SetDrawColor(30, 41, 59, 220)
         surface.DrawLine(tx + 16, ty + 74, tx + ttW - 16, ty + 74)
 
-        -- Row 4: Word-Wrapped Description in GWRP_UI_Body
+        -- Row 4: Word-Wrapped Description in GW_UI_Body
         for i, l in ipairs(linesDesc) do
-            draw.SimpleText(l, "GWRP_UI_Body", tx + 16, ty + 84 + (i - 1) * 22, Color(226, 232, 240), TEXT_ALIGN_LEFT)
+            draw.SimpleText(l, "GW_UI_Body", tx + 16, ty + 84 + (i - 1) * 22, Color(226, 232, 240), TEXT_ALIGN_LEFT)
         end
 
         -- Row 5: Interaction Guidance Hint
         if def.canCancel then
             local guideY = ty + ttH - 22
-            draw.SimpleText("<Right Click to Dismiss>", "GWRP_UI_Badge", tx + 16, guideY, Color(34, 211, 238), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText("Cancel Effect", "GWRP_UI_Caption", tx + ttW - 16, guideY, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("<Right Click to Dismiss>", "GW_UI_Badge", tx + 16, guideY, Color(34, 211, 238), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Cancel Effect", "GW_UI_Caption", tx + ttW - 16, guideY, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
     end
 end)
@@ -471,11 +471,11 @@ end)
 -- RIGHT-CLICK DISMISS INPUT LISTENERS
 -- ========================================================
 
-hook.Add("VGUIMousePressed", "GWRP_BuffRightClickDismiss", function(pnl, mouseCode)
-    if mouseCode == MOUSE_RIGHT and GWRP.Buffs.HoveredBuff then
-        local hb = GWRP.Buffs.HoveredBuff
+hook.Add("VGUIMousePressed", "GW_BuffRightClickDismiss", function(pnl, mouseCode)
+    if mouseCode == MOUSE_RIGHT and GW.Buffs.HoveredBuff then
+        local hb = GW.Buffs.HoveredBuff
         if hb.def and hb.def.canCancel then
-            net.Start("GWRP_CancelBuff")
+            net.Start("GW_CancelBuff")
                 net.WriteString(hb.id)
             net.SendToServer()
             surface.PlaySound("buttons/button15.wav")
@@ -483,11 +483,11 @@ hook.Add("VGUIMousePressed", "GWRP_BuffRightClickDismiss", function(pnl, mouseCo
     end
 end)
 
-hook.Add("PlayerButtonDown", "GWRP_BuffMouseRawClick", function(ply, button)
-    if button == MOUSE_RIGHT and GWRP.Buffs.HoveredBuff then
-        local hb = GWRP.Buffs.HoveredBuff
+hook.Add("PlayerButtonDown", "GW_BuffMouseRawClick", function(ply, button)
+    if button == MOUSE_RIGHT and GW.Buffs.HoveredBuff then
+        local hb = GW.Buffs.HoveredBuff
         if hb.def and hb.def.canCancel then
-            net.Start("GWRP_CancelBuff")
+            net.Start("GW_CancelBuff")
                 net.WriteString(hb.id)
             net.SendToServer()
             surface.PlaySound("buttons/button15.wav")
@@ -496,15 +496,15 @@ hook.Add("PlayerButtonDown", "GWRP_BuffMouseRawClick", function(ply, button)
 end)
 
 -- ========================================================
--- FLOATING COMBAT TEXT RENDERER (UNIFIED GWRP_FONTMEDIUM)
+-- FLOATING COMBAT TEXT RENDERER (UNIFIED GW_FONTMEDIUM)
 -- ========================================================
 
-hook.Add("HUDPaint", "GWRP_DrawBuffCombatText", function()
+hook.Add("HUDPaint", "GW_DrawBuffCombatText", function()
     local now = CurTime()
-    for i = #GWRP.Buffs.CombatTexts, 1, -1 do
-        local item = GWRP.Buffs.CombatTexts[i]
+    for i = #GW.Buffs.CombatTexts, 1, -1 do
+        local item = GW.Buffs.CombatTexts[i]
         if now > item.dieTime then
-            table.remove(GWRP.Buffs.CombatTexts, i)
+            table.remove(GW.Buffs.CombatTexts, i)
         else
             local lifePct = 1 - ((item.dieTime - now) / 1.6)
             local alpha = math.Clamp((1 - lifePct) * 255, 0, 255)
@@ -512,8 +512,8 @@ hook.Add("HUDPaint", "GWRP_DrawBuffCombatText", function()
 
             local scr = (item.pos + Vector(0, 0, offsetUp)):ToScreen()
             if scr.visible then
-                draw.SimpleText(item.text, "GWRP_FontMedium", scr.x + 1, scr.y + 1, Color(11, 15, 25, alpha), TEXT_ALIGN_CENTER)
-                draw.SimpleText(item.text, "GWRP_FontMedium", scr.x, scr.y, Color(item.color.r, item.color.g, item.color.b, alpha), TEXT_ALIGN_CENTER)
+                draw.SimpleText(item.text, "GW_FontMedium", scr.x + 1, scr.y + 1, Color(11, 15, 25, alpha), TEXT_ALIGN_CENTER)
+                draw.SimpleText(item.text, "GW_FontMedium", scr.x, scr.y, Color(item.color.r, item.color.g, item.color.b, alpha), TEXT_ALIGN_CENTER)
             end
         end
     end
@@ -523,7 +523,7 @@ end)
 -- 3D2D OVERHEAD WANTED STAR (MATCHING TURF & DOOR LABELS)
 -- ========================================================
 
-hook.Add("PostPlayerDraw", "GWRP_DrawOverheadWantedStatus", function(ply)
+hook.Add("PostPlayerDraw", "GW_DrawOverheadWantedStatus", function(ply)
     if not IsValid(ply) or not ply:Alive() or ply == LocalPlayer() then return end
     if not ply:isWanted() then return end
 
@@ -554,6 +554,6 @@ hook.Add("PostPlayerDraw", "GWRP_DrawOverheadWantedStatus", function(ply)
         surface.SetDrawColor(30, 41, 59, 200)
         surface.DrawOutlinedRect(-pillW / 2 + 2, -pillH / 2 + 2, pillW - 4, pillH - 4, 1)
 
-        draw.SimpleText("★ WANTED SUSPECT ★", "GWRP_FontMedium", 0, -1, Color(254, 240, 138), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("★ WANTED SUSPECT ★", "GW_FontMedium", 0, -1, Color(254, 240, 138), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     cam.End3D2D()
 end)

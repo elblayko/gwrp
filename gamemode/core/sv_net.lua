@@ -2,56 +2,56 @@
     sv_net.lua - Centralized Network Protocol & Rate Limiter
 --]]
 
-util.AddNetworkString("GWRP_Notification")
-util.AddNetworkString("GWRP_PlayerDied")
-util.AddNetworkString("GWRP_TurfUpdate")
-util.AddNetworkString("GWRP_TurfAlert")
-util.AddNetworkString("GWRP_ChangeJob")
-util.AddNetworkString("GWRP_BuyItem")
-util.AddNetworkString("GWRP_DoorAction")
-util.AddNetworkString("GWRP_ChatMessage")
-util.AddNetworkString("GWRP_SyncTurfZones")
-util.AddNetworkString("GWRP_OpenTurfSetup")
-util.AddNetworkString("GWRP_AdminTurfAction")
-util.AddNetworkString("GWRP_AdminDebugAction")
-util.AddNetworkString("GWRP_OpenAdminMenu")
-util.AddNetworkString("GWRP_ToggleF4Menu")
-util.AddNetworkString("GWRP_ToggleF2Menu")
-util.AddNetworkString("GWRP_SyncInventory")
-util.AddNetworkString("GWRP_UseInventoryItem")
-util.AddNetworkString("GWRP_DropInventoryItem")
-util.AddNetworkString("GWRP_MoveInventorySlot")
-util.AddNetworkString("GWRP_DropInventorySlot")
-util.AddNetworkString("GWRP_UseInventorySlot")
-util.AddNetworkString("GWRP_EquipBag")
-util.AddNetworkString("GWRP_ToggleBagWindow")
-util.AddNetworkString("GWRP_SyncAllBuffs")
-util.AddNetworkString("GWRP_SyncBuffAdded")
-util.AddNetworkString("GWRP_SyncBuffRemoved")
-util.AddNetworkString("GWRP_CancelBuff")
-util.AddNetworkString("GWRP_BuffCombatText")
-util.AddNetworkString("GWRP_OpenComputerOS")
-util.AddNetworkString("GWRP_RunComputerCommand")
-util.AddNetworkString("GWRP_ComputerCommandResponse")
-util.AddNetworkString("GWRP_LevelUp")
-util.AddNetworkString("GWRP_XPGained")
-util.AddNetworkString("GWRP_OpenCraftingUI")
-util.AddNetworkString("GWRP_CraftItem")
-util.AddNetworkString("GWRP_CollectMachineResource")
+util.AddNetworkString("GW_Notification")
+util.AddNetworkString("GW_PlayerDied")
+util.AddNetworkString("GW_TurfUpdate")
+util.AddNetworkString("GW_TurfAlert")
+util.AddNetworkString("GW_ChangeJob")
+util.AddNetworkString("GW_BuyItem")
+util.AddNetworkString("GW_DoorAction")
+util.AddNetworkString("GW_ChatMessage")
+util.AddNetworkString("GW_SyncTurfZones")
+util.AddNetworkString("GW_OpenTurfSetup")
+util.AddNetworkString("GW_AdminTurfAction")
+util.AddNetworkString("GW_AdminDebugAction")
+util.AddNetworkString("GW_OpenAdminMenu")
+util.AddNetworkString("GW_ToggleF4Menu")
+util.AddNetworkString("GW_ToggleF2Menu")
+util.AddNetworkString("GW_SyncInventory")
+util.AddNetworkString("GW_UseInventoryItem")
+util.AddNetworkString("GW_DropInventoryItem")
+util.AddNetworkString("GW_MoveInventorySlot")
+util.AddNetworkString("GW_DropInventorySlot")
+util.AddNetworkString("GW_UseInventorySlot")
+util.AddNetworkString("GW_EquipBag")
+util.AddNetworkString("GW_ToggleBagWindow")
+util.AddNetworkString("GW_SyncAllBuffs")
+util.AddNetworkString("GW_SyncBuffAdded")
+util.AddNetworkString("GW_SyncBuffRemoved")
+util.AddNetworkString("GW_CancelBuff")
+util.AddNetworkString("GW_BuffCombatText")
+util.AddNetworkString("GW_OpenComputerOS")
+util.AddNetworkString("GW_RunComputerCommand")
+util.AddNetworkString("GW_ComputerCommandResponse")
+util.AddNetworkString("GW_LevelUp")
+util.AddNetworkString("GW_XPGained")
+util.AddNetworkString("GW_OpenCraftingUI")
+util.AddNetworkString("GW_CraftItem")
+util.AddNetworkString("GW_CollectMachineResource")
 
-GWRP.NetLimits = GWRP.NetLimits or {}
+GW.NetLimits = GW.NetLimits or {}
 
-function GWRP.CheckRateLimit(ply, action, maxPerSec)
+function GW.CheckRateLimit(ply, action, maxPerSec)
     local id = ply:SteamID() .. "_" .. action
     local now = CurTime()
-    GWRP.NetLimits[id] = GWRP.NetLimits[id] or { count = 0, reset = now + 1 }
+    GW.NetLimits[id] = GW.NetLimits[id] or { count = 0, reset = now + 1 }
 
-    if now > GWRP.NetLimits[id].reset then
-        GWRP.NetLimits[id].count = 1
-        GWRP.NetLimits[id].reset = now + 1
+    if now > GW.NetLimits[id].reset then
+        GW.NetLimits[id].count = 1
+        GW.NetLimits[id].reset = now + 1
         return true
     end
 
-    GWRP.NetLimits[id].count = GWRP.NetLimits[id].count + 1
-    return GWRP.NetLimits[id].count <= maxPerSec
+    GW.NetLimits[id].count = GW.NetLimits[id].count + 1
+    return GW.NetLimits[id].count <= maxPerSec
 end

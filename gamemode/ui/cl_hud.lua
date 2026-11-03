@@ -2,10 +2,10 @@
     cl_hud.lua - Classic DarkRP / GangWars Bottom-Left HUD, Ammo Display & Hitmarkers
 --]]
 
-GWRP.UI = GWRP.UI or {}
+GW.UI = GW.UI or {}
 
 -- Text Fitting Helper (Word/Length truncation protection)
-GWRP.UI.FitText = GWRP.UI.FitText or function(text, font, maxW)
+GW.UI.FitText = GW.UI.FitText or function(text, font, maxW)
     if not text or text == "" then return "" end
     surface.SetFont(font)
     local tw = surface.GetTextSize(text)
@@ -17,51 +17,51 @@ GWRP.UI.FitText = GWRP.UI.FitText or function(text, font, maxW)
     return s .. "..."
 end
 
-function GWRP.UI.CreateFonts()
+function GW.UI.CreateFonts()
     -- Legacy / In-Game HUD Fonts (Crisp & Readable)
-    surface.CreateFont("GWRP_FontSmall", {
+    surface.CreateFont("GW_FontSmall", {
         font = "Roboto",
         size = 17,
         weight = 700,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_FontMedium", {
+    surface.CreateFont("GW_FontMedium", {
         font = "Roboto",
         size = 22,
         weight = 700,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_FontLarge", {
+    surface.CreateFont("GW_FontLarge", {
         font = "Roboto",
         size = 30,
         weight = 800,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_FontAmmo", {
+    surface.CreateFont("GW_FontAmmo", {
         font = "Trebuchet MS",
         size = 42,
         weight = 900,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_HUD_Small", {
+    surface.CreateFont("GW_HUD_Small", {
         font = "Roboto",
         size = 17,
         weight = 700,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_HUD_Med", {
+    surface.CreateFont("GW_HUD_Med", {
         font = "Roboto",
         size = 22,
         weight = 700,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_HUD_Large", {
+    surface.CreateFont("GW_HUD_Large", {
         font = "Roboto",
         size = 30,
         weight = 800,
@@ -70,63 +70,63 @@ function GWRP.UI.CreateFonts()
     })
 
     -- High-Legibility Scaled Typography for Modern Menus & F4 Dashboard
-    surface.CreateFont("GWRP_UI_Title", {
+    surface.CreateFont("GW_UI_Title", {
         font = "Roboto",
         size = 34,
         weight = 800,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_UI_Header", {
+    surface.CreateFont("GW_UI_Header", {
         font = "Roboto",
         size = 25,
         weight = 700,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_UI_Sub", {
+    surface.CreateFont("GW_UI_Sub", {
         font = "Roboto",
         size = 21,
         weight = 600,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_UI_Price", {
+    surface.CreateFont("GW_UI_Price", {
         font = "Roboto",
         size = 30,
         weight = 800,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_UI_Btn", {
+    surface.CreateFont("GW_UI_Btn", {
         font = "Roboto",
         size = 20,
         weight = 700,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_UI_Body", {
+    surface.CreateFont("GW_UI_Body", {
         font = "Roboto",
         size = 19,
         weight = 500,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_UI_BodyBold", {
+    surface.CreateFont("GW_UI_BodyBold", {
         font = "Roboto",
         size = 19,
         weight = 700,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_UI_Badge", {
+    surface.CreateFont("GW_UI_Badge", {
         font = "Roboto",
         size = 16,
         weight = 700,
         antialias = true,
         extended = true
     })
-    surface.CreateFont("GWRP_UI_Caption", {
+    surface.CreateFont("GW_UI_Caption", {
         font = "Roboto",
         size = 17,
         weight = 500,
@@ -136,10 +136,10 @@ function GWRP.UI.CreateFonts()
 end
 
 -- Call immediately upon script inclusion so fonts exist regardless of engine hook timings
-GWRP.UI.CreateFonts()
+GW.UI.CreateFonts()
 
 -- Disable default HL2 HUD elements
-hook.Add("HUDShouldDraw", "GWRP_HideDefaultHUD", function(name)
+hook.Add("HUDShouldDraw", "GW_HideDefaultHUD", function(name)
     local hide = {
         ["CHudHealth"] = true,
         ["CHudBattery"] = true,
@@ -159,7 +159,7 @@ local smoothXP = nil
 local xpPopups = {}
 local levelUpBanner = nil
 
-net.Receive("GWRP_XPGained", function()
+net.Receive("GW_XPGained", function()
     local amount = net.ReadInt(32)
     local reason = net.ReadString()
     table.insert(xpPopups, {
@@ -169,7 +169,7 @@ net.Receive("GWRP_XPGained", function()
     })
 end)
 
-net.Receive("GWRP_LevelUp", function()
+net.Receive("GW_LevelUp", function()
     local newLvl = net.ReadInt(16)
     local rewardCash = net.ReadInt(32)
     surface.PlaySound("garrysmod/save_load1.wav")
@@ -182,7 +182,7 @@ net.Receive("GWRP_LevelUp", function()
 end)
 
 -- Main Paint Hook
-hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
+hook.Add("HUDPaint", "GW_DrawMainHUD", function()
     local ply = LocalPlayer()
     if not IsValid(ply) or not ply:Alive() then
         smoothHP = nil
@@ -192,8 +192,8 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
     end
 
     -- 1. Draw Top Turf Domination Bar
-    if GWRP.Turf and GWRP.Turf.DrawHUD then
-        GWRP.Turf.DrawHUD()
+    if GW.Turf and GW.Turf.DrawHUD then
+        GW.Turf.DrawHUD()
     end
 
     -- 2. Modern Unified Bottom-Left HUD (Obsidian Theme with Level & XP)
@@ -205,7 +205,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
     local jobName = jobData.name or "Citizen"
     local gangName = ply:GetGang()
     local isGang = (gangName ~= "")
-    local badgeCol = isGang and GWRP.GetGangColor(gangName) or (jobData.faction and jobData.faction.color or Color(56, 189, 248))
+    local badgeCol = isGang and GW.GetGangColor(gangName) or (jobData.faction and jobData.faction.color or Color(56, 189, 248))
     local badgeText = isGang and (gangName .. " • " .. jobName) or jobName
 
     -- Background Obsidian Card
@@ -220,9 +220,9 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
     -- Top Header Row: Level Badge + Player Name + Faction/Gang Capsule Badge
     local headerY = hudY + 10
-    surface.SetFont("GWRP_UI_Badge")
+    surface.SetFont("GW_UI_Badge")
     local maxBadgeW = math.floor(hudW * 0.48)
-    local fitBadge = GWRP.UI.FitText(badgeText, "GWRP_UI_Badge", maxBadgeW - 16)
+    local fitBadge = GW.UI.FitText(badgeText, "GW_UI_Badge", maxBadgeW - 16)
     local bTextW = surface.GetTextSize(fitBadge)
     local badgeW = bTextW + 16
     local badgeX = hudX + hudW - badgeW - 14
@@ -231,25 +231,25 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
     draw.RoundedBox(4, badgeX, headerY, badgeW, 22, Color(badgeCol.r, badgeCol.g, badgeCol.b, 35))
     surface.SetDrawColor(badgeCol.r, badgeCol.g, badgeCol.b, 160)
     surface.DrawOutlinedRect(badgeX, headerY, badgeW, 22, 1)
-    draw.SimpleText(fitBadge, "GWRP_UI_Badge", badgeX + badgeW / 2, headerY + 11, badgeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(fitBadge, "GW_UI_Badge", badgeX + badgeW / 2, headerY + 11, badgeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- Player Level Capsule Pill
     local curLevel = ply.GetLevel and ply:GetLevel() or 1
     local lvlBadgeText = "LVL " .. curLevel
-    surface.SetFont("GWRP_UI_Badge")
+    surface.SetFont("GW_UI_Badge")
     local lvlBadgeW = surface.GetTextSize(lvlBadgeText) + 14
     local lvlBadgeX = hudX + 14
 
     draw.RoundedBox(4, lvlBadgeX, headerY, lvlBadgeW, 22, Color(245, 158, 11, 40))
     surface.SetDrawColor(245, 158, 11, 180)
     surface.DrawOutlinedRect(lvlBadgeX, headerY, lvlBadgeW, 22, 1)
-    draw.SimpleText(lvlBadgeText, "GWRP_UI_Badge", lvlBadgeX + lvlBadgeW / 2, headerY + 11, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(lvlBadgeText, "GW_UI_Badge", lvlBadgeX + lvlBadgeW / 2, headerY + 11, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- Player Nickname (Word/length fitted to avoid badge overlap)
     local nickX = lvlBadgeX + lvlBadgeW + 8
     local maxNickW = badgeX - nickX - 8
-    local fitNick = GWRP.UI.FitText(ply:Nick(), "GWRP_UI_Sub", maxNickW)
-    draw.SimpleText(fitNick, "GWRP_UI_Sub", nickX, headerY + 11, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    local fitNick = GW.UI.FitText(ply:Nick(), "GW_UI_Sub", maxNickW)
+    draw.SimpleText(fitNick, "GW_UI_Sub", nickX, headerY + 11, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Slate Header Divider Line
     surface.SetDrawColor(30, 41, 59, 200)
@@ -268,7 +268,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
     local targetXP = ply.GetXP and ply:GetXP() or 0
     local reqXP = ply.GetRequiredXP and ply:GetRequiredXP() or 250
-    local maxLvl = (GWRP.Config and GWRP.Config.Level and GWRP.Config.Level.MaxLevel) or 50
+    local maxLvl = (GW.Config and GW.Config.Level and GW.Config.Level.MaxLevel) or 50
     local isMaxLvl = (curLevel >= maxLvl)
     if smoothXP == nil then smoothXP = targetXP end
     smoothXP = Lerp(math.Clamp(dt * 8, 0, 1), smoothXP, targetXP)
@@ -283,7 +283,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
     draw.RoundedBox(4, hudX + 14, hpY, 32, barH, Color(239, 68, 68, 35))
     surface.SetDrawColor(239, 68, 68, 160)
     surface.DrawOutlinedRect(hudX + 14, hpY, 32, barH, 1)
-    draw.SimpleText("HP", "GWRP_UI_Badge", hudX + 14 + 16, hpY + barH / 2, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("HP", "GW_UI_Badge", hudX + 14 + 16, hpY + barH / 2, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     draw.RoundedBox(4, trackX, hpY, trackW, barH, Color(17, 24, 39, 240))
     surface.SetDrawColor(30, 41, 59, 180)
@@ -296,15 +296,15 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
         draw.RoundedBox(2, trackX + 1, hpY + 1, math.max(4, fillW - 2), 2, Color(254, 202, 202, 70))
     end
     local hpStr = string.format("%d / %d", math.max(0, math.ceil(smoothHP)), maxHP)
-    draw.SimpleText(hpStr, "GWRP_UI_Badge", trackX + trackW - 7, hpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(hpStr, "GWRP_UI_Badge", trackX + trackW - 8, hpY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(hpStr, "GW_UI_Badge", trackX + trackW - 7, hpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(hpStr, "GW_UI_Badge", trackX + trackW - 8, hpY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
     -- Armor Bar Row
     local armorY = hudY + 65
     draw.RoundedBox(4, hudX + 14, armorY, 32, barH, Color(6, 182, 212, 35))
     surface.SetDrawColor(6, 182, 212, 160)
     surface.DrawOutlinedRect(hudX + 14, armorY, 32, barH, 1)
-    draw.SimpleText("AP", "GWRP_UI_Badge", hudX + 14 + 16, armorY + barH / 2, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("AP", "GW_UI_Badge", hudX + 14 + 16, armorY + barH / 2, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     draw.RoundedBox(4, trackX, armorY, trackW, barH, Color(17, 24, 39, 240))
     surface.SetDrawColor(30, 41, 59, 180)
@@ -317,15 +317,15 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
         draw.RoundedBox(2, trackX + 1, armorY + 1, math.max(4, fillW - 2), 2, Color(165, 243, 252, 70))
     end
     local armorStr = string.format("%d / 100", math.max(0, math.ceil(smoothArmor)))
-    draw.SimpleText(armorStr, "GWRP_UI_Badge", trackX + trackW - 7, armorY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(armorStr, "GWRP_UI_Badge", trackX + trackW - 8, armorY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(armorStr, "GW_UI_Badge", trackX + trackW - 7, armorY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(armorStr, "GW_UI_Badge", trackX + trackW - 8, armorY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
     -- XP Progress Bar Row
     local xpY = hudY + 86
     draw.RoundedBox(4, hudX + 14, xpY, 32, barH, Color(245, 158, 11, 35))
     surface.SetDrawColor(245, 158, 11, 160)
     surface.DrawOutlinedRect(hudX + 14, xpY, 32, barH, 1)
-    draw.SimpleText("XP", "GWRP_UI_Badge", hudX + 14 + 16, xpY + barH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("XP", "GW_UI_Badge", hudX + 14 + 16, xpY + barH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     draw.RoundedBox(4, trackX, xpY, trackW, barH, Color(17, 24, 39, 240))
     surface.SetDrawColor(30, 41, 59, 180)
@@ -338,8 +338,8 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
         draw.RoundedBox(2, trackX + 1, xpY + 1, math.max(4, fillW - 2), 2, Color(253, 230, 138, 80))
     end
     local xpStr = isMaxLvl and "MAX LEVEL (50)" or string.format("%s / %s XP (%d%%)", string.Comma(math.ceil(smoothXP)), string.Comma(reqXP), math.floor(xpPct * 100))
-    draw.SimpleText(xpStr, "GWRP_UI_Badge", trackX + trackW - 7, xpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(xpStr, "GWRP_UI_Badge", trackX + trackW - 8, xpY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(xpStr, "GW_UI_Badge", trackX + trackW - 7, xpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(xpStr, "GW_UI_Badge", trackX + trackW - 8, xpY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
     -- Slate Mid Divider Line
     surface.SetDrawColor(30, 41, 59, 200)
@@ -352,17 +352,17 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
     draw.RoundedBox(4, hudX + 14, econY, 24, 24, Color(16, 185, 129, 35))
     surface.SetDrawColor(16, 185, 129, 160)
     surface.DrawOutlinedRect(hudX + 14, econY, 24, 24, 1)
-    draw.SimpleText("$", "GWRP_UI_Badge", hudX + 14 + 12, econY + 12, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("$", "GW_UI_Badge", hudX + 14 + 12, econY + 12, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- Cash Value
-    local moneyStr = GWRP.FormatMoney(ply:GetMoney())
-    draw.SimpleText(moneyStr, "GWRP_UI_Sub", hudX + 44, econY + 12, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    local moneyStr = GW.FormatMoney(ply:GetMoney())
+    draw.SimpleText(moneyStr, "GW_UI_Sub", hudX + 44, econY + 12, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Salary Pill Capsule
     local salaryVal = jobData.salary or 45
-    local payInterval = GWRP.Config and GWRP.Config.PaydayInterval or 90
+    local payInterval = GW.Config and GW.Config.PaydayInterval or 90
     local salaryStr = "+$" .. salaryVal .. " / " .. payInterval .. "s"
-    surface.SetFont("GWRP_UI_Badge")
+    surface.SetFont("GW_UI_Badge")
     local salTextW = surface.GetTextSize(salaryStr)
     local salPillW = salTextW + 18
     local salPillX = hudX + hudW - salPillW - 14
@@ -370,7 +370,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
     draw.RoundedBox(4, salPillX, econY, salPillW, 24, Color(24, 32, 47, 240))
     surface.SetDrawColor(30, 41, 59, 220)
     surface.DrawOutlinedRect(salPillX, econY, salPillW, 24, 1)
-    draw.SimpleText(salaryStr, "GWRP_UI_Badge", salPillX + salPillW / 2, econY + 12, Color(56, 189, 248), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(salaryStr, "GW_UI_Badge", salPillX + salPillW / 2, econY + 12, Color(56, 189, 248), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- 2.5 Floating Animated +XP Popups (Ascending above the HUD card)
     local now = CurTime()
@@ -386,7 +386,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             local yOffset = progress * 40 + (i - 1) * 22
             local currentY = popupBaseY - yOffset
 
-            surface.SetFont("GWRP_UI_Header")
+            surface.SetFont("GW_UI_Header")
             local tw, th = surface.GetTextSize(p.text)
             local pw = tw + 20
             local px = hudX + 14
@@ -394,7 +394,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             draw.RoundedBox(4, px, currentY, pw, 24, Color(11, 15, 25, math.min(alpha, 220)))
             surface.SetDrawColor(245, 158, 11, math.min(alpha, 180))
             surface.DrawOutlinedRect(px, currentY, pw, 24, 1)
-            draw.SimpleText(p.text, "GWRP_UI_Header", px + pw / 2, currentY + 12, Color(251, 191, 36, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(p.text, "GW_UI_Header", px + pw / 2, currentY + 12, Color(251, 191, 36, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
     end
 
@@ -423,20 +423,20 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
             -- Banner Content
             local titleTxt = "★ LEVEL UP! REACHED LEVEL " .. levelUpBanner.level .. " ★"
-            draw.SimpleText(titleTxt, "GWRP_UI_Title", bX + bW / 2, bY + 24, Color(251, 191, 36, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(titleTxt, "GW_UI_Title", bX + bW / 2, bY + 24, Color(251, 191, 36, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             local rewardTxt = string.format("Cash Reward: +$%s  •  Health Fully Restored!", string.Comma(levelUpBanner.reward))
-            draw.SimpleText(rewardTxt, "GWRP_UI_Sub", bX + bW / 2, bY + 54, Color(74, 222, 128, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(rewardTxt, "GW_UI_Sub", bX + bW / 2, bY + 54, Color(74, 222, 128, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
     end
 
     -- 3. Draw Bottom-Right Ammo Display (Unified Theme)
     local wep = ply:GetActiveWeapon()
     local nonAmmoWeps = {
-        weapon_gwrp_fists = true,
+        weapon_gw_fists = true,
         weapon_fists = true,
         fists = true,
-        weapon_gwrp_keys = true,
+        weapon_gw_keys = true,
         weapon_physgun = true,
         weapon_physcannon = true,
         gmod_tool = true
@@ -457,8 +457,8 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
             -- Weapon Name
             local wepName = wep:GetPrintName() or "WEAPON"
-            local fitName = GWRP.UI.FitText(string.upper(wepName), "GWRP_UI_Badge", ammoW - 28)
-            draw.SimpleText(fitName, "GWRP_UI_Badge", ammoX + ammoW - 14, ammoY + 16, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            local fitName = GW.UI.FitText(string.upper(wepName), "GW_UI_Badge", ammoW - 28)
+            draw.SimpleText(fitName, "GW_UI_Badge", ammoX + ammoW - 14, ammoY + 16, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
             -- Divider
             surface.SetDrawColor(30, 41, 59, 200)
@@ -466,10 +466,10 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
             -- Ammo Numbers
             if clip >= 0 then
-                draw.SimpleText(tostring(clip), "GWRP_FontAmmo", ammoX + ammoW - 14 - 55, ammoY + 52, Color(245, 158, 11), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-                draw.SimpleText("/ " .. reserve, "GWRP_UI_Sub", ammoX + ammoW - 14, ammoY + 55, Color(203, 213, 225), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(tostring(clip), "GW_FontAmmo", ammoX + ammoW - 14 - 55, ammoY + 52, Color(245, 158, 11), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("/ " .. reserve, "GW_UI_Sub", ammoX + ammoW - 14, ammoY + 55, Color(203, 213, 225), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
             else
-                draw.SimpleText(tostring(reserve), "GWRP_FontAmmo", ammoX + ammoW - 14, ammoY + 52, Color(245, 158, 11), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(tostring(reserve), "GW_FontAmmo", ammoX + ammoW - 14, ammoY + 52, Color(245, 158, 11), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
             end
         end
     end
@@ -487,12 +487,12 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             local cardH = 92
             local cardX = tagX - cardW / 2
 
-            local owner = ent:GetNWEntity("GWRP_DoorOwner")
-            local gangName = ent:GetNWString("GWRP_DoorFaction", "")
+            local owner = ent:GetNWEntity("GW_DoorOwner")
+            local gangName = ent:GetNWString("GW_DoorFaction", "")
             local isOwned = IsValid(owner)
             local isOwner = isOwned and (owner == ply)
             local canAccess = ent.CanAccessDoor and ent:CanAccessDoor(ply)
-            local cost = (GWRP.Config and GWRP.Config.DoorCost) or 15
+            local cost = (GW.Config and GW.Config.DoorCost) or 15
 
             local accentCol = Color(52, 211, 153)
             local badgeText = "VACANT"
@@ -512,7 +512,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
                 promptText = "[F2] Manage / Sell Property"
                 promptCol = Color(74, 222, 128)
             elseif isOwned then
-                local gangCol = (gangName ~= "" and gangName ~= "neutral" and GWRP.GetGangColor) and GWRP.GetGangColor(gangName) or nil
+                local gangCol = (gangName ~= "" and gangName ~= "neutral" and GW.GetGangColor) and GW.GetGangColor(gangName) or nil
                 if canAccess then
                     accentCol = gangCol or Color(6, 182, 212)
                     badgeText = "GANG ACCESS"
@@ -534,7 +534,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             end
 
             -- Measure Badge Width
-            surface.SetFont("GWRP_UI_Badge")
+            surface.SetFont("GW_UI_Badge")
             local bTextW = surface.GetTextSize(badgeText)
             local badgeW = bTextW + 16
 
@@ -550,22 +550,22 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             draw.RoundedBox(4, cardX + 8, tagY + 8, badgeW, 20, Color(accentCol.r, accentCol.g, accentCol.b, 40))
             surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 160)
             surface.DrawOutlinedRect(cardX + 8, tagY + 8, badgeW, 20, 1)
-            draw.SimpleText(badgeText, "GWRP_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(badgeText, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             local maxTitleW = cardW - badgeW - 24
-            local fitTitle = GWRP.UI.FitText(titleText, "GWRP_UI_Badge", maxTitleW)
-            draw.SimpleText(fitTitle, "GWRP_UI_Badge", cardX + badgeW + 16, tagY + 18, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            local fitTitle = GW.UI.FitText(titleText, "GW_UI_Badge", maxTitleW)
+            draw.SimpleText(fitTitle, "GW_UI_Badge", cardX + badgeW + 16, tagY + 18, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Row 2: Subtitle Info
-            draw.SimpleText(subText, "GWRP_FontSmall", cardX + 12, tagY + 44, subCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(subText, "GW_FontSmall", cardX + 12, tagY + 44, subCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Row 3: Prompt Action
-            draw.SimpleText(promptText, "GWRP_UI_Caption", cardX + 12, tagY + 68, promptCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        elseif distSqr <= (160 * 160) and ent:GetClass() == "gwrp_clinic_pod" then
+            draw.SimpleText(promptText, "GW_UI_Caption", cardX + 12, tagY + 68, promptCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        elseif distSqr <= (160 * 160) and ent:GetClass() == "gw_clinic_pod" then
             local tagX = ScrW() / 2
             local tagY = ScrH() / 2 + 36
 
-            surface.SetFont("GWRP_UI_Badge")
+            surface.SetFont("GW_UI_Badge")
             local podTitle = "Clinical Triage Pod"
             local titleW = surface.GetTextSize(podTitle)
             local totalW = titleW + 28
@@ -575,7 +575,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             surface.SetDrawColor(52, 211, 153, 200)
             surface.DrawOutlinedRect(tagX - totalW / 2, tagY, totalW, totalH, 1)
 
-            draw.SimpleText(podTitle, "GWRP_UI_Badge", tagX, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(podTitle, "GW_UI_Badge", tagX, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         elseif distSqr <= (160 * 160) and ent.HasItemQuality and ent:HasItemQuality() then
             local qData = ent:GetItemQualityData()
             if qData then
@@ -586,12 +586,12 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
             local tagX = ScrW() / 2
             local tagY = ScrH() / 2 + 36
 
-            surface.SetFont("GWRP_UI_Badge")
+            surface.SetFont("GW_UI_Badge")
             local nameW = surface.GetTextSize(entName)
             local badgeW = surface.GetTextSize(qName) + 16
 
             -- Up-Close Raycast UI: Layer-3 Network Switch
-            if ent:GetClass() == "gwrp_network_switch" then
+            if ent:GetClass() == "gw_network_switch" then
                 local cardW = 380
                 local cardH = 96
                 local cardX = tagX - cardW / 2
@@ -602,8 +602,8 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
                 -- Header: Quality Pill + Switch Title
                 draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
-                draw.SimpleText(qName, "GWRP_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                draw.SimpleText(entName, "GWRP_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 -- 4 Ports Status Row: Ports 1..2 (Copper), Port 3 (SFP Combo 10G/1G), Port 4 (Dedicated SFP 10G)
                 local p1 = ent.GetPort1Active and ent:GetPort1Active()
@@ -647,7 +647,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
                     draw.RoundedBox(4, pt.x, portY, portW, portH, bg)
                     surface.SetDrawColor(col.r, col.g, col.b, 160)
                     surface.DrawOutlinedRect(pt.x, portY, portW, portH, 1)
-                    draw.SimpleText(txt, "GWRP_UI_Caption", pt.x + portW / 2, portY + 12, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText(txt, "GW_UI_Caption", pt.x + portW / 2, portY + 12, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 end
 
                 -- Hardware Status Row
@@ -655,10 +655,10 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
                 local p4Status = p4 and "P4: 10G Uplink UP" or "P4: 10G Uplink Open"
                 local linksTxt = string.format("%s | %s", p3Status, p4Status)
 
-                draw.SimpleText(linksTxt, "GWRP_UI_Caption", cardX + cardW / 2, tagY + 75, Color(203, 213, 225), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(linksTxt, "GW_UI_Caption", cardX + cardW / 2, tagY + 75, Color(203, 213, 225), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             -- Up-Close Raycast UI: Satellite WAN Uplink Gateway
-            elseif ent:GetClass() == "gwrp_wan_uplink" then
+            elseif ent:GetClass() == "gw_wan_uplink" then
                 local cardW = 360
                 local cardH = 92
                 local cardX = tagX - cardW / 2
@@ -669,8 +669,8 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
                 -- Header: Quality Pill + Name
                 draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
-                draw.SimpleText(qName, "GWRP_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                draw.SimpleText(entName, "GWRP_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 -- Key and Mesh Status Row
                 local key = ent.GetEncryptionKey and ent:GetEncryptionKey() or "NONE"
@@ -679,16 +679,16 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
                 local statusCol = isOnline and Color(52, 211, 153) or Color(245, 158, 11)
                 local statusTxt = isOnline and string.format("ONLINE (%d PEER%s)", peers, peers == 1 and "" or "S") or "SEARCHING"
 
-                draw.SimpleText(string.format("Encryption Key: %s", key), "GWRP_UI_BodyBold", cardX + 12, tagY + 40, Color(56, 189, 248), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText(statusTxt, "GWRP_UI_Badge", cardX + cardW - 12, tagY + 40, statusCol, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(string.format("Encryption Key: %s", key), "GW_UI_BodyBold", cardX + 12, tagY + 40, Color(56, 189, 248), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(statusTxt, "GW_UI_Badge", cardX + cardW - 12, tagY + 40, statusCol, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
                 -- Attachment and Hint Row
                 local sw = ent.GetConnectedSwitch and ent:GetConnectedSwitch()
                 local swTxt = IsValid(sw) and string.format("Connected: L3 Switch Port %d (Active L3 Route)", ent:GetAssignedPort() or 0) or "Unlinked: Connect to L3 Switch via Wire Tool"
-                draw.SimpleText(swTxt, "GWRP_UI_Caption", cardX + 12, tagY + 68, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(swTxt, "GW_UI_Caption", cardX + 12, tagY + 68, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Up-Close Raycast UI: Contraband Money Printers
-            elseif ent.PrintAmount ~= nil or ent:GetClass():find("gwrp_printer_") then
+            elseif ent.PrintAmount ~= nil or ent:GetClass():find("gw_printer_") then
                 local cardW = 340
                 local cardH = 102
                 local cardX = tagX - cardW / 2
@@ -699,19 +699,19 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
                 -- Header: Quality Pill + Printer Name
                 draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
-                draw.SimpleText(qName, "GWRP_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                draw.SimpleText(entName, "GWRP_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 -- Stored Cash Row
                 local cash = ent.GetStoredCash and ent:GetStoredCash() or 0
-                draw.SimpleText(string.format("Stored Cash: +$%d", cash), "GWRP_FontSmall", cardX + 12, tagY + 39, GWRP.Colors.MoneyGreen, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(string.format("Stored Cash: +$%d", cash), "GW_FontSmall", cardX + 12, tagY + 39, GW.Colors.MoneyGreen, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 -- Temperature Row (Dedicated line to prevent clipping with undervolt tag)
                 local temp = ent.GetTemperature and ent:GetTemperature() or 20
                 local isUv = ent.GetHasUndervolt and ent:GetHasUndervolt()
-                local tempCol = temp > 75 and GWRP.Colors.HealthRed or (isUv and Color(56, 189, 248) or Color(203, 213, 225))
+                local tempCol = temp > 75 and GW.Colors.HealthRed or (isUv and Color(56, 189, 248) or Color(203, 213, 225))
                 local tempTxt = isUv and string.format("Temp: %d°C / 100°C (Undervolted)", temp) or string.format("Temp: %d°C / 100°C", temp)
-                draw.SimpleText(tempTxt, "GWRP_UI_Caption", cardX + 12, tagY + 61, tempCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(tempTxt, "GW_UI_Caption", cardX + 12, tagY + 61, tempCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 -- Efficiency Row
                 local eff = ent.GetEfficiency and ent:GetEfficiency() or 60
@@ -729,7 +729,7 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
                     effTxt = "Efficiency: 80%"
                 end
 
-                draw.SimpleText(effTxt, "GWRP_UI_Caption", cardX + 12, tagY + 83, effCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(effTxt, "GW_UI_Caption", cardX + 12, tagY + 83, effCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Standard Raycast Badge for Other In-World Entities
             else
@@ -740,10 +740,10 @@ hook.Add("HUDPaint", "GWRP_DrawMainHUD", function()
 
                 -- Quality Pill Badge
                 draw.RoundedBox(4, tagX - totalW / 2 + 6, tagY + 4, badgeW, 22, Color(qCol.r, qCol.g, qCol.b, 40))
-                draw.SimpleText(qName, "GWRP_UI_Badge", tagX - totalW / 2 + 6 + badgeW / 2, tagY + 15, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(qName, "GW_UI_Badge", tagX - totalW / 2 + 6 + badgeW / 2, tagY + 15, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
                 -- Entity Name
-                draw.SimpleText(entName, "GWRP_UI_Badge", tagX - totalW / 2 + badgeW + 14, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(entName, "GW_UI_Badge", tagX - totalW / 2 + badgeW + 14, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             end
         end
     end

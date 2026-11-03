@@ -2,10 +2,10 @@
     sh_turf.lua - Shared Turf Definitions & Zones
 --]]
 
-GWRP.Turf = GWRP.Turf or {}
+GW.Turf = GW.Turf or {}
 
 -- Default Starter Templates (Used if no per-map JSON profile exists yet)
-GWRP.Turf.DefaultTemplates = {
+GW.Turf.DefaultTemplates = {
     ["rp_downtown_v4c_v2"] = {
         [1] = { id = 1, name = "Downtown Plaza", pos = Vector(-137, -196, -143), radius = 500, owner = "neutral", progress = 100 },
         [2] = { id = 2, name = "Eastside Slums", pos = Vector(-2010, -1480, -140), radius = 450, owner = "neutral", progress = 100 },
@@ -15,4 +15,4 @@ GWRP.Turf.DefaultTemplates = {
 }
 
 -- Active runtime turf zones on current map
-GWRP.Turf.Zones = GWRP.Turf.Zones or {}
+GW.Turf.Zones = GW.Turf.Zones or {}

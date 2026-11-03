@@ -64,43 +64,43 @@ function GM:Initialize()
     print("   Gamemode Loaded Successfully!                  ")
     print("==================================================")
 
-    GWRP.Database.Init()
-    GWRP.Turf.Init()
-    GWRP.Doors.Init()
-    GWRP.Economy.StartPaydayTimer()
+    GW.Database.Init()
+    GW.Turf.Init()
+    GW.Doors.Init()
+    GW.Economy.StartPaydayTimer()
 end
 
 function GM:PlayerInitialSpawn(ply)
-    ply.GWRP_DataLoaded = false
-    GWRP.Database.LoadPlayer(ply, function(data)
-        local initialJob = (data and data.job and GWRP.Jobs[data.job]) and data.job or "citizen"
+    ply.GW_DataLoaded = false
+    GW.Database.LoadPlayer(ply, function(data)
+        local initialJob = (data and data.job and GW.Jobs[data.job]) and data.job or "citizen"
         ply:SetJob(initialJob, true)
-        GWRP.Turf.SyncToPlayer(ply)
-        GWRP.Doors.SyncToPlayer(ply)
+        GW.Turf.SyncToPlayer(ply)
+        GW.Doors.SyncToPlayer(ply)
 
         timer.Simple(1, function()
             if IsValid(ply) then
-                GWRP.Notify(ply, "Welcome to GangWars RP! Press F4 to open the Store & Jobs.", NOTIFY_GENERIC, 8)
-                GWRP.Notify(ply, "Claim Turf Flag Poles for your gang to earn dividends!", NOTIFY_HINT, 10)
+                GW.Notify(ply, "Welcome to GangWars RP! Press F4 to open the Store & Jobs.", NOTIFY_GENERIC, 8)
+                GW.Notify(ply, "Claim Turf Flag Poles for your gang to earn dividends!", NOTIFY_HINT, 10)
             end
         end)
     end)
 end
 
 function GM:PlayerDisconnected(ply)
-    if GWRP.Database and GWRP.Database.SavePlayer then
-        GWRP.Database.SavePlayer(ply)
+    if GW.Database and GW.Database.SavePlayer then
+        GW.Database.SavePlayer(ply)
     end
 end
 
 function GM:ShutDown()
     for _, ply in ipairs(player.GetAll()) do
-        if GWRP.Database and GWRP.Database.SavePlayer then
-            GWRP.Database.SavePlayer(ply)
+        if GW.Database and GW.Database.SavePlayer then
+            GW.Database.SavePlayer(ply)
         end
     end
-    if GWRP.Turf and GWRP.Turf.SaveMapProfile then
-        GWRP.Turf.SaveMapProfile()
+    if GW.Turf and GW.Turf.SaveMapProfile then
+        GW.Turf.SaveMapProfile()
     end
     print("[GWRP] All player, gang, and turf records committed to SQLite.")
 end
@@ -129,7 +129,7 @@ function GM:PlayerSpawn(ply)
 
         -- Universal RP tools (Given to ALL jobs)
         ply:Give("weapon_fists")
-        ply:Give("weapon_gwrp_keys")
+        ply:Give("weapon_gw_keys")
         ply:Give("weapon_physgun")
         ply:Give("weapon_physcannon")
         ply:Give("gmod_tool")
@@ -184,12 +184,12 @@ end
 -- WEAPON PICKUP & PROGRAMMATIC GIVE CONTROL
 -- ========================================================
 local plyMeta = FindMetaTable("Player")
-if plyMeta and not plyMeta.GWRP_OldGive then
-    plyMeta.GWRP_OldGive = plyMeta.Give
+if plyMeta and not plyMeta.GW_OldGive then
+    plyMeta.GW_OldGive = plyMeta.Give
     function plyMeta:Give(class, bNoAmmo)
-        self.GWRP_GivingWeapon = true
-        local wep = self:GWRP_OldGive(class, bNoAmmo)
-        self.GWRP_GivingWeapon = nil
+        self.GW_GivingWeapon = true
+        local wep = self:GW_OldGive(class, bNoAmmo)
+        self.GW_GivingWeapon = nil
         return wep
     end
 end
@@ -198,7 +198,7 @@ function GM:PlayerCanPickupWeapon(ply, wep)
     if not IsValid(ply) or not IsValid(wep) then return false end
 
     -- Allow programmatic Give() calls (job spawn loadout, vendor purchase, inventory equip)
-    if ply.GWRP_GivingWeapon then
+    if ply.GW_GivingWeapon then
         return true
     end
 
@@ -216,10 +216,10 @@ end
 function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
     if not IsValid(ply) or not IsValid(newWep) then return end
     local class = newWep:GetClass()
-    local def = GWRP.Inventory and GWRP.Inventory.GetItemData and GWRP.Inventory.GetItemData(class)
+    local def = GW.Inventory and GW.Inventory.GetItemData and GW.Inventory.GetItemData(class)
     local reqLvl = (def and def.level) or (newWep.RequiredLevel or 1)
     if reqLvl > 1 and ply:GetLevel() < reqLvl then
-        GWRP.Notify(ply, string.format("You must be Level %d to wield %s!", reqLvl, def and def.name or class), NOTIFY_ERROR)
+        GW.Notify(ply, string.format("You must be Level %d to wield %s!", reqLvl, def and def.name or class), NOTIFY_ERROR)
         return true -- Blocks switching to this weapon
     end
 end
@@ -229,26 +229,26 @@ function GM:PlayerDeath(victim, inflictor, attacker)
     local respawnSecs = (victim:GetJob() == "police_officer") and 3 or 5
     victim.NextSpawnTime = CurTime() + respawnSecs
 
-    net.Start("GWRP_PlayerDied")
+    net.Start("GW_PlayerDied")
         net.WriteUInt(respawnSecs, 8)
     net.Send(victim)
 
     -- Drop a small amount of cash on death
-    local dropAmount = math.min(GWRP.Config.DropMoneyOnDeathMax or 75, math.floor(victim:GetMoney() * 0.1))
+    local dropAmount = math.min(GW.Config.DropMoneyOnDeathMax or 75, math.floor(victim:GetMoney() * 0.1))
     if dropAmount > 0 then
         victim:AddMoney(-dropAmount)
-        GWRP.Economy.SpawnCashStack(victim:GetPos() + Vector(0, 0, 10), dropAmount)
+        GW.Economy.SpawnCashStack(victim:GetPos() + Vector(0, 0, 10), dropAmount)
     end
 
     -- Award Combat XP
     if IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim then
-        local xpReward = (GWRP.Config and GWRP.Config.Level and GWRP.Config.Level.XP_PlayerKill) or 50
+        local xpReward = (GW.Config and GW.Config.Level and GW.Config.Level.XP_PlayerKill) or 50
         local isRival = false
         local aGang = attacker:GetGang()
         local vGang = victim:GetGang()
         if aGang ~= "" and vGang ~= "" and string.lower(aGang) ~= string.lower(vGang) then
             isRival = true
-            xpReward = xpReward + ((GWRP.Config and GWRP.Config.Level and GWRP.Config.Level.XP_RivalGangKillBonus) or 50)
+            xpReward = xpReward + ((GW.Config and GW.Config.Level and GW.Config.Level.XP_RivalGangKillBonus) or 50)
         end
         if attacker.AddXP then
             local reason = isRival and "Rival Gang Kill" or "Player Kill"
@@ -266,11 +266,11 @@ end
 
 -- Hook F4 (gm_showspare2) and F2 (gm_showteam) from engine
 function GM:ShowSpare2(ply)
-    net.Start("GWRP_ToggleF4Menu")
+    net.Start("GW_ToggleF4Menu")
     net.Send(ply)
 end
 
 function GM:ShowTeam(ply)
-    net.Start("GWRP_ToggleF2Menu")
+    net.Start("GW_ToggleF2Menu")
     net.Send(ply)
 end
