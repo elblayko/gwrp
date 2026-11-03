@@ -43,12 +43,12 @@ function ENT:Draw()
 
     local myPos = self:GetPos()
     local distSqr = ply:EyePos():DistToSqr(myPos)
-    if distSqr > (500 * 500) then return end
+    if distSqr > (240 * 240) then return end
 
     -- Raycast angle check
     local aim = ply:GetAimVector()
     local dir = (myPos - ply:EyePos()):GetNormalized()
-    if aim:Dot(dir) < 0.45 then return end
+    if aim:Dot(dir) < 0.55 then return end
 
     local ang = ply:EyeAngles()
     ang:RotateAroundAxis(ang:Forward(), 90)
