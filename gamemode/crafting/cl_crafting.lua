@@ -137,7 +137,7 @@ function GWRP.Crafting.OpenCraftingMenu(machine)
             local netMsg = string.format("L2 Switch Port %d  |  %s  |  %d%% Speed", port, ip ~= "" and ip or "DHCP", eff)
             draw.SimpleText(netMsg, "GWRP_UI_BodyBold", netX, 36, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         else
-            draw.SimpleText("Standalone (60% Speed) - Link to Switch", "GWRP_UI_BodyBold", netX, 36, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Standalone (60% Speed) - Link to Switch via Wire Tool", "GWRP_UI_BodyBold", netX, 36, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         end
     end
 

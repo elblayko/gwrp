@@ -189,7 +189,7 @@ function ENT:Draw()
             local netText = string.format("L2 Linked: Port %d  |  %s  |  %d%% Speed", port, (ip ~= "" and ip or "192.168.1.x"), eff)
             draw.SimpleText(netText, "GWRP_UI_Badge", x + 14, netY, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         else
-            draw.SimpleText("Standalone (60% Speed) - Link to Switch with Wire Tool", "GWRP_UI_Badge", x + 14, netY, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Standalone (60% Speed)", "GWRP_UI_Badge", x + 14, netY, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         end
 
         -- ========================================================
