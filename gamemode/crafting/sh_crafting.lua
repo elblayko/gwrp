@@ -139,13 +139,13 @@ GWRP.Inventory.Items["gwrp_resource_machine"] = {
 -- ========================================================
 
 -- Extraction weights (Total = 100)
--- Zinc: 38% | Iron: 24% | Steel: 12% | Blueprints: 18% | Carbon Rod: 8%
+-- Zinc: 48% (Common Base) | Iron: 24% (Structural) | Steel: 12% (Military Alloy) | Blueprints: 10% | Carbon Rod: 6% (Exotic)
 GWRP.Crafting.DropTable = {
-    { id = "crafting_ingot_zinc",  weight = 38 },
+    { id = "crafting_ingot_zinc",  weight = 48 },
     { id = "crafting_ingot_iron",  weight = 24 },
     { id = "crafting_ingot_steel", weight = 12 },
     {
-        weight = 18,
+        weight = 10,
         isBlueprintPool = true,
         blueprints = {
             "blueprint_glock",
@@ -154,11 +154,18 @@ GWRP.Crafting.DropTable = {
             "blueprint_ak47"
         }
     },
-    { id = "crafting_carbon_rod",  weight = 8 }
+    { id = "crafting_carbon_rod",  weight = 6 }
 }
 
 function GWRP.Crafting.RollRandomResource()
-    local roll = math.random(1, 100)
+    local totalWeight = 0
+    for _, entry in ipairs(GWRP.Crafting.DropTable) do
+        totalWeight = totalWeight + (entry.weight or 0)
+    end
+    if totalWeight <= 0 then return "crafting_ingot_zinc" end
+
+    -- Use Source engine C++ float random generator (high entropy, uniformly distributed across [0, totalWeight))
+    local roll = math.Rand(0, totalWeight)
     local cumulative = 0
 
     for _, entry in ipairs(GWRP.Crafting.DropTable) do
@@ -166,7 +173,8 @@ function GWRP.Crafting.RollRandomResource()
         if roll <= cumulative then
             if entry.isBlueprintPool then
                 local bpList = entry.blueprints
-                return bpList[math.random(1, #bpList)]
+                local idx = math.Clamp(math.floor(math.Rand(1, #bpList + 1)), 1, #bpList)
+                return bpList[idx]
             else
                 return entry.id
             end

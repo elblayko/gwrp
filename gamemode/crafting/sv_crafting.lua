@@ -212,3 +212,30 @@ net.Receive("GWRP_CollectMachineResource", function(len, ply)
         GWRP.Crafting.PickupMaterial(ply, machine.CurrentItem)
     end
 end)
+
+-- Debug verification concommand: gwrp_test_drops <count>
+concommand.Add("gwrp_test_drops", function(ply, cmd, args)
+    if IsValid(ply) and not ply:IsAdmin() then return end
+
+    local count = math.Clamp(tonumber(args[1]) or 1000, 10, 50000)
+    local results = {}
+
+    for i = 1, count do
+        local id = GWRP.Crafting.RollRandomResource()
+        results[id] = (results[id] or 0) + 1
+    end
+
+    local out = string.format("\n[GWRP Crafting] Simulated %d extraction rolls:\n", count)
+    for id, cnt in pairs(results) do
+        local pct = (cnt / count) * 100
+        local def = GWRP.Crafting.Materials[id]
+        local name = def and def.name or id
+        out = out .. string.format("  %-28s: %5d  (%5.1f%%)\n", name, cnt, pct)
+    end
+
+    if IsValid(ply) then
+        ply:ChatPrint(out)
+    else
+        print(out)
+    end
+end)

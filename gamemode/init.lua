@@ -56,6 +56,9 @@ include("crafting/sv_crafting.lua")
 include("core/sv_admin.lua")
 
 function GM:Initialize()
+    math.randomseed(os.time() + math.floor(SysTime() * 1000))
+    for i = 1, 5 do math.random() end
+
     print("==================================================")
     print("           GangWars RP (by Toxic)                 ")
     print("   Gamemode Loaded Successfully!                  ")
