@@ -12,7 +12,7 @@ util.AddNetworkString("GW_OpenClinicMenu")
 util.AddNetworkString("GW_Clinic_PurchaseTreatment")
 
 function ENT:Initialize()
-    self:SetModel("models/props_wasteland/gaspump001a.mdl")
+    self:SetModel("models/props/de_nuke/nucleartestcabinet.mdl")
     self:PhysicsInit(SOLID_VPHYSICS)
     self:SetMoveType(MOVETYPE_VPHYSICS)
     self:SetSolid(SOLID_VPHYSICS)
@@ -76,10 +76,10 @@ function ENT:Use(activator, caller)
 
     -- Send clinical treatment menu
     net.Start("GW_OpenClinicMenu")
-        net.WriteEntity(self)
-        net.WriteBool(self:GetDoctorOnDuty())
-        net.WriteInt(self:GetVaultCash(), 32)
-        net.WriteInt(self:GetTotalPatients(), 32)
+    net.WriteEntity(self)
+    net.WriteBool(self:GetDoctorOnDuty())
+    net.WriteInt(self:GetVaultCash(), 32)
+    net.WriteInt(self:GetTotalPatients(), 32)
     net.Send(activator)
 
     activator:EmitSound("buttons/button14.wav", 60, 100)
@@ -117,7 +117,9 @@ net.Receive("GW_Clinic_PurchaseTreatment", function(len, ply)
 
     if IsValid(owner) and owner:IsPlayer() then
         owner:AddMoney(ownerCut)
-        GW.Notify(owner, string.format("[CLINIC] %s received %s ($%d)! +$%d earned.", ply:Nick(), treatDef.name, treatDef.cost, ownerCut), NOTIFY_GENERIC, 6)
+        GW.Notify(owner,
+            string.format("[CLINIC] %s received %s ($%d)! +$%d earned.", ply:Nick(), treatDef.name, treatDef.cost,
+                ownerCut), NOTIFY_GENERIC, 6)
         owner:EmitSound("ambient/levels/labs/coinslot1.wav", 55, 110)
     end
 
@@ -134,6 +136,7 @@ net.Receive("GW_Clinic_PurchaseTreatment", function(len, ply)
     ed:SetScale(1.0)
     util.Effect("WheelDust", ed)
 
-    local notifyMsg = isDoc and string.format("Received %s with [DR. ON DUTY BONUS]!", treatDef.name) or string.format("Received %s from Autonomous Clinic!", treatDef.name)
+    local notifyMsg = isDoc and string.format("Received %s with [DR. ON DUTY BONUS]!", treatDef.name) or
+    string.format("Received %s from Autonomous Clinic!", treatDef.name)
     GW.Notify(ply, notifyMsg, NOTIFY_GENERIC, 5)
 end)

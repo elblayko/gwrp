@@ -6,7 +6,7 @@ GW.Config = GW.Config or {}
 
 -- Economy
 GW.Config.StartingMoney = 250
-GW.Config.PaydayInterval = 90 -- seconds between salary ticks
+GW.Config.PaydayInterval = 90    -- seconds between salary ticks
 GW.Config.DropMoneyOnDeathMax = 75
 GW.Config.GangCreationCost = 200 -- cost to register a new player gang
 
@@ -15,11 +15,11 @@ GW.Config.DefaultRespawnTime = 15 -- Baseline respawn time for all players (seco
 GW.Config.PoliceRespawnTime = 5   -- Rapid dispatch respawn for base police officer (seconds)
 
 -- Turf Warfare
-GW.Config.TurfCaptureRadius = 450 -- Hammer units
-GW.Config.TurfCaptureTime = 15 -- seconds of holding uncontested to capture
+GW.Config.TurfCaptureRadius = 450   -- Hammer units
+GW.Config.TurfCaptureTime = 15      -- seconds of holding uncontested to capture
 GW.Config.TurfDividendInterval = 90 -- seconds between turf payouts
-GW.Config.TurfDividendAmount = 25 -- cash given to each online gang member per owned turf
-GW.Config.TurfCaptureReward = 40 -- instant cash reward to capturing player
+GW.Config.TurfDividendAmount = 25   -- cash given to each online gang member per owned turf
+GW.Config.TurfCaptureReward = 40    -- instant cash reward to capturing player
 
 -- Contraband Money Printers & Networking
 GW.Config.MaxPrintersPerPlayer = 4
@@ -29,15 +29,15 @@ GW.Config.PoliceBountyPerModule = 25
 GW.Config.EntityHUDViewDistance = 380 -- Shared max 3D2D HUD visibility distance for printers & synthesizers
 
 -- Thermal Regulation & Undervolt Module
-GW.Config.PrinterHeatRiseStandard = 4      -- +4C per cycle
-GW.Config.PrinterHeatRiseUndervolted = 1   -- +1C per cycle (+400% lifespan)
+GW.Config.PrinterHeatRiseStandard = 4    -- +4C per cycle
+GW.Config.PrinterHeatRiseUndervolted = 1 -- +1C per cycle (+400% lifespan)
 GW.Config.ModuleUndervoltCost = 80
 
 -- Network Switch & Efficiency Rates
-GW.Config.SwitchMaxPorts = 3 -- 2 copper ports + Port 3 combo SFP (10G/1G) + Port 4 10G SFP uplink
-GW.Config.MaxCableLength = 550 -- maximum length in hammer units before copper cable snaps
-GW.Config.MaxFiberCableLength = 800 -- maximum length in hammer units for SFP fiber optic cable
-GW.Config.WLANSniffMaxDistance = 2500 -- maximum distance in hammer units for airmon & computer WLAN traffic sniffing
+GW.Config.SwitchMaxPorts = 3               -- 2 copper ports + Port 3 combo SFP (10G/1G) + Port 4 10G SFP uplink
+GW.Config.MaxCableLength = 550             -- maximum length in hammer units before copper cable snaps
+GW.Config.MaxFiberCableLength = 800        -- maximum length in hammer units for SFP fiber optic cable
+GW.Config.WLANSniffMaxDistance = 2500      -- maximum distance in hammer units for airmon & computer WLAN traffic sniffing
 GW.Config.PrinterStandaloneEfficiency = 60 -- 1 printer or unlinked = 60%
 GW.Config.PrinterNetworkEfficiency2 = 80   -- 2 printers on switch = 80%
 GW.Config.PrinterNetworkEfficiency3 = 100  -- 3 printers on switch = 100%
@@ -88,8 +88,8 @@ function GW.GetRequiredXP(level)
 end
 
 -- F4 Shop Retail Surcharge & Markup Settings (200% - 300% convenience markup)
-GW.Config.ShowShopMarkup = true           -- Display markup badges and savings hints in F4 menu
-GW.Config.DefaultShopMarkupPercent = 250  -- Default surcharge percentage for public kiosk convenience items
+GW.Config.ShowShopMarkup = true          -- Display markup badges and savings hints in F4 menu
+GW.Config.DefaultShopMarkupPercent = 250 -- Default surcharge percentage for public kiosk convenience items
 
 -- Whitelist of allowed tools and RP equipment for the Hobo job
 GW.HoboAllowedWeapons = {
@@ -185,17 +185,17 @@ GW.ShopItems = {
     -- ========================================================
     -- 1. PUBLIC STREET SUPPLIES & BASIC TOOLS
     -- ========================================================
-    ["ammo_universal"] = { 
-        name = "Universal Ammo Crate", 
+    ["ammo_universal"] = {
+        name = "Universal Ammo Crate",
         level = 1,
-        cost = 70, 
+        cost = 70,
         wholesaleCost = 20,
         markupPercent = 250,
         markupRole = "Arms Dealer",
         wholesaleJob = "arms_dealer",
-        type = "ammo", 
-        category = "supplies", 
-        desc = "Emergency street ammunition pack for pistols, rifles, shotguns & magnums." 
+        type = "ammo",
+        category = "supplies",
+        desc = "Emergency street ammunition pack for pistols, rifles, shotguns & magnums."
     },
     ["item_bandage"] = {
         name = "Tactical Field Bandage (Bag Item)",
@@ -223,34 +223,34 @@ GW.ShopItems = {
         jobs = { "arms_dealer" },
         desc = "Discount bulk ammunition crate for authorized weapons dealers."
     },
-    ["armor_vest"] = { 
-        name = "Heavy Kevlar Vest", 
+    ["armor_vest"] = {
+        name = "Heavy Kevlar Vest",
         level = 3,
-        cost = 35, 
-        type = "armor", 
-        category = "supplies", 
-        jobs = { "arms_dealer" }, 
-        desc = "Reinforced ceramic ballistic vest. Restores body armor to 100%." 
+        cost = 35,
+        type = "armor",
+        category = "supplies",
+        jobs = { "arms_dealer" },
+        desc = "Reinforced ceramic ballistic vest. Restores body armor to 100%."
     },
-    ["shipment_glock"] = { 
-        name = "Shipment: Glock-18 (10x)", 
+    ["shipment_glock"] = {
+        name = "Shipment: Glock-18 (10x)",
         level = 1,
-        cost = 180, 
-        type = "shipment", 
-        weapon = "weapon_gw_glock", 
-        weaponName = "Glock-18", 
-        count = 10, 
+        cost = 180,
+        type = "shipment",
+        weapon = "weapon_gw_glock",
+        weaponName = "Glock-18",
+        count = 10,
         jobs = { "arms_dealer" },
         isContraband = true
     },
-    ["shipment_shotgun"] = { 
-        name = "Shipment: Shotgun (10x)", 
+    ["shipment_shotgun"] = {
+        name = "Shipment: Shotgun (10x)",
         level = 3,
-        cost = 750, 
-        type = "shipment", 
-        weapon = "weapon_gw_shotgun", 
-        weaponName = "Pump Shotgun", 
-        count = 10, 
+        cost = 750,
+        type = "shipment",
+        weapon = "weapon_gw_shotgun",
+        weaponName = "Pump Shotgun",
+        count = 10,
         jobs = { "arms_dealer" },
         isContraband = true
     },
@@ -258,24 +258,24 @@ GW.ShopItems = {
     -- ========================================================
     -- 3. BLACK MARKET DEALER EXCLUSIVES (CONTRABAND & INFILTRATION)
     -- ========================================================
-    ["weapon_lockpick"] = { 
-        name = "Tactical Lockpick", 
+    ["weapon_lockpick"] = {
+        name = "Tactical Lockpick",
         level = 2,
-        cost = 45, 
-        type = "weapon", 
-        class = "weapon_gw_lockpick", 
-        jobs = { "black_market_dealer", "thief" }, 
+        cost = 45,
+        type = "weapon",
+        class = "weapon_gw_lockpick",
+        jobs = { "black_market_dealer", "thief" },
         isContraband = true,
-        desc = "Mechanical lock bypass tool. Used to breach locked doors and security pins." 
+        desc = "Mechanical lock bypass tool. Used to breach locked doors and security pins."
     },
-    ["shipment_lockpick"] = { 
-        name = "Shipment: Tactical Lockpick (5x)", 
+    ["shipment_lockpick"] = {
+        name = "Shipment: Tactical Lockpick (5x)",
         level = 2,
-        cost = 120, 
-        type = "shipment", 
-        weapon = "weapon_gw_lockpick", 
-        weaponName = "Tactical Lockpick", 
-        count = 5, 
+        cost = 120,
+        type = "shipment",
+        weapon = "weapon_gw_lockpick",
+        weaponName = "Tactical Lockpick",
+        count = 5,
         jobs = { "black_market_dealer" },
         isContraband = true
     },
@@ -290,25 +290,25 @@ GW.ShopItems = {
         isContraband = true,
         desc = "Underground combat injector. Grants +40% speed and 15% damage reduction for 20s."
     },
-    ["shipment_deagle"] = { 
-        name = "Shipment: Desert Eagle (10x)", 
+    ["shipment_deagle"] = {
+        name = "Shipment: Desert Eagle (10x)",
         level = 5,
-        cost = 420, 
-        type = "shipment", 
-        weapon = "weapon_gw_deagle", 
-        weaponName = "Desert Eagle", 
-        count = 10, 
+        cost = 420,
+        type = "shipment",
+        weapon = "weapon_gw_deagle",
+        weaponName = "Desert Eagle",
+        count = 10,
         jobs = { "black_market_dealer" },
         isContraband = true
     },
-    ["shipment_ak47"] = { 
-        name = "Shipment: AK-47 (10x)", 
+    ["shipment_ak47"] = {
+        name = "Shipment: AK-47 (10x)",
         level = 8,
-        cost = 1500, 
-        type = "shipment", 
-        weapon = "weapon_gw_ak47", 
-        weaponName = "AK-47", 
-        count = 10, 
+        cost = 1500,
+        type = "shipment",
+        weapon = "weapon_gw_ak47",
+        weaponName = "AK-47",
+        count = 10,
         jobs = { "black_market_dealer" },
         isContraband = true
     },
@@ -324,146 +324,151 @@ GW.ShopItems = {
         class = "gw_clinic_pod",
         category = "supplies",
         jobs = { "pharmacist" },
-        desc = "Deployable automated triage clinic. Dispenses heals and combat bio-enhancements to passing citizens. Generates passive income for the Pharmacist."
+        desc =
+        "Deployable automated triage clinic. Dispenses heals and combat bio-enhancements to passing citizens. Generates passive income for the Pharmacist."
     },
-    ["weapon_medkit"] = { 
-        name = "Field Medical Kit", 
+    ["weapon_medkit"] = {
+        name = "Field Medical Kit",
         level = 1,
-        cost = 50, 
-        type = "weapon", 
-        class = "weapon_gw_medkit", 
-        jobs = { "pharmacist" }, 
-        desc = "Deployable trauma kit used to treat injuries and administer combat adrenaline stims in the field." 
+        cost = 50,
+        type = "weapon",
+        class = "weapon_gw_medkit",
+        jobs = { "pharmacist" },
+        desc = "Deployable trauma kit used to treat injuries and administer combat adrenaline stims in the field."
     },
-    ["medkit"] = { 
-        name = "First Aid Kit (Instant)", 
+    ["medkit"] = {
+        name = "First Aid Kit (Instant)",
         level = 1,
-        cost = 85, 
+        cost = 85,
         wholesaleCost = 25,
         markupPercent = 240,
         markupRole = "Pharmacist",
         wholesaleJob = "pharmacist",
-        type = "medkit", 
-        category = "supplies", 
-        desc = "Emergency clinical trauma pack; restores +60 Health immediately." 
+        type = "medkit",
+        category = "supplies",
+        desc = "Emergency clinical trauma pack; restores +60 Health immediately."
     },
 
     -- ========================================================
     -- 5. NETWORKING & HARDWARE (ACCESSIBLE TO ALL CITIZENS)
     -- ========================================================
-    ["weapon_wiretool"] = { 
-        name = "Copper Wiring Tool", 
+    ["weapon_wiretool"] = {
+        name = "Copper Wiring Tool",
         level = 1,
-        cost = 50, 
+        cost = 50,
         wholesaleCost = 15,
         markupPercent = 233,
         markupRole = "Cyber Engineer",
         wholesaleJob = "cyber_engineer",
-        type = "weapon", 
-        class = "weapon_gw_wiretool", 
-        category = "networking", 
-        desc = "Cabling tool used to connect printers, switches, and computer terminals." 
+        type = "weapon",
+        class = "weapon_gw_wiretool",
+        category = "networking",
+        desc = "Cabling tool used to connect printers, switches, and computer terminals."
     },
-    ["weapon_repairtool"] = { 
-        name = "Cryo-Thermal Calibrator", 
+    ["weapon_repairtool"] = {
+        name = "Printer Calibrator",
         level = 2,
-        cost = 105, 
+        cost = 105,
         wholesaleCost = 30,
         markupPercent = 250,
         markupRole = "Cyber Engineer",
         wholesaleJob = "cyber_engineer",
-        type = "weapon", 
-        class = "weapon_gw_repairtool", 
-        category = "networking", 
-        desc = "Handheld cryo-calibrator. Cools printers (-35°C), repairs integrity, and allows Cyber Engineers to Supercharge hardware." 
+        type = "weapon",
+        class = "weapon_gw_repairtool",
+        category = "networking",
+        desc =
+        "Handheld printer calibrator. Cools printers (-35°C), repairs integrity, and allows Cyber Engineers to Supercharge hardware."
     },
-    ["entity_network_switch"] = { 
-        name = "L3 Network Switch (2-Cu + 2-SFP)", 
+    ["entity_network_switch"] = {
+        name = "L3 Network Switch (2-Cu + 2-SFP)",
         level = 2,
-        cost = 120, 
-        type = "entity", 
-        class = "gw_network_switch", 
-        category = "networking", 
-        desc = "Layer-3 hardware switch featuring 2 copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink." 
+        cost = 120,
+        type = "entity",
+        class = "gw_network_switch",
+        category = "networking",
+        desc =
+        "Layer-3 hardware switch featuring 2 copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink."
     },
-    ["entity_computer"] = { 
-        name = "Personal Computer", 
+    ["entity_computer"] = {
+        name = "Personal Computer",
         level = 5,
-        cost = 200, 
-        type = "entity", 
-        class = "gw_computer", 
-        category = "networking", 
-        desc = "Hacking OS terminal; connect to switch for network operations & nmap." 
+        cost = 200,
+        type = "entity",
+        class = "gw_computer",
+        category = "networking",
+        desc = "Hacking OS terminal; connect to switch for network operations & nmap."
     },
-    ["entity_wan_uplink"] = { 
-        name = "Satellite WAN Uplink", 
+    ["entity_wan_uplink"] = {
+        name = "Satellite WAN Uplink",
         level = 3,
-        cost = 180, 
-        type = "entity", 
-        class = "gw_wan_uplink", 
-        category = "networking", 
-        desc = "Encrypted microwave satellite dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to link separate networks wirelessly across the map with matching keys." 
+        cost = 180,
+        type = "entity",
+        class = "gw_wan_uplink",
+        category = "networking",
+        desc =
+        "Encrypted microwave satellite dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to link separate networks wirelessly across the map with matching keys."
     },
-    ["weapon_cyberphone"] = { 
-        name = "CyberDeck Mobile Phone", 
+    ["weapon_cyberphone"] = {
+        name = "CyberDeck Mobile Phone",
         level = 3,
-        cost = 250, 
-        type = "weapon", 
-        class = "weapon_gw_cyberphone", 
-        category = "networking", 
+        cost = 250,
+        type = "weapon",
+        class = "weapon_gw_cyberphone",
+        category = "networking",
         jobs = { "cyber_engineer" },
-        desc = "Handheld mobile CyberDeck handset exclusively for Cyber Engineers. Runs CyberDeck OS with built-in wireless spectrum reconnaissance and mobile Metasploit." 
+        desc =
+        "Handheld mobile CyberDeck handset exclusively for Cyber Engineers. Runs CyberDeck OS with built-in wireless spectrum reconnaissance and mobile Metasploit."
     },
-    ["module_undervolt"] = { 
-        name = "Undervolt Hardware Module", 
+    ["module_undervolt"] = {
+        name = "Undervolt Hardware Module",
         level = 3,
-        cost = 80, 
-        type = "entity", 
-        class = "gw_module_undervolt", 
-        category = "networking", 
+        cost = 80,
+        type = "entity",
+        class = "gw_module_undervolt",
+        category = "networking",
         isContraband = true,
-        desc = "Microcontroller module that drops operating voltage (-75% heat, +400% lifespan)." 
+        desc = "Microcontroller module that drops operating voltage (-75% heat, +400% lifespan)."
     },
-    ["module_overclock"] = { 
-        name = "Overclock Hardware Module", 
+    ["module_overclock"] = {
+        name = "Overclock Hardware Module",
         level = 4,
-        cost = 150, 
-        type = "entity", 
-        class = "gw_module_overclock", 
-        category = "networking", 
+        cost = 150,
+        type = "entity",
+        class = "gw_module_overclock",
+        category = "networking",
         isContraband = true,
-        desc = "High-frequency module that boosts printer cash yield by +50% (+60% heat output)." 
+        desc = "High-frequency module that boosts printer cash yield by +50% (+60% heat output)."
     },
 
     -- ========================================================
     -- 6. PUBLIC MONEY PRINTERS (ACCESSIBLE TO ALL CITIZENS)
     -- ========================================================
-    ["printer_bronze"] = { 
-        name = "Money Printer", 
+    ["printer_bronze"] = {
+        name = "Money Printer",
         level = 1,
-        cost = 250, 
-        type = "entity", 
-        class = "gw_printer_bronze", 
+        cost = 250,
+        type = "entity",
+        class = "gw_printer_bronze",
         category = "printers",
         isContraband = true,
         desc = "Entry-level contraband printer. Generates steady cash revenue."
     },
-    ["printer_silver"] = { 
-        name = "Silver Money Printer", 
+    ["printer_silver"] = {
+        name = "Silver Money Printer",
         level = 4,
-        cost = 750, 
-        type = "entity", 
-        class = "gw_printer_silver", 
+        cost = 750,
+        type = "entity",
+        class = "gw_printer_silver",
         category = "printers",
         isContraband = true,
         desc = "Commercial grade contraband printer. High efficiency throughput."
     },
-    ["printer_diamond"] = { 
-        name = "Diamond Money Printer", 
+    ["printer_diamond"] = {
+        name = "Diamond Money Printer",
         level = 8,
-        cost = 2200, 
-        type = "entity", 
-        class = "gw_printer_diamond", 
+        cost = 2200,
+        type = "entity",
+        class = "gw_printer_diamond",
         category = "printers",
         isContraband = true,
         desc = "Maximum tier industrial printer. High yields, benefits greatly from networking."
@@ -477,7 +482,8 @@ GW.ShopItems = {
         class = "gw_resource_machine",
         category = "printers",
         badge = "Legal Tech",
-        desc = "Automated legal extractor & crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput."
+        desc =
+        "Automated legal extractor & crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput."
     },
 
     -- ========================================================

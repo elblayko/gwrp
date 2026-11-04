@@ -39,6 +39,7 @@ function ENT:Initialize()
 
     -- Humming sound loop
     self.HumSound = CreateSound(self, "ambient/machines/combine_terminal_loop1.wav")
+    self.HumSound:SetSoundLevel(40)
     if self.HumSound then self.HumSound:Play() end
 
     -- Wiremod Support
@@ -86,7 +87,9 @@ function ENT:UpdateWireOutputs()
     local ipStr = (self.GetIPAddress and self:GetIPAddress() ~= "") and (" | IP: " .. self:GetIPAddress()) or ""
     local uvStr = self:GetHasUndervolt() and " (UV)" or ""
     local tuneStr = self:GetIsTuned() and " [TUNED]" or ""
-    WireLib.SetOverlayText(self, string.format("[%s]%s%s\nStatus: %s%s (%d%% Eff)\nStored: $%d | Temp: %dC", self.PrintName, uvStr, tuneStr, portStr, ipStr, eff, self:GetStoredCash(), temp))
+    WireLib.SetOverlayText(self,
+        string.format("[%s]%s%s\nStatus: %s%s (%d%% Eff)\nStored: $%d | Temp: %dC", self.PrintName, uvStr, tuneStr,
+            portStr, ipStr, eff, self:GetStoredCash(), temp))
 end
 
 function ENT:TunePrinter(ply)
@@ -218,7 +221,8 @@ function ENT:PrintCycle()
         yield = math.Round(yield * 1.2) -- Cyber-Tuned: +20% cash yield
     end
 
-    local heatRise = self:GetHasUndervolt() and (GW.Config.PrinterHeatRiseUndervolted or 1) or (GW.Config.PrinterHeatRiseStandard or 4)
+    local heatRise = self:GetHasUndervolt() and (GW.Config.PrinterHeatRiseUndervolted or 1) or
+        (GW.Config.PrinterHeatRiseStandard or 4)
     if self:GetHasOverclock() then
         heatRise = heatRise + 3
     end
@@ -272,7 +276,8 @@ function ENT:Use(activator, caller)
     if (self.NextUsePerPlayer[activator] or 0) > now then return end
     self.NextUsePerPlayer[activator] = now + 0.25
 
-    local reqLvl = self.RequiredLevel or (GW.ShopItems and GW.ShopItems[self:GetClass()] and GW.ShopItems[self:GetClass()].level) or 1
+    local reqLvl = self.RequiredLevel or
+        (GW.ShopItems and GW.ShopItems[self:GetClass()] and GW.ShopItems[self:GetClass()].level) or 1
     if not activator:IsPolice() and activator:GetLevel() < reqLvl then
         GW.Notify(activator, string.format("You must be Level %d to operate this printer!", reqLvl), NOTIFY_ERROR)
         return
@@ -282,7 +287,8 @@ function ENT:Use(activator, caller)
         -- Turf Incursion Alert if inside gang territory
         local zone = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(self:GetPos())
         if zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police" and GW.Turf.SendIncursionAlert then
-            GW.Turf.SendIncursionAlert(zone, "Police Incursion! A contraband printer was confiscated in " .. zone.name .. "!")
+            GW.Turf.SendIncursionAlert(zone,
+                "Police Incursion! A contraband printer was confiscated in " .. zone.name .. "!")
         end
 
         -- Police Confiscation (Patrol Officers earn +50% Detective Bounty)
@@ -290,7 +296,8 @@ function ENT:Use(activator, caller)
         local baseBounty = self.BountyAmount or GW.Config.PoliceBountyPerPrinter or 125
         local bounty = isPatrol and math.floor(baseBounty * 1.5) or baseBounty
         activator:AddMoney(bounty)
-        local msg = isPatrol and string.format("Detective Perk: Printer seized for +$%d (+50%% Patrol Bounty)!", bounty) or string.format("Printer confiscated for +$%d bounty!", bounty)
+        local msg = isPatrol and string.format("Detective Perk: Printer seized for +$%d (+50%% Patrol Bounty)!", bounty) or
+            string.format("Printer confiscated for +$%d bounty!", bounty)
         GW.Notify(activator, msg, NOTIFY_GENERIC)
         activator:EmitSound("ambient/levels/labs/coinslot1.wav")
         if self.HumSound then self.HumSound:Stop() end
@@ -303,7 +310,8 @@ function ENT:Use(activator, caller)
         local cash = self:GetStoredCash()
         if cash > 0 then
             local zone = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(self:GetPos())
-            local taxRate = (zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police") and (zone.tax_rate or 10) or 0
+            local taxRate = (zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police") and
+                (zone.tax_rate or 10) or 0
             local activatorGang = activator:GetGang()
 
             -- Protection Tax: Only applies if the player is NOT in the controlling gang (e.g. Civilians)
@@ -317,20 +325,26 @@ function ENT:Use(activator, caller)
                 end
 
                 if activator.AddXP then
-                    activator:AddXP((GW.Config and GW.Config.Level and GW.Config.Level.XP_PrinterCollect) or 20, "Printer Revenue")
+                    activator:AddXP((GW.Config and GW.Config.Level and GW.Config.Level.XP_PrinterCollect) or 20,
+                        "Printer Revenue")
                 end
-                GW.Notify(activator, string.format("Collected $%d (-$%d / %d%% Protection Tax paid to '%s')!", playerPayout, taxAmount, taxRate, zone.owner), NOTIFY_GENERIC)
+                GW.Notify(activator,
+                    string.format("Collected $%d (-$%d / %d%% Protection Tax paid to '%s')!", playerPayout, taxAmount,
+                        taxRate, zone.owner), NOTIFY_GENERIC)
 
                 -- Alert online gang members of passive income
                 for _, p in ipairs(player.GetAll()) do
                     if string.lower(p:GetGang()) == string.lower(zone.owner) then
-                        GW.Notify(p, string.format("[TURF TAX] +$%d deposited to Gang Bank from resident civilian printer in %s!", taxAmount, zone.name), NOTIFY_HINT, 3)
+                        GW.Notify(p,
+                            string.format("[TURF TAX] +$%d deposited to Gang Bank from resident civilian printer in %s!",
+                                taxAmount, zone.name), NOTIFY_HINT, 3)
                     end
                 end
             else
                 activator:AddMoney(cash)
                 if activator.AddXP then
-                    activator:AddXP((GW.Config and GW.Config.Level and GW.Config.Level.XP_PrinterCollect) or 20, "Printer Revenue")
+                    activator:AddXP((GW.Config and GW.Config.Level and GW.Config.Level.XP_PrinterCollect) or 20,
+                        "Printer Revenue")
                 end
                 GW.Notify(activator, "Collected $" .. cash .. " from printer!", NOTIFY_GENERIC)
             end
