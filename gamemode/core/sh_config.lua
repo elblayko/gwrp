@@ -10,6 +10,10 @@ GW.Config.PaydayInterval = 90 -- seconds between salary ticks
 GW.Config.DropMoneyOnDeathMax = 75
 GW.Config.GangCreationCost = 200 -- cost to register a new player gang
 
+-- Respawn Times
+GW.Config.DefaultRespawnTime = 15 -- Baseline respawn time for all players (seconds)
+GW.Config.PoliceRespawnTime = 5   -- Rapid dispatch respawn for base police officer (seconds)
+
 -- Turf Warfare
 GW.Config.TurfCaptureRadius = 450 -- Hammer units
 GW.Config.TurfCaptureTime = 15 -- seconds of holding uncontested to capture

@@ -172,11 +172,62 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
         end
         return ""
 
-    -- 6. Gang Info: /gang
+    -- 6. Gang Info & Vault Banking: /gang [deposit|withdraw|tax]
     elseif cmd == "/gang" then
         local gang = ply:GetGang()
         if gang == "" then
             GW.Notify(ply, "You are not in a gang. Type /creategang <name> to form one!", NOTIFY_HINT)
+            return ""
+        end
+
+        local sub = string.lower(args[2] or "")
+        if sub == "deposit" then
+            local amt = math.floor(tonumber(args[3]) or 0)
+            if amt <= 0 then
+                GW.Notify(ply, "Usage: /gang deposit <amount>", NOTIFY_ERROR)
+                return ""
+            end
+            if not ply:CanAfford(amt) then
+                GW.Notify(ply, "You cannot afford to deposit $" .. amt .. "!", NOTIFY_ERROR)
+                return ""
+            end
+            ply:AddMoney(-amt)
+            if GW.Database and GW.Database.AddGangBank then
+                GW.Database.AddGangBank(gang, amt)
+            end
+            GW.Notify(ply, string.format("Deposited +$%d into the gang vault!", amt), NOTIFY_GENERIC)
+            return ""
+        elseif sub == "withdraw" then
+            local isLeader = ply:GetNWBool("GW_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
+            if not isLeader then
+                GW.Notify(ply, "Only the Gang Leader can withdraw funds from the gang vault!", NOTIFY_ERROR)
+                return ""
+            end
+            local amt = math.floor(tonumber(args[3]) or 0)
+            if amt <= 0 then
+                GW.Notify(ply, "Usage: /gang withdraw <amount>", NOTIFY_ERROR)
+                return ""
+            end
+            local gData = GW.Database and GW.Database.GetGang and GW.Database.GetGang(gang)
+            local bank = gData and gData.bank or 0
+            if amt > bank then
+                GW.Notify(ply, string.format("The gang vault only contains $%d!", bank), NOTIFY_ERROR)
+                return ""
+            end
+            if GW.Database and GW.Database.AddGangBank then
+                GW.Database.AddGangBank(gang, -amt)
+            end
+            ply:AddMoney(amt)
+            GW.Notify(ply, string.format("Withdrew $%d from the gang vault!", amt), NOTIFY_GENERIC)
+            return ""
+        elseif sub == "tax" or sub == "settax" then
+            local rate = math.floor(tonumber(args[3]) or 0)
+            local zone, zId = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(ply:GetPos())
+            if not zone then
+                GW.Notify(ply, "You must be standing inside a territory to set its tax rate! (Or press [E] on its flag pole)", NOTIFY_ERROR)
+                return ""
+            end
+            GW.Turf.SetTaxRate(zId, rate, ply)
             return ""
         end
 
@@ -188,20 +239,39 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
         end
 
         local dbMembers = GW.Database and GW.Database.GetGangMembers and GW.Database.GetGangMembers(gang) or {}
+        local gData = GW.Database and GW.Database.GetGang and GW.Database.GetGang(gang)
+        local bank = gData and gData.bank or 0
         local turfs = {}
         for _, zone in pairs(GW.Turf.Zones) do
             if zone.owner and string.lower(zone.owner) == string.lower(gang) then
-                table.insert(turfs, zone.name)
+                table.insert(turfs, string.format("%s (%d%% tax)", zone.name, zone.tax_rate or 10))
             end
         end
 
         GW.Notify(ply, "--- Gang: " .. gang .. " ---", NOTIFY_GENERIC)
+        GW.Notify(ply, string.format("Gang Vault Balance: $%d", bank), NOTIFY_GENERIC)
         GW.Notify(ply, "Total Registered Members: " .. #dbMembers, NOTIFY_GENERIC)
         GW.Notify(ply, "Online Members (" .. #members .. "): " .. table.concat(members, ", "), NOTIFY_GENERIC)
         GW.Notify(ply, "Controlled Turfs: " .. (#turfs > 0 and table.concat(turfs, ", ") or "None"), NOTIFY_GENERIC)
         return ""
 
-    -- 7. Private Gang Chat: /g <msg> or /gangchat <msg>
+    -- 7. Set Turf Tax: /settax <5-30> or /turftax <5-30>
+    elseif cmd == "/settax" or cmd == "/turftax" then
+        local gang = ply:GetGang()
+        if gang == "" then
+            GW.Notify(ply, "You must be in a gang to configure territory taxes!", NOTIFY_ERROR)
+            return ""
+        end
+        local rate = math.floor(tonumber(args[2]) or 0)
+        local zone, zId = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(ply:GetPos())
+        if not zone then
+            GW.Notify(ply, "You must be standing inside a territory zone to set its tax rate!", NOTIFY_ERROR)
+            return ""
+        end
+        GW.Turf.SetTaxRate(zId, rate, ply)
+        return ""
+
+    -- 8. Private Gang Chat: /g <msg> or /gangchat <msg>
     elseif cmd == "/g" or cmd == "/gangchat" then
         local gang = ply:GetGang()
         if gang == "" then

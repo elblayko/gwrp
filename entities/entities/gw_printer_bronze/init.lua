@@ -279,6 +279,12 @@ function ENT:Use(activator, caller)
     end
 
     if activator:IsPolice() then
+        -- Turf Incursion Alert if inside gang territory
+        local zone = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(self:GetPos())
+        if zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police" and GW.Turf.SendIncursionAlert then
+            GW.Turf.SendIncursionAlert(zone, "Police Incursion! A contraband printer was confiscated in " .. zone.name .. "!")
+        end
+
         -- Police Confiscation (Patrol Officers earn +50% Detective Bounty)
         local isPatrol = (activator:GetJob() == "police_officer")
         local baseBounty = self.BountyAmount or GW.Config.PoliceBountyPerPrinter or 125
@@ -293,14 +299,42 @@ function ENT:Use(activator, caller)
         self:DisconnectFromSwitch()
         self:Remove()
     else
-        -- Collect Cash
+        -- Collect Cash (with Turf Protection Tax)
         local cash = self:GetStoredCash()
         if cash > 0 then
-            activator:AddMoney(cash)
-            if activator.AddXP then
-                activator:AddXP((GW.Config and GW.Config.Level and GW.Config.Level.XP_PrinterCollect) or 20, "Printer Revenue")
+            local zone = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(self:GetPos())
+            local taxRate = (zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police") and (zone.tax_rate or 10) or 0
+            local activatorGang = activator:GetGang()
+
+            -- Protection Tax: Only applies if the player is NOT in the controlling gang (e.g. Civilians)
+            if taxRate > 0 and (activatorGang == "" or string.lower(activatorGang) ~= string.lower(zone.owner)) then
+                local taxAmount = math.max(1, math.floor(cash * (taxRate / 100)))
+                local playerPayout = cash - taxAmount
+
+                activator:AddMoney(playerPayout)
+                if GW.Database and GW.Database.AddGangBank then
+                    GW.Database.AddGangBank(zone.owner, taxAmount)
+                end
+
+                if activator.AddXP then
+                    activator:AddXP((GW.Config and GW.Config.Level and GW.Config.Level.XP_PrinterCollect) or 20, "Printer Revenue")
+                end
+                GW.Notify(activator, string.format("Collected $%d (-$%d / %d%% Protection Tax paid to '%s')!", playerPayout, taxAmount, taxRate, zone.owner), NOTIFY_GENERIC)
+
+                -- Alert online gang members of passive income
+                for _, p in ipairs(player.GetAll()) do
+                    if string.lower(p:GetGang()) == string.lower(zone.owner) then
+                        GW.Notify(p, string.format("[TURF TAX] +$%d deposited to Gang Bank from resident civilian printer in %s!", taxAmount, zone.name), NOTIFY_HINT, 3)
+                    end
+                end
+            else
+                activator:AddMoney(cash)
+                if activator.AddXP then
+                    activator:AddXP((GW.Config and GW.Config.Level and GW.Config.Level.XP_PrinterCollect) or 20, "Printer Revenue")
+                end
+                GW.Notify(activator, "Collected $" .. cash .. " from printer!", NOTIFY_GENERIC)
             end
-            GW.Notify(activator, "Collected $" .. cash .. " from printer!", NOTIFY_GENERIC)
+
             activator:EmitSound("ambient/levels/labs/coinslot1.wav")
             self:SetStoredCash(0)
             self:UpdateWireOutputs()

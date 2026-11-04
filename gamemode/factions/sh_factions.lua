@@ -156,7 +156,7 @@ GW.Jobs = {
         runSpeed = 350,
         models = { "models/player/police.mdl" },
         max = 6,
-        desc = "Rapid pursuit interceptor & detective. Top 350 sprint speed, exclusive contraband scanner, 3s rapid dispatch respawn, and +50% cash bounties on seized printers."
+        desc = "Rapid pursuit interceptor & detective. Top 350 sprint speed, exclusive contraband scanner, 5s rapid dispatch respawn, and +50% cash bounties on seized printers."
     },
     ["police_chief"] = {
         name = "Police Chief",

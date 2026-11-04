@@ -136,6 +136,12 @@ function SWEP:PrimaryAttack()
                 ent:Fire("open", "", 0)
                 sound.Play("doors/door_metal_large_open1.wav", tr.HitPos, 85, 90)
                 GW.Notify(ply, "[RAM BREACH] Door successfully smashed open!", NOTIFY_GENERIC, 4)
+
+                -- Turf Incursion Alert if inside gang territory
+                local zone = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(tr.HitPos)
+                if zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police" and GW.Turf.SendIncursionAlert then
+                    GW.Turf.SendIncursionAlert(zone, "Police Incursion! SWAT breached a door in " .. zone.name .. "!")
+                end
             elseif ent:GetClass() == "prop_physics" then
                 local phys = ent:GetPhysicsObject()
                 if IsValid(phys) then

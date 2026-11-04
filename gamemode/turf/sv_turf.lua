@@ -27,7 +27,8 @@ function GW.Turf.SaveMapProfile()
             pos = { x = math.Round(zone.pos.x, 2), y = math.Round(zone.pos.y, 2), z = math.Round(zone.pos.z, 2) },
             radius = tonumber(zone.radius) or 450,
             owner = zone.owner or "neutral",
-            progress = tonumber(zone.progress) or 100
+            progress = tonumber(zone.progress) or 100,
+            tax_rate = tonumber(zone.tax_rate) or 10
         })
     end
 
@@ -63,7 +64,8 @@ function GW.Turf.LoadMapProfile()
                 pos = Vector(item.pos.x, item.pos.y, item.pos.z),
                 radius = tonumber(item.radius) or 450,
                 owner = item.owner or "neutral",
-                progress = tonumber(item.progress) or 100
+                progress = tonumber(item.progress) or 100,
+                tax_rate = tonumber(item.tax_rate) or 10
             }
         end
         -- Migrate to SQLite
@@ -82,7 +84,8 @@ function GW.Turf.LoadMapProfile()
                 pos = Vector(zone.pos.x, zone.pos.y, zone.pos.z),
                 radius = zone.radius,
                 owner = zone.owner,
-                progress = zone.progress or 100
+                progress = zone.progress or 100,
+                tax_rate = tonumber(zone.tax_rate) or 10
             }
         end
         GW.Turf.SaveMapProfile()
@@ -132,6 +135,7 @@ function GW.Turf.SyncToPlayer(ply)
             net.WriteUInt(zone.radius or 450, 16)
             net.WriteString(zone.owner or "neutral")
             net.WriteUInt(zone.progress or 100, 8)
+            net.WriteUInt(zone.tax_rate or 10, 8)
         end
     net.Send(ply)
 end
@@ -147,6 +151,7 @@ function GW.Turf.SyncToAll()
             net.WriteUInt(zone.radius or 450, 16)
             net.WriteString(zone.owner or "neutral")
             net.WriteUInt(zone.progress or 100, 8)
+            net.WriteUInt(zone.tax_rate or 10, 8)
         end
     net.Broadcast()
 end
@@ -159,6 +164,7 @@ function GW.Turf.BroadcastUpdate(turfId)
         net.WriteUInt(turfId, 8)
         net.WriteString(zone.owner or "neutral")
         net.WriteUInt(zone.progress or 100, 8)
+        net.WriteUInt(zone.tax_rate or 10, 8)
     net.Broadcast()
 end
 
@@ -242,6 +248,78 @@ function GW.Turf.DistributeDividends()
         end
     end
 end
+
+-- ==========================================
+-- TURF TAX & INCURSION ALERTS
+-- ==========================================
+
+function GW.Turf.SetTaxRate(turfId, taxRate, ply)
+    local zone = GW.Turf.Zones[turfId]
+    if not zone then
+        if IsValid(ply) then GW.Notify(ply, "Invalid turf zone!", NOTIFY_ERROR) end
+        return false
+    end
+
+    taxRate = math.Clamp(math.Round(tonumber(taxRate) or 10), 5, 30)
+
+    if IsValid(ply) then
+        local pGang = ply:GetGang()
+        local isLeader = ply:GetNWBool("GW_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
+        if not isLeader then
+            GW.Notify(ply, "Only the Gang Leader can adjust territory protection taxes!", NOTIFY_ERROR)
+            return false
+        end
+
+        if not ply:IsAdmin() and (pGang == "" or string.lower(pGang) ~= string.lower(zone.owner or "")) then
+            GW.Notify(ply, "Your gang does not control this territory!", NOTIFY_ERROR)
+            return false
+        end
+    end
+
+    zone.tax_rate = taxRate
+
+    if GW.Database and GW.Database.SetTurfTax then
+        GW.Database.SetTurfTax(game.GetMap(), turfId, taxRate)
+    end
+    GW.Turf.SaveMapProfile()
+    GW.Turf.BroadcastUpdate(turfId)
+
+    if IsValid(ply) then
+        GW.Notify(ply, string.format("Set protection tax for %s to %d%%!", zone.name, taxRate), NOTIFY_GENERIC)
+    end
+
+    -- Broadcast notification to online gang members
+    if zone.owner and zone.owner ~= "" and zone.owner ~= "neutral" and zone.owner ~= "Police" then
+        for _, p in ipairs(player.GetAll()) do
+            if string.lower(p:GetGang()) == string.lower(zone.owner) and p ~= ply then
+                GW.Notify(p, string.format("[GANG] Protection tax in %s was set to %d%%.", zone.name, taxRate), NOTIFY_HINT, 4)
+            end
+        end
+    end
+
+    return true
+end
+
+function GW.Turf.SendIncursionAlert(zone, alertMsg)
+    if not zone or not zone.owner or zone.owner == "" or zone.owner == "neutral" or zone.owner == "Police" then return end
+
+    local alertText = alertMsg or string.format("POLICE INCURSION in %s! Defend your district and paying civilians!", zone.name)
+    for _, p in ipairs(player.GetAll()) do
+        if string.lower(p:GetGang()) == string.lower(zone.owner) then
+            p:EmitSound("ambient/alarms/klaxon1.wav", 75, 120, 0.7)
+            GW.Notify(p, "[DISTRICT ALERT] " .. alertText, NOTIFY_ERROR, 8)
+        end
+    end
+end
+
+net.Receive("GW_SetTurfTax", function(len, ply)
+    if not IsValid(ply) then return end
+    if not GW.CheckRateLimit(ply, "turf_set_tax", 1.0) then return end
+
+    local turfId = net.ReadUInt(8)
+    local taxRate = net.ReadUInt(8)
+    GW.Turf.SetTaxRate(turfId, taxRate, ply)
+end)
 
 -- ==========================================
 -- ADMIN SETUP COMMANDS & NETWORK HANDLERS

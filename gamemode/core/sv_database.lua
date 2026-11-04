@@ -96,7 +96,8 @@ GW.Database.Procedures = {
     -- 5. Turf Procedures (Per-Map)
     GET_MAP_TURFS = "SELECT * FROM gw_turfs WHERE map = ? ORDER BY turf_id ASC;",
     CLEAR_MAP_TURFS = "DELETE FROM gw_turfs WHERE map = ?;",
-    INSERT_MAP_TURF = "INSERT INTO gw_turfs (map, turf_id, name, pos_x, pos_y, pos_z, radius, owner) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+    INSERT_MAP_TURF = "INSERT INTO gw_turfs (map, turf_id, name, pos_x, pos_y, pos_z, radius, owner, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    SET_TURF_TAX = "UPDATE gw_turfs SET tax_rate = ? WHERE map = ? AND turf_id = ?;",
     DELETE_MAP_TURF = "DELETE FROM gw_turfs WHERE map = ? AND turf_id = ?;",
 
     -- 6. Settings Procedures
@@ -266,6 +267,7 @@ function GW.Database.Init()
             pos_z REAL,
             radius INTEGER,
             owner TEXT DEFAULT 'neutral',
+            tax_rate INTEGER DEFAULT 10,
             PRIMARY KEY (map, turf_id)
         );
     ]])
@@ -297,6 +299,7 @@ function GW.Database.Init()
     sql.Query("ALTER TABLE gw_players ADD COLUMN gang TEXT DEFAULT ''")
     sql.Query("ALTER TABLE gw_players ADD COLUMN job TEXT DEFAULT 'citizen'")
     sql.Query("ALTER TABLE gw_players ADD COLUMN respect INTEGER DEFAULT 0")
+    sql.Query("ALTER TABLE gw_turfs ADD COLUMN tax_rate INTEGER DEFAULT 10")
 
     print("[GWRP-DB] SQLite Engine initialized with parameterized stored procedures.")
 end
@@ -674,6 +677,7 @@ function GW.Database.SaveTurfZones(mapName, zonesTable)
             local pz = zone.pos and zone.pos.z or 0
             local radius = tonumber(zone.radius) or 450
             local owner = zone.owner or "neutral"
+            local taxRate = tonumber(zone.tax_rate) or 10
 
             GW.Database.Call("INSERT_MAP_TURF", {
                 mapKey,
@@ -683,7 +687,8 @@ function GW.Database.SaveTurfZones(mapName, zonesTable)
                 py,
                 pz,
                 radius,
-                owner
+                owner,
+                taxRate
             })
         end
         print(string.format("[GWRP-DB] Committed %d turf zones via atomic transaction for map '%s'.", table.Count(zonesTable), mapName))
@@ -705,6 +710,7 @@ function GW.Database.LoadTurfZones(mapName)
             pos = Vector(tonumber(row.pos_x), tonumber(row.pos_y), tonumber(row.pos_z)),
             radius = tonumber(row.radius) or 450,
             owner = row.owner or "neutral",
+            tax_rate = tonumber(row.tax_rate) or 10,
             progress = 100
         }
     end
@@ -713,6 +719,10 @@ end
 
 function GW.Database.DeleteTurfZone(mapName, turfId)
     GW.Database.Call("DELETE_MAP_TURF", { string.lower(mapName), turfId })
+end
+
+function GW.Database.SetTurfTax(mapName, turfId, taxRate)
+    GW.Database.Call("SET_TURF_TAX", { tonumber(taxRate) or 10, string.lower(mapName), tonumber(turfId) })
 end
 
 -- ========================================================

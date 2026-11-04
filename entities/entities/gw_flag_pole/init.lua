@@ -60,8 +60,20 @@ function ENT:Use(activator, caller)
     end
 
     if string.lower(zone.owner or "") == string.lower(claimant) then
-        GW.Notify(activator, zone.name .. " is already controlled by " .. claimant .. "!", NOTIFY_GENERIC)
-        return
+        if activator:GetNWBool("GW_IsGangLeader", false) or (activator.GetJob and activator:GetJob() == "gang_leader") or activator:IsAdmin() then
+            local gData = GW.Database and GW.Database.GetGang and GW.Database.GetGang(claimant)
+            local bank = gData and gData.bank or 0
+            net.Start("GW_OpenTurfTaxMenu")
+                net.WriteUInt(turfId, 8)
+                net.WriteString(zone.name or "")
+                net.WriteUInt(zone.tax_rate or 10, 8)
+                net.WriteUInt(bank, 32)
+            net.Send(activator)
+            return
+        else
+            GW.Notify(activator, string.format("%s is controlled by %s (Protection Tax: %d%%). Only your Gang Leader can configure taxes.", zone.name, claimant, zone.tax_rate or 10), NOTIFY_GENERIC)
+            return
+        end
     end
 
     -- Already being captured?

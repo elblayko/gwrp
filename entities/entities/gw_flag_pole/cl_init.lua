@@ -55,7 +55,7 @@ function ENT:DrawBillboard()
     local zone = zones and zones[id]
     local zoneName = zone and zone.name or ("Territory #" .. id)
     local turfData = GW.TurfData and GW.TurfData[id]
-    local data = turfData or (zone and { owner = zone.owner, progress = zone.progress or 100 } or { owner = "neutral", progress = 100 })
+    local data = turfData or (zone and { owner = zone.owner, progress = zone.progress or 100, tax_rate = zone.tax_rate or 10 } or { owner = "neutral", progress = 100, tax_rate = 10 })
 
     local owner = data.owner
     local isNeutral = (not owner or owner == "" or owner == "neutral")
@@ -167,7 +167,8 @@ function ENT:DrawBillboard()
 
         -- Turf Dividends Info
         local dividendAmt = (GW.Config and GW.Config.TurfDividendAmount) or 25
-        local dividendText = "Yields +$" .. dividendAmt .. "/m to controlling gang"
+        local taxRate = data.tax_rate or (zone and zone.tax_rate) or 10
+        local dividendText = (not isNeutral and ownerStr ~= "Police") and string.format("Yield: +$%d/m | Protection Tax: %d%%", dividendAmt, taxRate) or ("Yields +$" .. dividendAmt .. "/m to controlling gang")
         draw.SimpleText(dividendText, "GW_Pole_Body", 0, -halfH + 130, Color(148, 163, 184, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
         -- Interaction / Progress Button
@@ -196,7 +197,8 @@ function ENT:DrawBillboard()
         elseif isOwner then
             btnBg = Color(34, 197, 94, math.min(45, alpha))
             btnBorder = Color(34, 197, 94, math.min(180, alpha))
-            btnText = "Controlled by your gang"
+            local isLeader = ply:GetNWBool("GW_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
+            btnText = (isLeader and ownerStr ~= "Police") and string.format("Press [E] to Manage Protection Tax (%d%%)", taxRate) or string.format("Controlled by your gang (Tax: %d%%)", taxRate)
             btnCol = Color(74, 222, 128, alpha)
         elseif isNeutral then
             btnBg = Color(245, 158, 11, math.min(45, alpha))

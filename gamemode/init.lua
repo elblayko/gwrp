@@ -225,8 +225,10 @@ function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
 end
 
 function GM:PlayerDeath(victim, inflictor, attacker)
-    -- Rapid Dispatch: Patrol Officers respawn in 3s, other roles in 5s
-    local respawnSecs = (victim:GetJob() == "police_officer") and 3 or 5
+    -- Rapid Dispatch: Patrol Officers respawn in 5s, baseline for all other roles is 15s
+    local defaultSecs = (GW.Config and GW.Config.DefaultRespawnTime) or 15
+    local policeSecs = (GW.Config and GW.Config.PoliceRespawnTime) or 5
+    local respawnSecs = (victim:GetJob() == "police_officer") and policeSecs or defaultSecs
     victim.NextSpawnTime = CurTime() + respawnSecs
 
     net.Start("GW_PlayerDied")
@@ -253,6 +255,16 @@ function GM:PlayerDeath(victim, inflictor, attacker)
         if attacker.AddXP then
             local reason = isRival and "Rival Gang Kill" or "Player Kill"
             attacker:AddXP(xpReward, reason)
+        end
+
+        -- Turf Defense Bonus: Eliminating police within your gang's territory
+        local zone = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(victim:GetPos())
+        if aGang ~= "" and zone and zone.owner and string.lower(zone.owner) == string.lower(aGang) and victim.IsPolice and victim:IsPolice() then
+            attacker:AddMoney(100)
+            if attacker.AddXP then
+                attacker:AddXP(100, "Turf Defense: Incursion Repelled")
+            end
+            GW.Notify(attacker, string.format("[TURF DEFENDER] +$100 & +100 XP for eliminating Police in %s!", zone.name), NOTIFY_GENERIC)
         end
     end
 end

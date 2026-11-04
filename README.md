@@ -267,7 +267,10 @@ Jobs are in [sh_factions.lua](gamemode/factions/sh_factions.lua). Shop items are
 | `/acceptgang` | Accept an invite |
 | `/leavegang` | Leave your gang |
 | `/disbandgang` | Disband (leader only) |
-| `/gang` | Show gang info and turfs |
+| `/gang` | Show gang info, bank vault balance, and controlled turfs with tax rates |
+| `/gang deposit <amt>` | Deposit personal cash into the gang vault |
+| `/gang withdraw <amt>` | Withdraw money from gang vault (Leader only) |
+| `/settax <5-30>` | Set territory protection tax rate (Leader only) |
 | `/g <msg>` or `/gangchat <msg>` | Private gang chat |
 
 ### Admin (admin or superadmin)
@@ -303,7 +306,7 @@ The admin HUD also provides: set job/gang/health/armor, godmode, goto/bring/resp
 | | SWAT Specialist | 7 | $22 | 2 |
 | | Mayor | 5 | $35 | 1 |
 
-All jobs receive fists, keys, physgun, gravity gun and toolgun. Police also spawn with duty ammo. Officers respawn in 3 s; everyone else in 5 s.
+All jobs receive fists, keys, physgun, gravity gun and toolgun. Police also spawn with duty ammo. Officers respawn in 5 s; everyone else in 15 s.
 
 ---
 
