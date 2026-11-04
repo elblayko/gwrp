@@ -28,6 +28,30 @@ function SWEP:StartLockpick(ply, ent)
     self.NextClickSound = CurTime() + 0.65
 
     GW.Notify(ply, string.format("Lockpicking started... stay close (%ds)!", math.Round(self.LockpickTime)), NOTIFY_GENERIC, 3)
+
+    -- Silent Alarm Security Trip
+    local doorOwner = ent.GetDoorOwner and ent:GetDoorOwner()
+    if IsValid(doorOwner) and doorOwner ~= ply then
+        if not ply:HasBuff("wanted") then
+            ply:AddBuff("wanted", 180, {
+                reason = "Armed Burglary in Progress",
+                officer = "Silent Security Alarm",
+                isBurglary = true,
+                raidPos = ent:GetPos(),
+                raidTime = CurTime() + 180
+            })
+        end
+
+        GW.Notify(doorOwner, "SECURITY ALARM: An intruder is lockpicking your front door!", NOTIFY_ERROR, 6)
+        doorOwner:EmitSound("ambient/alarms/klaxon1.wav", 65, 120, 0.5)
+
+        for _, p in ipairs(player.GetAll()) do
+            if p:IsPolice() then
+                p:EmitSound("ambient/alarms/klaxon1.wav", 65, 130, 0.5)
+                GW.Notify(p, string.format("[LSPD 911] Silent alarm tripped! Burglary in progress at %s's property!", doorOwner:Nick()), NOTIFY_ERROR, 8)
+            end
+        end
+    end
 end
 
 function SWEP:Think()
@@ -80,4 +104,3 @@ function SWEP:OnLockpickSuccess(ply, target)
         GW.Notify(ply, "Prop unsealed!", NOTIFY_HINT, 4)
     end
 end
-

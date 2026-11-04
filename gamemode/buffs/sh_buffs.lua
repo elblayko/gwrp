@@ -147,27 +147,22 @@ if meta then
     end
 
     -- ========================================================
-    -- DARKRP & RP COMPATIBILITY METATABLE BRIDGE
+    -- PLAYER WANTED & RAID EXTENSIONS (NATIVE)
     -- ========================================================
 
-    --- DarkRP standard isWanted check mapped to 'wanted' debuff.
-    function meta:isWanted()
-        return self:HasBuff("wanted")
-    end
-
     function meta:IsWanted()
-        return self:isWanted()
+        return self:GetNWBool("GW_IsWanted", false) or self:HasBuff("wanted")
     end
 
-    --- Fallback for getDarkRPVar("wanted")
-    local oldGetDarkRPVar = meta.getDarkRPVar
-    function meta:getDarkRPVar(var)
-        if var == "wanted" then
-            return self:isWanted()
-        end
-        if oldGetDarkRPVar then
-            return oldGetDarkRPVar(self, var)
-        end
-        return nil
+    function meta:isWanted()
+        return self:IsWanted()
+    end
+
+    function meta:IsRaidTarget()
+        return self:GetNWBool("GW_IsRaidTarget", false)
+    end
+
+    function meta:GetWantedReason()
+        return self:GetNWString("GW_WantedReason", "Criminal Activity")
     end
 end
