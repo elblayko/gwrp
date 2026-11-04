@@ -8,6 +8,20 @@ GW.UI.F4Frame = nil
 GW.UI.ActiveF4Tab = "jobs"
 GW.UI.ActiveJobCategory = "all"
 GW.UI.SearchQuery = ""
+GW.UI.ClientGangData = nil
+
+-- Network Receiver for Gang Dashboard Data
+net.Receive("GW_SendGangData", function()
+    local jsonStr = net.ReadString() or "{}"
+    GW.UI.ClientGangData = util.JSONToTable(jsonStr) or {}
+
+    if IsValid(GW.UI.F4Frame) and GW.UI.ActiveF4Tab == "gang" then
+        if IsValid(GW.UI.CurrentContentPanel) then
+            GW.UI.CurrentContentPanel:Clear()
+            GW.UI.RenderContentTab(GW.UI.CurrentContentPanel, "gang", GW.UI.F4Frame)
+        end
+    end
+end)
 
 -- Text Formatting Helpers: Word Wrap & Boundary Protection
 function GW.UI.WrapText(text, font, maxW)
@@ -148,7 +162,7 @@ function GW.UI.ToggleF4Menu()
     end
 
     -- ==========================================
-    -- LEFT VERTICAL SIDEBAR NAVIGATION
+    -- LEFT VERTICAL SIDEBAR NAVIGATION (CATEGORIZED SECTIONS)
     -- ==========================================
     local sidebar = vgui.Create("DPanel", frame)
     sidebar:SetPos(14, 82)
@@ -157,27 +171,76 @@ function GW.UI.ToggleF4Menu()
         draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
         surface.SetDrawColor(30, 41, 59, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
+    end
 
-        -- Bottom Info Card
-        draw.RoundedBox(6, 12, h - 80, w - 24, 68, Color(11, 15, 25, 220))
-        draw.SimpleText("Map: " .. game.GetMap(), "GW_UI_Caption", 22, h - 60, Color(148, 163, 184))
-        draw.SimpleText("Online: " .. #player.GetAll() .. " players", "GW_UI_Caption", 22, h - 34, Color(74, 222, 128))
+    -- Bottom Info Card
+    local botInfo = vgui.Create("DPanel", sidebar)
+    botInfo:SetPos(10, frameH - 96 - 72)
+    botInfo:SetSize(244, 62)
+    botInfo.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        draw.SimpleText("Map: " .. game.GetMap(), "GW_UI_Caption", 12, 16, Color(148, 163, 184))
+        draw.SimpleText("Online: " .. #player.GetAll() .. " players", "GW_UI_Caption", 12, 38, Color(74, 222, 128))
     end
 
     local invItems = GW.Inventory and GW.Inventory.ClientItems or {}
     local invBadge = #invItems > 0 and tostring(#invItems) or "0"
+    local rawGang = IsValid(ply) and ply:GetRawGang() or ""
+    local gangBadge = (rawGang ~= "") and "Active" or "None"
+    if IsValid(ply) and rawGang ~= "" and not ply:IsGangFaction() then
+        gangBadge = "Suspended"
+    end
 
-    local tabs = {
-        { id = "jobs", title = "Careers & Jobs", badge = table.Count(GW.Jobs or {}) },
-        { id = "inventory", title = "Inventory", badge = invBadge },
-        { id = "weapons", title = "Ammo & Gear", badge = "Ammo" },
-        { id = "shipments", title = "Shipments", badge = "10x Bulk" },
-        { id = "entities", title = "Printers & Tech", badge = "Tech" },
-        { id = "supplies", title = "Supplies & Items", badge = "Aid" },
-        { id = "networking", title = "Networking", badge = "Cyber" },
-        { id = "debug_buffs", title = "Debug Buffs", badge = "Debug" },
-        { id = "rules", title = "Server Rules", badge = "Rules" }
+    -- Categorized Sections Hierarchy
+    local navSections = {
+        {
+            header = "ROLES & ASSETS",
+            tabs = {
+                { id = "jobs", title = "Careers & Jobs", badge = table.Count(GW.Jobs or {}) },
+                { id = "inventory", title = "Inventory", badge = invBadge }
+            }
+        },
+        {
+            header = "INFO",
+            tabs = {
+                { id = "rules", title = "Server Rules", badge = "Rules" },
+                { id = "guide", title = "Server Guide", badge = "Guide" }
+            }
+        },
+        {
+            header = "GANG MANAGEMENT",
+            tabs = {
+                { id = "gang", title = "View Gang", badge = gangBadge }
+            }
+        },
+        {
+            header = "ITEM SHOP",
+            tabs = {
+                { id = "weapons", title = "Ammo & Gear", badge = "Ammo" },
+                { id = "entities", title = "Printers & Tech", badge = "Tech" },
+                { id = "shipments", title = "Shipments", badge = "Bulk" },
+                { id = "networking", title = "Networking", badge = "Cyber" },
+                { id = "supplies", title = "Supplies & Items", badge = "Aid" }
+            }
+        }
     }
+
+    if ply:IsAdmin() or ply:IsSuperAdmin() then
+        table.insert(navSections[4].tabs, { id = "debug_buffs", title = "Debug Buffs", badge = "Admin" })
+    end
+
+    -- Sidebar Scrollable Button List
+    local navScroll = vgui.Create("DScrollPanel", sidebar)
+    navScroll:SetPos(6, 8)
+    navScroll:SetSize(252, frameH - 96 - 86)
+    local navVBar = navScroll:GetVBar()
+    navVBar:SetWide(4)
+    navVBar.Paint = function() end
+    navVBar.btnGrip.Paint = function(s, w, h) draw.RoundedBox(2, 0, 0, w, h, Color(56, 189, 248, 80)) end
+    navVBar.btnUp.Paint = function() end
+    navVBar.btnDown.Paint = function() end
 
     -- Content Body Container
     local contentPanel = vgui.Create("DPanel", frame)
@@ -196,47 +259,66 @@ function GW.UI.ToggleF4Menu()
         GW.UI.RenderContentTab(contentPanel, tabId, frame)
     end
 
-    local maxNavH = (frameH - 96) - 96
-    local totalTabs = #tabs
-    local btnH = math.Clamp(math.floor((maxNavH - 12) / totalTabs) - 4, 38, 48)
-    local btnGap = btnH + 5
-    local navY = 12
-
-    for _, tab in ipairs(tabs) do
-        local btnTab = vgui.Create("DButton", sidebar)
-        btnTab:SetPos(12, navY)
-        btnTab:SetSize(240, btnH)
-        btnTab:SetText("")
-
-        btnTab.Paint = function(s, w, h)
-            local isActive = (GW.UI.ActiveF4Tab == tab.id)
-            local isHovered = s:IsHovered()
-
-            local bgCol = isActive and Color(30, 41, 59, 255) or (isHovered and Color(24, 32, 47, 180) or Color(0, 0, 0, 0))
-            draw.RoundedBox(6, 0, 0, w, h, bgCol)
-
-            if isActive then
-                -- Vertical Cyan Accent Indicator
-                draw.RoundedBox(2, 0, 6, 4, h - 12, Color(6, 182, 212))
-            end
-
-            -- Clean Title in Large Readable Sub Font
-            local textCol = isActive and Color(248, 250, 252) or (isHovered and Color(226, 232, 240) or Color(148, 163, 184))
-            draw.SimpleText(tab.title, "GW_UI_Sub", 18, h / 2, textCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-            -- Badge Tag
-            if tab.badge then
-                local badgeText = tostring(tab.badge)
-                draw.RoundedBox(4, w - 66, (h - 24) / 2, 56, 24, Color(11, 15, 25, 200))
-                draw.SimpleText(badgeText, "GW_UI_Badge", w - 38, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Build Grouped Navigation Elements
+    for secIdx, sec in ipairs(navSections) do
+        -- Section Header
+        local secHeader = navScroll:Add("DPanel")
+        secHeader:Dock(TOP)
+        secHeader:DockMargin(4, secIdx == 1 and 4 or 12, 4, 4)
+        secHeader:SetTall(24)
+        secHeader.Paint = function(s, w, h)
+            draw.SimpleText(sec.header, "GW_UI_Badge", 8, h / 2, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            surface.SetFont("GW_UI_Badge")
+            local tw, _ = surface.GetTextSize(sec.header)
+            local lineX = 14 + tw
+            if lineX < w - 8 then
+                surface.SetDrawColor(51, 65, 85, 140)
+                surface.DrawLine(lineX, h / 2, w - 8, h / 2)
             end
         end
 
-        btnTab.DoClick = function()
-            SwitchTab(tab.id)
-        end
+        -- Sub Tabs
+        for _, tab in ipairs(sec.tabs) do
+            local btnTab = navScroll:Add("DButton")
+            btnTab:Dock(TOP)
+            btnTab:DockMargin(4, 2, 4, 2)
+            btnTab:SetTall(38)
+            btnTab:SetText("")
 
-        navY = navY + btnGap
+            btnTab.Paint = function(s, w, h)
+                local isActive = (GW.UI.ActiveF4Tab == tab.id)
+                local isHovered = s:IsHovered()
+
+                local bgCol = isActive and Color(30, 41, 59, 255) or (isHovered and Color(24, 32, 47, 180) or Color(0, 0, 0, 0))
+                draw.RoundedBox(6, 0, 0, w, h, bgCol)
+
+                if isActive then
+                    draw.RoundedBox(2, 0, 6, 4, h - 12, Color(6, 182, 212))
+                end
+
+                local textCol = isActive and Color(248, 250, 252) or (isHovered and Color(226, 232, 240) or Color(148, 163, 184))
+                draw.SimpleText(tab.title, "GW_UI_Sub", 16, h / 2, textCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+                if tab.badge then
+                    local badgeText = tostring(tab.badge)
+                    local badgeBg = (tab.id == "gang" and badgeText == "Suspended") and Color(245, 158, 11, 40) or Color(11, 15, 25, 200)
+                    local badgeFg = (tab.id == "gang" and badgeText == "Suspended") and Color(251, 191, 36) or Color(148, 163, 184)
+                    if tab.id == "gang" and badgeText == "Active" then
+                        badgeBg = Color(16, 185, 129, 40)
+                        badgeFg = Color(52, 211, 153)
+                    end
+
+                    surface.SetFont("GW_UI_Badge")
+                    local bw = surface.GetTextSize(badgeText) + 16
+                    draw.RoundedBox(4, w - bw - 8, (h - 22) / 2, bw, 22, badgeBg)
+                    draw.SimpleText(badgeText, "GW_UI_Badge", w - 8 - bw / 2, h / 2, badgeFg, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                end
+            end
+
+            btnTab.DoClick = function()
+                SwitchTab(tab.id)
+            end
+        end
     end
 
     -- Initial tab load
@@ -274,12 +356,15 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
             networking = "Network Infrastructure & Cyber Equipment",
             debug_buffs = "Debug Status Effects & Tests",
             buffs = "Debug Status Effects & Tests",
-            rules = "City Ordinances & Server Code of Conduct"
+            rules = "City Ordinances & Server Code of Conduct",
+            guide = "Citizen Handbook & Server Guide",
+            gang = "Gang Management & Underworld Syndicate"
         }
         draw.SimpleText(titles[tabId] or "Catalog", "GW_UI_Header", 0, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
-    if tabId ~= "rules" then
+    -- Search Bar Filter (Hidden on non-catalog tabs)
+    if tabId ~= "rules" and tabId ~= "guide" and tabId ~= "gang" then
         if tabId == "inventory" then
             local btnBag = vgui.Create("DButton", topBar)
             btnBag:SetSize(180, 42)
@@ -330,7 +415,6 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
     scroll:SetPos(16, 72)
     scroll:SetSize(contW - 32, contH - 86)
 
-    -- Custom modern scrollbar
     local sbar = scroll:GetVBar()
     sbar:SetWide(8)
     sbar.Paint = function(s, w, h) draw.RoundedBox(4, 0, 0, w, h, Color(11, 15, 25, 120)) end
@@ -340,10 +424,567 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
 
     if tabId == "rules" then
         GW.UI.RenderRulesContent(scroll)
+    elseif tabId == "guide" then
+        GW.UI.RenderGuideContent(scroll)
+    elseif tabId == "gang" then
+        GW.UI.RenderGangContent(scroll, mainFrame)
     elseif tabId == "inventory" then
         GW.UI.PopulateInventoryGrid(scroll, mainFrame, "")
     else
         GW.UI.PopulateGrid(scroll, tabId, mainFrame, "")
+    end
+end
+
+-- ==========================================
+-- SERVER GUIDE CONTENT
+-- ==========================================
+
+function GW.UI.RenderGuideContent(scroll)
+    local guideSections = {
+        {
+            num = "01",
+            title = "Getting Started & Career Advancement",
+            desc = "Begin your life in GangWars RP by opening the Careers tab. Choosing a job grants regular periodic salaries, specialized equipment, and unlocks corresponding trade items. Earn Respect and XP to Level Up by surviving, completing faction activities, contesting territory, and engaging in trade.",
+            accent = Color(6, 182, 212)
+        },
+        {
+            num = "02",
+            title = "Economy: Wholesale Dealers vs Retail Kiosks",
+            desc = "Items in the public F4 Item Shop carry a 200% to 260% convenience kiosk markup. Specialized merchants (Arms Dealers, Pharmacists, Cyber Engineers, and Black Market Dealers) purchase items at direct factory wholesale cost. Save money by purchasing directly from players or start your own distribution empire!",
+            accent = Color(16, 185, 129)
+        },
+        {
+            num = "03",
+            title = "Money Printers & Cooling Mechanics",
+            desc = "Money printers produce continuous passive cash income. Internal temperatures rise during operation; interact with printers using [E] to cycle coolant and prevent explosive overheating at 100°C. Warning: Police officers are authorized to raid bases and seize illegal printers for instant cash bounties.",
+            accent = Color(245, 158, 11)
+        },
+        {
+            num = "04",
+            title = "Gangs, Turf Flags & Territory Taxation",
+            desc = "Street Gangsters can organize syndicates in the Gang Management tab or via /creategang <name>. Capture city territory districts by holding the holographic flag poles [E]. Controlled turfs deposit recurring dividends into member wallets and allow the gang leader to configure district sales taxes (5% to 30%).",
+            accent = Color(168, 85, 247)
+        },
+        {
+            num = "05",
+            title = "Real Estate, Keys & Base Architecture",
+            desc = "Look at any unowned door and press [F2] to purchase real estate. Lock and unlock doors using Keys. Base defenses must feature clear, navigable entranceways and must never completely block public highways or flag pole perimeters. Hobos are restricted to building sandbox structures and cannot purchase real estate or weapons.",
+            accent = Color(56, 189, 248)
+        },
+        {
+            num = "06",
+            title = "Chat Commands Reference",
+            desc = "Quick chat commands available to all citizens:\n• /gang : View active gang status, bank balance & controlled turfs\n• /creategang <name> : Found a street gang ($500 creation fee)\n• /invitegang <player> : Invite a fellow gangster to your syndicate\n• /acceptgang : Accept a pending street gang invitation\n• /leavegang : Voluntarily leave your current gang\n• /settax <5-30> : Configure tax rate for your controlled district\n• /g <msg> : Broadcast message on encrypted private gang radio\n• /dropmoney <amount> : Drop physical cash bills from your wallet",
+            accent = Color(244, 63, 94)
+        }
+    }
+
+    local scrollW = scroll:GetWide() - 32
+    for _, g in ipairs(guideSections) do
+        local maxTextW = math.max(scrollW - 100, 400)
+        local lines = GW.UI.WrapText(g.desc, "GW_UI_Body", maxTextW)
+        local cardH = math.max(130, 68 + #lines * 22 + 16)
+
+        local card = scroll:Add("DPanel")
+        card:Dock(TOP)
+        card:DockMargin(0, 0, 0, 14)
+        card:SetTall(cardH)
+
+        card.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
+            draw.RoundedBoxEx(8, 0, 0, 6, h, g.accent, true, false, true, false)
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+            -- Number badge
+            draw.RoundedBox(4, 18, 16, 44, 34, Color(g.accent.r, g.accent.g, g.accent.b, 35))
+            draw.SimpleText(g.num, "GW_UI_Header", 40, 33, g.accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+            -- Title
+            draw.SimpleText(g.title, "GW_UI_Header", 76, 33, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+            -- Word-Wrapped Description
+            for i, line in ipairs(lines) do
+                draw.SimpleText(line, "GW_UI_Body", 76, 62 + (i - 1) * 22, Color(148, 163, 184))
+            end
+        end
+    end
+end
+
+-- ==========================================
+-- GANG MANAGEMENT DASHBOARD (VIEW GANG)
+-- ==========================================
+
+function GW.UI.RenderGangContent(scroll, mainFrame)
+    local ply = LocalPlayer()
+
+    -- Request latest sync data from server
+    net.Start("GW_RequestGangData")
+    net.SendToServer()
+
+    local data = GW.UI.ClientGangData
+
+    -- Loading Placeholder
+    if not data then
+        local loading = scroll:Add("DPanel")
+        loading:Dock(TOP)
+        loading:SetTall(160)
+        loading.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 180))
+            draw.SimpleText("Loading Syndicate Intelligence...", "GW_UI_Header", w / 2, h / 2, Color(6, 182, 212), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        return
+    end
+
+    local scrollW = scroll:GetWide() - 20
+
+    -- ========================================================
+    -- SCENARIO A: PLAYER IS IN A GANG
+    -- ========================================================
+    if data.hasGang then
+        -- 1. Suspension Warning Banner (if off-duty as Police or Civilian)
+        if data.isSuspended then
+            local susp = scroll:Add("DPanel")
+            susp:Dock(TOP)
+            susp:DockMargin(0, 0, 0, 14)
+            susp:SetTall(64)
+            susp.Paint = function(s, w, h)
+                draw.RoundedBox(8, 0, 0, w, h, Color(245, 158, 11, 25))
+                surface.SetDrawColor(245, 158, 11, 140)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+                draw.SimpleText("⚠ GANG AFFILIATION CURRENTLY SUSPENDED", "GW_UI_Sub", 18, 18, Color(251, 191, 36))
+                draw.SimpleText("You are on duty as " .. data.currentJob .. ". Gang territory dividends & controls are dormant until you switch to Street Gangs in Careers.", "GW_UI_Caption", 18, 40, Color(226, 232, 240))
+            end
+        end
+
+        -- 2. Top Gang Header Banner
+        local gangCol = GW.GetGangColor(data.gangName)
+        local topBanner = scroll:Add("DPanel")
+        topBanner:Dock(TOP)
+        topBanner:DockMargin(0, 0, 0, 16)
+        topBanner:SetTall(84)
+        topBanner.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 240))
+            draw.RoundedBoxEx(8, 0, 0, 6, h, gangCol, true, false, true, false)
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+            -- Gang Name
+            draw.SimpleText(data.gangName, "GW_UI_Title", 24, 26, Color(248, 250, 252))
+
+            -- Rank Pill
+            local rText = data.isLeader and "GANG LEADER" or "SYNDICATE MEMBER"
+            local rCol = data.isLeader and Color(6, 182, 212) or Color(148, 163, 184)
+            surface.SetFont("GW_UI_Badge")
+            local tw = surface.GetTextSize(rText) + 20
+            draw.RoundedBox(4, 24, 50, tw, 22, Color(rCol.r, rCol.g, rCol.b, 35))
+            draw.SimpleText(rText, "GW_UI_Badge", 24 + tw / 2, 61, rCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+            -- Right Stats
+            local stat1 = "★ Respect: " .. string.Comma(data.respect)
+            local stat2 = #data.members .. " Registered Gangsters"
+            draw.SimpleText(stat1, "GW_UI_Header", w - 24, 24, Color(245, 158, 11), TEXT_ALIGN_RIGHT)
+            draw.SimpleText(stat2, "GW_UI_Sub", w - 24, 52, Color(74, 222, 128), TEXT_ALIGN_RIGHT)
+        end
+
+        -- 3. Two Column Layout Container
+        local colContainer = scroll:Add("DPanel")
+        colContainer:Dock(TOP)
+        colContainer:DockMargin(0, 0, 0, 16)
+        colContainer:SetTall(420)
+        colContainer.Paint = function() end
+
+        local colW = (scrollW - 14) / 2
+
+        -- LEFT COLUMN: Vault & Territories
+        local leftCol = vgui.Create("DPanel", colContainer)
+        leftCol:SetPos(0, 0)
+        leftCol:SetSize(colW, 420)
+        leftCol.Paint = function() end
+
+        -- Vault Card
+        local vaultCard = vgui.Create("DPanel", leftCol)
+        vaultCard:SetPos(0, 0)
+        vaultCard:SetSize(colW, 230)
+        vaultCard.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
+            draw.RoundedBoxEx(8, 0, 0, w, 4, Color(16, 185, 129), true, true, false, false)
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+            draw.SimpleText("GANG VAULT & TREASURY", "GW_UI_Sub", 18, 16, Color(16, 185, 129))
+            local balText = "$" .. string.Comma(data.bank)
+            draw.SimpleText(balText, "GW_UI_Price", 18, 52, Color(74, 222, 128))
+            draw.SimpleText("Territory tax earnings and dividends accumulate directly in the vault.", "GW_UI_Caption", 18, 88, Color(148, 163, 184))
+        end
+
+        -- Vault Deposit Buttons
+        local depAmounts = { 500, 2500, 10000 }
+        local depX = 18
+        for _, amt in ipairs(depAmounts) do
+            local bDep = vgui.Create("DButton", vaultCard)
+            bDep:SetPos(depX, 116)
+            bDep:SetSize((colW - 54) / 3, 34)
+            bDep:SetText("")
+            bDep.Paint = function(s, w, h)
+                local bg = s:IsHovered() and Color(16, 185, 129, 220) or Color(5, 150, 105, 180)
+                draw.RoundedBox(6, 0, 0, w, h, bg)
+                draw.SimpleText("+$" .. string.Comma(amt), "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+            bDep.DoClick = function()
+                net.Start("GW_GangUIAction")
+                    net.WriteString("deposit")
+                    net.WriteString(util.TableToJSON({ amount = amt }))
+                net.SendToServer()
+            end
+            depX = depX + (colW - 54) / 3 + 9
+        end
+
+        -- Vault Withdraw Buttons (Leader only)
+        if data.isLeader then
+            local withX = 18
+            for _, amt in ipairs(depAmounts) do
+                local bWith = vgui.Create("DButton", vaultCard)
+                bWith:SetPos(withX, 160)
+                bWith:SetSize((colW - 54) / 3, 34)
+                bWith:SetText("")
+                bWith.Paint = function(s, w, h)
+                    local canWith = (data.bank >= amt)
+                    local bg = not canWith and Color(51, 65, 85, 160) or (s:IsHovered() and Color(239, 68, 68, 220) or Color(185, 28, 28, 180))
+                    draw.RoundedBox(6, 0, 0, w, h, bg)
+                    draw.SimpleText("-$" .. string.Comma(amt), "GW_UI_Btn", w / 2, h / 2, canWith and Color(248, 250, 252) or Color(156, 163, 175), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                end
+                bWith.DoClick = function()
+                    net.Start("GW_GangUIAction")
+                        net.WriteString("withdraw")
+                        net.WriteString(util.TableToJSON({ amount = amt }))
+                    net.SendToServer()
+                end
+                withX = withX + (colW - 54) / 3 + 9
+            end
+        else
+            local lblOnlyLeader = vgui.Create("DLabel", vaultCard)
+            lblOnlyLeader:SetPos(18, 166)
+            lblOnlyLeader:SetSize(colW - 36, 24)
+            lblOnlyLeader:SetFont("GW_UI_Caption")
+            lblOnlyLeader:SetTextColor(Color(148, 163, 184))
+            lblOnlyLeader:SetText("★ Vault withdrawals are reserved exclusively for the Gang Leader.")
+        end
+
+        -- Controlled Territories Card
+        local turfCard = vgui.Create("DPanel", leftCol)
+        turfCard:SetPos(0, 244)
+        turfCard:SetSize(colW, 176)
+        turfCard.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
+            draw.RoundedBoxEx(8, 0, 0, w, 4, Color(168, 85, 247), true, true, false, false)
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+            draw.SimpleText("CONTROLLED TERRITORIES (" .. #data.turfs .. ")", "GW_UI_Sub", 18, 16, Color(168, 85, 247))
+        end
+
+        local turfScroll = vgui.Create("DScrollPanel", turfCard)
+        turfScroll:SetPos(14, 46)
+        turfScroll:SetSize(colW - 28, 120)
+
+        if #data.turfs == 0 then
+            local noTurf = turfScroll:Add("DLabel")
+            noTurf:Dock(TOP)
+            noTurf:DockMargin(4, 16, 4, 4)
+            noTurf:SetFont("GW_UI_Caption")
+            noTurf:SetTextColor(Color(148, 163, 184))
+            noTurf:SetText("No city districts currently owned. Hold holographic flag poles in contested areas to capture.")
+        else
+            for _, t in ipairs(data.turfs) do
+                local tRow = turfScroll:Add("DPanel")
+                tRow:Dock(TOP)
+                tRow:DockMargin(0, 0, 0, 8)
+                tRow:SetTall(38)
+                tRow.Paint = function(s, w, h)
+                    draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
+                    draw.SimpleText(t.name, "GW_UI_Sub", 12, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("District Tax: " .. (t.tax_rate or 10) .. "%", "GW_UI_Caption", w - 12, h / 2, Color(74, 222, 128), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                end
+            end
+        end
+
+        -- RIGHT COLUMN: Member Roster & Recruitment
+        local rightCol = vgui.Create("DPanel", colContainer)
+        rightCol:SetPos(colW + 14, 0)
+        rightCol:SetSize(colW, 420)
+        rightCol.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
+            draw.RoundedBoxEx(8, 0, 0, w, 4, Color(6, 182, 212), true, true, false, false)
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+            draw.SimpleText("SYNDICATE ROSTER & RECRUITS", "GW_UI_Sub", 18, 16, Color(6, 182, 212))
+        end
+
+        -- Recruitment Bar (Invite Player)
+        local txtInvite = vgui.Create("DTextEntry", rightCol)
+        txtInvite:SetPos(18, 48)
+        txtInvite:SetSize(colW - 138, 36)
+        txtInvite:SetPlaceholderText("Enter player name or SteamID...")
+        txtInvite:SetFont("GW_UI_Caption")
+        txtInvite.Paint = function(s, w, h)
+            draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
+            surface.SetDrawColor(30, 41, 59, 200)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            s:DrawTextEntryText(Color(248, 250, 252), Color(6, 182, 212), Color(248, 250, 252))
+        end
+
+        local btnInvite = vgui.Create("DButton", rightCol)
+        btnInvite:SetPos(colW - 110, 48)
+        btnInvite:SetSize(92, 36)
+        btnInvite:SetText("")
+        btnInvite.Paint = function(s, w, h)
+            local bg = s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200)
+            draw.RoundedBox(6, 0, 0, w, h, bg)
+            draw.SimpleText("Invite", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        btnInvite.DoClick = function()
+            local targetName = string.Trim(txtInvite:GetText())
+            if targetName == "" then return end
+            net.Start("GW_GangUIAction")
+                net.WriteString("invite")
+                net.WriteString(util.TableToJSON({ target = targetName }))
+            net.SendToServer()
+            txtInvite:SetText("")
+        end
+
+        -- Members Scrollable List
+        local rosterScroll = vgui.Create("DScrollPanel", rightCol)
+        rosterScroll:SetPos(18, 94)
+        rosterScroll:SetSize(colW - 36, 310)
+
+        for _, m in ipairs(data.members) do
+            local mRow = rosterScroll:Add("DPanel")
+            mRow:Dock(TOP)
+            mRow:DockMargin(0, 0, 0, 8)
+            mRow:SetTall(46)
+            mRow.Paint = function(s, w, h)
+                draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
+                surface.SetDrawColor(30, 41, 59, 160)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+                -- Online Status Dot
+                local dotCol = m.isOnline and Color(74, 222, 128) or Color(100, 116, 139)
+                draw.RoundedBox(4, 12, h / 2 - 4, 8, 8, dotCol)
+
+                -- Member Name & Role
+                local nameCol = m.isOnline and Color(248, 250, 252) or Color(148, 163, 184)
+                draw.SimpleText(m.name, "GW_UI_Sub", 28, 14, nameCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(m.job, "GW_UI_Caption", 28, 32, Color(100, 116, 139), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+                -- Rank Tag
+                local rankText = m.isLeader and "Leader" or "Member"
+                local rankCol = m.isLeader and Color(6, 182, 212) or Color(148, 163, 184)
+                surface.SetFont("GW_UI_Badge")
+                local rtw = surface.GetTextSize(rankText) + 16
+                local rX = (data.isLeader and m.steamid ~= ply:SteamID()) and (w - rtw - 74) or (w - rtw - 12)
+                draw.RoundedBox(4, rX, (h - 22) / 2, rtw, 22, Color(rankCol.r, rankCol.g, rankCol.b, 35))
+                draw.SimpleText(rankText, "GW_UI_Badge", rX + rtw / 2, h / 2, rankCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+
+            -- Kick Button (Leader only, cannot kick self)
+            if data.isLeader and m.steamid ~= ply:SteamID() then
+                local btnKick = vgui.Create("DButton", mRow)
+                btnKick:SetSize(56, 30)
+                btnKick:SetPos(colW - 36 - 66, 8)
+                btnKick:SetText("")
+                btnKick.Paint = function(s, w, h)
+                    local bg = s:IsHovered() and Color(239, 68, 68, 240) or Color(185, 28, 28, 190)
+                    draw.RoundedBox(4, 0, 0, w, h, bg)
+                    draw.SimpleText("Kick", "GW_UI_Badge", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                end
+                btnKick.DoClick = function()
+                    Derma_Query("Kick " .. m.name .. " from the gang?", "Confirm Kick", "Kick", function()
+                        net.Start("GW_GangUIAction")
+                            net.WriteString("kick")
+                            net.WriteString(util.TableToJSON({ steamid = m.steamid }))
+                        net.SendToServer()
+                    end, "Cancel")
+                end
+            end
+        end
+
+        -- 4. Bottom Danger Zone Action Row
+        local bottomRow = scroll:Add("DPanel")
+        bottomRow:Dock(TOP)
+        bottomRow:DockMargin(0, 0, 0, 16)
+        bottomRow:SetTall(46)
+        bottomRow.Paint = function() end
+
+        local btnLeave = vgui.Create("DButton", bottomRow)
+        btnLeave:SetPos(0, 0)
+        btnLeave:SetSize(180, 46)
+        btnLeave:SetText("")
+        btnLeave.Paint = function(s, w, h)
+            local bg = s:IsHovered() and Color(239, 68, 68, 220) or Color(185, 28, 28, 180)
+            draw.RoundedBox(6, 0, 0, w, h, bg)
+            draw.SimpleText("Leave Gang", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        btnLeave.DoClick = function()
+            Derma_Query("Are you sure you want to leave '" .. data.gangName .. "'?", "Leave Gang", "Yes, Leave", function()
+                net.Start("GW_GangUIAction")
+                    net.WriteString("leave")
+                    net.WriteString("{}")
+                net.SendToServer()
+            end, "Cancel")
+        end
+
+        if data.isLeader then
+            local btnDisband = vgui.Create("DButton", bottomRow)
+            btnDisband:SetPos(194, 0)
+            btnDisband:SetSize(190, 46)
+            btnDisband:SetText("")
+            btnDisband.Paint = function(s, w, h)
+                local bg = s:IsHovered() and Color(220, 38, 38, 255) or Color(153, 27, 27, 200)
+                draw.RoundedBox(6, 0, 0, w, h, bg)
+                draw.SimpleText("Disband Gang", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+            btnDisband.DoClick = function()
+                Derma_Query("Are you sure you want to PERMANENTLY disband '" .. data.gangName .. "'? All members will be removed.", "Disband Gang", "Disband Gang", function()
+                    net.Start("GW_GangUIAction")
+                        net.WriteString("disband")
+                        net.WriteString("{}")
+                    net.SendToServer()
+                end, "Cancel")
+            end
+        end
+
+    -- ========================================================
+    -- SCENARIO B: PLAYER IS NOT IN A GANG
+    -- ========================================================
+    else
+        -- If on duty as Police or Civilian: Gangs are disabled
+        if not data.isGangFaction then
+            local restCard = scroll:Add("DPanel")
+            restCard:Dock(TOP)
+            restCard:DockMargin(0, 0, 0, 16)
+            restCard:SetTall(160)
+            restCard.Paint = function(s, w, h)
+                draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 220))
+                draw.RoundedBoxEx(8, 0, 0, 6, h, Color(239, 68, 68), true, false, true, false)
+                surface.SetDrawColor(30, 41, 59, 180)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+                draw.SimpleText("UNDERWORLD AFFILIATIONS RESTRICTED", "GW_UI_Header", 24, 26, Color(248, 113, 113))
+                draw.SimpleText("You are currently employed as " .. data.currentJob .. ".", "GW_UI_Sub", 24, 58, Color(248, 250, 252))
+                draw.SimpleText("Law enforcement officers and neutral civilians cannot participate in street gangs.", "GW_UI_Caption", 24, 88, Color(148, 163, 184))
+                draw.SimpleText("To found or join a gang, switch to any Street Gang role in the Careers tab.", "GW_UI_Caption", 24, 110, Color(74, 222, 128))
+            end
+
+            local btnGoJobs = vgui.Create("DButton", restCard)
+            btnGoJobs:SetSize(210, 42)
+            btnGoJobs:SetPos(scrollW - 226, 60)
+            btnGoJobs:SetText("")
+            btnGoJobs.Paint = function(s, w, h)
+                local bg = s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200)
+                draw.RoundedBox(6, 0, 0, w, h, bg)
+                draw.SimpleText("Open Careers & Jobs", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+            btnGoJobs.DoClick = function()
+                if IsValid(GW.UI.CurrentContentPanel) then
+                    GW.UI.ActiveF4Tab = "jobs"
+                    GW.UI.CurrentContentPanel:Clear()
+                    GW.UI.RenderContentTab(GW.UI.CurrentContentPanel, "jobs", mainFrame)
+                end
+            end
+            return
+        end
+
+        -- Active Street Gangster: Can found a new gang
+        local foundCard = scroll:Add("DPanel")
+        foundCard:Dock(TOP)
+        foundCard:DockMargin(0, 0, 0, 18)
+        foundCard:SetTall(160)
+        foundCard.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 220))
+            draw.RoundedBoxEx(8, 0, 0, 6, h, Color(245, 158, 11), true, false, true, false)
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+            draw.SimpleText("FOUND A NEW STREET GANG", "GW_UI_Header", 24, 24, Color(245, 158, 11))
+            draw.SimpleText("Establish your own syndicate, conquer territory, collect district taxes, and recruit allies.", "GW_UI_Caption", 24, 52, Color(148, 163, 184))
+            draw.SimpleText("Founding Fee: $" .. (data.creationCost or 500) .. " (Deducted from your personal wallet)", "GW_UI_Sub", 24, 118, Color(74, 222, 128))
+        end
+
+        local txtGangName = vgui.Create("DTextEntry", foundCard)
+        txtGangName:SetPos(24, 76)
+        txtGangName:SetSize(scrollW - 260, 38)
+        txtGangName:SetPlaceholderText("Enter gang name (2 to 24 characters)...")
+        txtGangName:SetFont("GW_UI_Sub")
+        txtGangName.Paint = function(s, w, h)
+            draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
+            surface.SetDrawColor(30, 41, 59, 200)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+            s:DrawTextEntryText(Color(248, 250, 252), Color(6, 182, 212), Color(248, 250, 252))
+        end
+
+        local btnFound = vgui.Create("DButton", foundCard)
+        btnFound:SetPos(scrollW - 220, 76)
+        btnFound:SetSize(200, 38)
+        btnFound:SetText("")
+        btnFound.Paint = function(s, w, h)
+            local bg = s:IsHovered() and Color(245, 158, 11, 240) or Color(217, 119, 6, 200)
+            draw.RoundedBox(6, 0, 0, w, h, bg)
+            draw.SimpleText("Found Gang ($500)", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
+        btnFound.DoClick = function()
+            local gName = string.Trim(txtGangName:GetText())
+            if #gName < 2 then
+                GW.Notify(ply, "Gang name must be at least 2 characters!", NOTIFY_ERROR)
+                return
+            end
+            net.Start("GW_GangUIAction")
+                net.WriteString("create")
+                net.WriteString(util.TableToJSON({ name = gName }))
+            net.SendToServer()
+        end
+
+        -- Active City Gangs Directory
+        local dirBanner = scroll:Add("DPanel")
+        dirBanner:Dock(TOP)
+        dirBanner:DockMargin(0, 0, 0, 10)
+        dirBanner:SetTall(42)
+        dirBanner.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
+            draw.SimpleText("REGISTERED CITY GANGS (" .. #data.cityGangs .. ")", "GW_UI_Sub", 18, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Reach out to gang leaders in-game to request an invite (/invitegang).", "GW_UI_Caption", w - 18, h / 2, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        end
+
+        if #data.cityGangs == 0 then
+            local noGangs = scroll:Add("DPanel")
+            noGangs:Dock(TOP)
+            noGangs:SetTall(100)
+            noGangs.Paint = function(s, w, h)
+                draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 140))
+                draw.SimpleText("No gangs currently registered in the city database. Be the first to form one!", "GW_UI_Sub", w / 2, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+        else
+            for _, g in ipairs(data.cityGangs) do
+                local gCard = scroll:Add("DPanel")
+                gCard:Dock(TOP)
+                gCard:DockMargin(0, 0, 0, 8)
+                gCard:SetTall(52)
+                gCard.Paint = function(s, w, h)
+                    local gCol = GW.GetGangColor(g.name)
+                    draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
+                    draw.RoundedBoxEx(6, 0, 0, 4, h, gCol, true, false, true, false)
+                    surface.SetDrawColor(30, 41, 59, 160)
+                    surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+                    draw.SimpleText(g.name, "GW_UI_Header", 18, 18, Color(248, 250, 252))
+                    draw.SimpleText((g.memberCount or 1) .. " Registered Members", "GW_UI_Caption", 18, 36, Color(148, 163, 184))
+
+                    draw.SimpleText("★ Respect: " .. string.Comma(g.respect or 0), "GW_UI_Sub", w - 24, 18, Color(245, 158, 11), TEXT_ALIGN_RIGHT)
+                    draw.SimpleText("Vault: $" .. string.Comma(g.bank or 0), "GW_UI_Caption", w - 24, 36, Color(74, 222, 128), TEXT_ALIGN_RIGHT)
+                end
+            end
+        end
     end
 end
 
@@ -353,7 +994,6 @@ end
 
 function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
     local ply = LocalPlayer()
-    local steamID = ply:SteamID()
 
     local rows = GW.Inventory and GW.Inventory.ClientItems or {}
     local filteredRows = {}
@@ -454,7 +1094,7 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
             end
         end
 
-        -- Action Buttons (Bottom-Right / Content Area)
+        -- Action Buttons
         local btnY = cardH - 48
 
         local btnDrop = vgui.Create("DButton", card)
@@ -470,7 +1110,6 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
             GW.Inventory.DropItem(rowId)
         end
 
-        -- If item is a weapon, show Equip button
         if itemType == "weapon" then
             local btnEquip = vgui.Create("DButton", card)
             btnEquip:SetSize(110, 36)
@@ -527,7 +1166,6 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
             }
         }
 
-        -- Count total roles per category
         local catCounts = { neutral = 0, gang = 0, police = 0 }
         for _, job in pairs(GW.Jobs or {}) do
             local fId = (job.faction and job.faction.id) or "neutral"
@@ -536,7 +1174,6 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
             end
         end
 
-        -- Top Category Filter Buttons Bar
         local filterBar = scroll:Add("DPanel")
         filterBar:Dock(TOP)
         filterBar:DockMargin(0, 0, 0, 16)
@@ -586,7 +1223,6 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
         local cardW = (scroll:GetWide() - 28) / 2
 
-        -- Render Each Category Section
         for _, cat in ipairs(categories) do
             if GW.UI.ActiveJobCategory == "all" or GW.UI.ActiveJobCategory == cat.id then
                 local catJobs = {}
@@ -612,7 +1248,6 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         return (a.data.level or 1) < (b.data.level or 1)
                     end)
 
-                    -- Section Banner
                     local banner = scroll:Add("DPanel")
                     banner:Dock(TOP)
                     banner:DockMargin(0, 0, 0, 10)
@@ -623,11 +1258,9 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         surface.SetDrawColor(30, 41, 59, 180)
                         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-                        -- Title & Subtitle
                         draw.SimpleText(cat.title, "GW_UI_Sub", 18, 14, cat.color, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
                         draw.SimpleText(cat.desc, "GW_UI_Caption", 18, 33, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-                        -- Right Player Activity Capsule
                         local actText = #catJobs .. " Roles  •  " .. catActivePlayers .. " Active Players"
                         surface.SetFont("GW_UI_Badge")
                         local tw = surface.GetTextSize(actText) + 20
@@ -637,7 +1270,6 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         draw.SimpleText(actText, "GW_UI_Badge", w - 16 - tw / 2, 24, cat.color, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                     end
 
-                    -- Grid Layout for Category
                     local catLayout = scroll:Add("DIconLayout")
                     catLayout:Dock(TOP)
                     catLayout:DockMargin(0, 0, 0, 18)
@@ -692,14 +1324,14 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                             surface.SetDrawColor(30, 41, 59, 180)
                             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-                            -- Row 1 Left: Faction Pill
+                            -- Faction Pill
                             local fName = job.faction and job.faction.name or "Civilian"
                             surface.SetFont("GW_UI_Badge")
                             local badgeW = surface.GetTextSize(fName) + 20
                             draw.RoundedBox(4, 138, 14, badgeW, 22, Color(fCol.r, fCol.g, fCol.b, 35))
                             draw.SimpleText(fName, "GW_UI_Badge", 138 + badgeW / 2, 25, fCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-                            -- Row 1 Right: Slot Availability Pill
+                            -- Slot Availability Pill
                             surface.SetFont("GW_UI_Badge")
                             local slotW = surface.GetTextSize(slotText) + 18
                             local slotX = cardW - 16 - slotW
@@ -708,11 +1340,11 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                             surface.DrawOutlinedRect(slotX, 14, slotW, 22, 1)
                             draw.SimpleText(slotText, "GW_UI_Badge", slotX + slotW / 2, 25, slotCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-                            -- Row 2: Job Name
+                            -- Job Name
                             local cleanJobName = GW.UI.FitText(job.name, "GW_UI_Header", maxTextW)
                             draw.SimpleText(cleanJobName, "GW_UI_Header", 138, 42, Color(248, 250, 252))
 
-                            -- Row 3: Stats Line
+                            -- Stats Line
                             local statsText = "Salary: +$" .. (job.salary or 45) .. " / 90s"
                             if (job.armor or 0) > 0 then
                                 statsText = statsText .. "   |   Armor: " .. job.armor .. "%"
@@ -722,7 +1354,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                             end
                             draw.SimpleText(statsText, "GW_UI_Sub", 138, 72, Color(74, 222, 128))
 
-                            -- Row 4: Description
+                            -- Description
                             local descLines = GW.UI.WrapText(job.desc or "", "GW_UI_Caption", maxTextW)
                             for i = 1, math.min(#descLines, 3) do
                                 draw.SimpleText(descLines[i], "GW_UI_Caption", 138, 98 + (i - 1) * 20, Color(148, 163, 184))
@@ -798,7 +1430,6 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
         local itemsList = {}
         for itemId, item in pairs(GW.ShopItems or {}) do
-            -- Filter by tab type
             if tabId == "weapons" and (item.category == "networking" or item.category == "supplies" or (item.type ~= "weapon" and item.type ~= "ammo")) then continue end
             if tabId == "shipments" and item.type ~= "shipment" then continue end
             if tabId == "entities" and (item.category ~= "printers" or item.debug or string.StartWith(itemId, "debug_")) then continue end
@@ -806,18 +1437,15 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
             if tabId == "networking" and item.category ~= "networking" then continue end
             if (tabId == "debug_buffs" or tabId == "buffs") and not (item.debug or string.StartWith(itemId, "debug_") or item.type == "buff" or item.type == "cleanse") then continue end
 
-            -- Filter by search query
             if searchFilter ~= "" and not string.find(string.lower(item.name), searchFilter, 1, true) then
                 continue
             end
 
-            -- Determine effective purchase cost via dynamic wholesale/retail pricing engine
             local effectiveCost = GW.GetItemCost(item, ply)
             local reqItemLevel = item.level or 1
             local canBuyLevel = (myLevel >= reqItemLevel)
             local canAfford = (myMoney >= effectiveCost)
 
-            -- Job Requirement Validation
             local hasJobReq = (item.jobs ~= nil) or (item.job ~= nil)
             local canBuyJob = true
             local reqJobName = ""
@@ -835,13 +1463,11 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 reqJobName = jData and jData.name or item.job
             end
 
-            -- Police & Hobo Restrictions
             local isPoliceProhibited = isPolice and (item.category == "printers" or item.isContraband or item.type == "shipment" or (item.jobs and table.HasValue(item.jobs, "black_market_dealer")) or (item.jobs and table.HasValue(item.jobs, "thief")))
             local isHoboProhibited = isHobo
 
             local isLocked = (not canBuyJob) or (not canBuyLevel) or isPoliceProhibited or isHoboProhibited
 
-            -- Sorting Priority
             local rank = 1
             if not isLocked and canAfford then
                 rank = 1
@@ -987,7 +1613,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                     end
                 end
 
-                -- Persistent Job & Level Prerequisite Pill (Marked Green with Checkmark When Satisfied!)
+                -- Persistent Job & Level Prerequisite Pill
                 local hasLevelReq = (reqItemLevel and reqItemLevel > 1)
                 if isHoboProhibited then
                     draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
@@ -1001,7 +1627,6 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                     draw.SimpleText("Prohibited for Law Enforcement", "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 elseif hasJobReq then
                     if canBuyJob then
-                        -- Requirement met: PERSISTENT GREEN CHECKMARK PILL
                         local checkText = (hasLevelReq and canBuyLevel) and ("✓ " .. reqJobName .. " (LVL " .. reqItemLevel .. "+)") or ("✓ Requires: " .. reqJobName)
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(16, 185, 129, 35))
                         surface.SetDrawColor(16, 185, 129, 140)
@@ -1009,7 +1634,6 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         local fitCheck = GW.UI.FitText(checkText, "GW_UI_Caption", 186)
                         draw.SimpleText(fitCheck, "GW_UI_Caption", cardW - 114, 64, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                     else
-                        -- Requirement unmet: RED WARNING PILL
                         local lockTag = "Requires: " .. reqJobName
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
                         surface.SetDrawColor(239, 68, 68, 90)
@@ -1134,10 +1758,6 @@ end
 -- ==========================================
 
 function GW.UI.RenderRulesContent(scroll)
-    local container = vgui.Create("DPanel", scroll)
-    container:Dock(FILL)
-    container.Paint = function() end
-
     local rules = {
         {
             num = "01",
@@ -1188,14 +1808,11 @@ function GW.UI.RenderRulesContent(scroll)
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-            -- Number badge
             draw.RoundedBox(4, 18, 16, 44, 34, Color(r.accent.r, r.accent.g, r.accent.b, 35))
             draw.SimpleText(r.num, "GW_UI_Header", 40, 33, r.accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-            -- Title
             draw.SimpleText(r.title, "GW_UI_Header", 76, 33, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-            -- Word-Wrapped Description
             for i, line in ipairs(lines) do
                 draw.SimpleText(line, "GW_UI_Body", 76, 62 + (i - 1) * 24, Color(148, 163, 184))
             end

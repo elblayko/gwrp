@@ -40,6 +40,9 @@ util.AddNetworkString("GW_XPGained")
 util.AddNetworkString("GW_OpenCraftingUI")
 util.AddNetworkString("GW_CraftItem")
 util.AddNetworkString("GW_CollectMachineResource")
+util.AddNetworkString("GW_RequestGangData")
+util.AddNetworkString("GW_SendGangData")
+util.AddNetworkString("GW_GangUIAction")
 
 GW.NetLimits = GW.NetLimits or {}
 
