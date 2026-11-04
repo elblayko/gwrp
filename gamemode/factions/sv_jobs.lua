@@ -1,5 +1,5 @@
 --[[
-    sv_jobs.lua - Server-side Job Management
+    sv_jobs.lua - Server-side Job Management with Faction Transition Feedback
 --]]
 
 local meta = FindMetaTable("Player")
@@ -27,6 +27,11 @@ function meta:SetJob(jobId, force)
         end
     end
 
+    local oldJobData = self:GetJobData()
+    local oldFactionId = oldJobData and oldJobData.faction and oldJobData.faction.id or "neutral"
+    local newFactionId = jobData.faction and jobData.faction.id or "neutral"
+    local storedGang = self:GetRawGang()
+
     self:SetNWString("GW_Job", jobId)
     if GW.Database and GW.Database.SavePlayerJob then
         GW.Database.SavePlayerJob(self, jobId)
@@ -34,6 +39,18 @@ function meta:SetJob(jobId, force)
     self:Spawn()
 
     GW.Notify(self, "You are now working as a " .. jobData.name .. "!", NOTIFY_GENERIC)
+
+    -- Notify player of gang suspension or restoration
+    if storedGang ~= "" and not force then
+        if newFactionId == "police" and oldFactionId ~= "police" then
+            GW.Notify(self, "On-duty as Police: Street gang affiliations are suspended.", NOTIFY_HINT, 6)
+        elseif newFactionId == "neutral" and oldFactionId == "gang" then
+            GW.Notify(self, "Civilian status: Street gang affiliations are temporarily inactive.", NOTIFY_HINT, 6)
+        elseif newFactionId == "gang" and oldFactionId ~= "gang" then
+            GW.Notify(self, string.format("Welcome back to the streets! Gang '%s' is now active.", storedGang), NOTIFY_GENERIC, 6)
+        end
+    end
+
     return true
 end
 

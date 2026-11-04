@@ -1,6 +1,6 @@
 --[[
     sv_inventory.lua - Server-Side Inventory Pickup, Slot Movement, Drop & Persistence Engine
-    Author: Toxic
+    Author: Toxic & Antigravity
 --]]
 
 GW.Inventory = GW.Inventory or {}
@@ -77,6 +77,13 @@ function GW.Inventory.PickupEntity(ply, ent)
 
     -- 2. Weapons on Ground
     if ent:IsWeapon() then
+        -- Hobo Restriction: Hobos cannot pick up weapons
+        if ply:GetJob() == "hobo" and not (GW.HoboAllowedWeapons and GW.HoboAllowedWeapons[class]) then
+            GW.Notify(ply, "Hobos can only use building tools and hands!", NOTIFY_ERROR)
+            ply:EmitSound("common/warning.wav", 65, 100)
+            return false
+        end
+
         local itemId = class
         local itemData = {
             clip1 = ent:Clip1(),
@@ -418,6 +425,12 @@ net.Receive("GW_UseInventorySlot", function(len, ply)
     end
 
     if itemType == "weapon" then
+        -- Hobo Restriction: Hobos can only use building tools
+        if ply:GetJob() == "hobo" and not (GW.HoboAllowedWeapons and GW.HoboAllowedWeapons[itemId]) then
+            GW.Notify(ply, "Hobos can only use building tools and hands!", NOTIFY_ERROR)
+            return
+        end
+
         if ply:HasWeapon(itemId) then
             GW.Notify(ply, "You already have this weapon equipped!", NOTIFY_ERROR)
             return
@@ -529,11 +542,17 @@ net.Receive("GW_UseInventoryItem", function(len, ply)
     for _, r in ipairs(rows) do
         if tonumber(r.id) == rowId then
             local itemId = r.item_id
-            if r.item_type == "weapon" and not ply:HasWeapon(itemId) then
-                ply:Give(itemId)
-                ply:SelectWeapon(itemId)
-                GW.Database.RemoveInventoryItemAtSlot(steamID, tonumber(r.bag_index) or 0, tonumber(r.slot_index) or 1, 1)
-                GW.Inventory.Sync(ply)
+            if r.item_type == "weapon" then
+                if ply:GetJob() == "hobo" and not (GW.HoboAllowedWeapons and GW.HoboAllowedWeapons[itemId]) then
+                    GW.Notify(ply, "Hobos can only use building tools and hands!", NOTIFY_ERROR)
+                    return
+                end
+                if not ply:HasWeapon(itemId) then
+                    ply:Give(itemId)
+                    ply:SelectWeapon(itemId)
+                    GW.Database.RemoveInventoryItemAtSlot(steamID, tonumber(r.bag_index) or 0, tonumber(r.slot_index) or 1, 1)
+                    GW.Inventory.Sync(ply)
+                end
             end
             break
         end

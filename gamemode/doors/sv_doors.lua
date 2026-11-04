@@ -1,6 +1,6 @@
 --[[
     sv_doors.lua - Door Purchasing, Locking & Gang Sharing (Session-based)
-    Author: Toxic
+    Author: Toxic & Antigravity
 --]]
 
 GW.Doors = GW.Doors or {}
@@ -24,6 +24,12 @@ net.Receive("GW_DoorAction", function(len, ply)
     local currentOwner = ent:GetNWEntity("GW_DoorOwner")
 
     if action == "buy" then
+        -- Hobos cannot purchase property
+        if ply:GetJob() == "hobo" then
+            GW.Notify(ply, "Hobos are homeless and cannot purchase properties!", NOTIFY_ERROR)
+            return
+        end
+
         if IsValid(currentOwner) then
             GW.Notify(ply, "This door is already owned!", NOTIFY_ERROR)
             return

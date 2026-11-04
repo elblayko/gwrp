@@ -1,11 +1,12 @@
 --[[
     cl_f4menu.lua - High-Legibility Scaled UI/UX F4 Dashboard with Full Word Wrap & Truncation Protection
-    Author: Toxic
+    Author: Toxic & Antigravity
 --]]
 
 GW.UI = GW.UI or {}
 GW.UI.F4Frame = nil
 GW.UI.ActiveF4Tab = "jobs"
+GW.UI.ActiveJobCategory = "all"
 GW.UI.SearchQuery = ""
 
 -- Text Formatting Helpers: Word Wrap & Boundary Protection
@@ -101,15 +102,15 @@ function GW.UI.ToggleF4Menu()
         local curJob = IsValid(ply) and ply:GetJobData() or {}
         local gangCol = (curGang ~= "") and GW.GetGangColor(curGang) or (curJob.faction and curJob.faction.color or GW.Colors.White)
 
-        local pillText = "$" .. string.Comma(curMoney)
+        local pillText = "$" .. string.Comma(curMoney) .. "   |   " .. (curJob.name or "Citizen")
         if curGang ~= "" then
             pillText = pillText .. "   |   " .. curGang
         end
 
         local pillX = w / 2
-        draw.RoundedBox(18, pillX - 180, 14, 360, 42, Color(24, 32, 47, 240))
+        draw.RoundedBox(18, pillX - 190, 14, 380, 42, Color(24, 32, 47, 240))
         surface.SetDrawColor(gangCol.r, gangCol.g, gangCol.b, 100)
-        surface.DrawOutlinedRect(pillX - 180, 14, 360, 42, 1)
+        surface.DrawOutlinedRect(pillX - 190, 14, 380, 42, 1)
         draw.SimpleText(pillText, "GW_UI_Header", pillX, 35, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
@@ -302,7 +303,7 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
         local txtSearch = vgui.Create("DTextEntry", topBar)
         txtSearch:SetSize(280, 42)
         txtSearch:SetPos(topBar:GetWide() - 280, 4)
-        txtSearch:SetPlaceholderText(tabId == "inventory" and "Search inventory..." or "Search catalog...")
+        txtSearch:SetPlaceholderText(tabId == "inventory" and "Search inventory..." or (tabId == "jobs" and "Search roles..." or "Search catalog..."))
         txtSearch:SetFont("GW_UI_Sub")
         txtSearch.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
@@ -351,40 +352,28 @@ end
 -- ==========================================
 
 function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
-    local items = GW.Inventory and GW.Inventory.ClientItems or {}
+    local ply = LocalPlayer()
+    local steamID = ply:SteamID()
 
-    -- Filter items based on searchFilter
-    local filtered = {}
-    for _, it in ipairs(items) do
-        local def = GW.Inventory.GetItemData(it.item_id)
-        local match = true
-        if searchFilter and searchFilter ~= "" then
-            local q = string.lower(searchFilter)
-            if not string.find(string.lower(def.name), q, 1, true) and
-               not string.find(string.lower(it.item_id), q, 1, true) and
-               not string.find(string.lower(it.item_type or ""), q, 1, true) then
-                match = false
-            end
-        end
-        if match then
-            table.insert(filtered, { row = it, def = def })
+    local rows = GW.Inventory and GW.Inventory.ClientItems or {}
+    local filteredRows = {}
+
+    for _, r in ipairs(rows) do
+        local def = GW.Inventory.GetItemData(r.item_id)
+        local name = def and def.name or r.item_id
+        if searchFilter == "" or string.find(string.lower(name), searchFilter, 1, true) then
+            table.insert(filteredRows, r)
         end
     end
 
-    if #filtered == 0 then
+    if #filteredRows == 0 then
         local emptyCard = scroll:Add("DPanel")
         emptyCard:Dock(TOP)
-        emptyCard:DockMargin(10, 30, 10, 0)
-        emptyCard:SetTall(240)
+        emptyCard:SetTall(160)
         emptyCard.Paint = function(s, w, h)
-            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
-            surface.SetDrawColor(30, 41, 59, 180)
-            surface.DrawOutlinedRect(0, 0, w, h, 1)
-
-            draw.SimpleText("Inventory is Empty", "GW_UI_Title", w / 2, 50, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            draw.SimpleText("Right-click world items (weapons, money printers, crates) with your Hands to store them.", "GW_UI_Sub", w / 2, 95, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            draw.SimpleText("All stored items automatically persist to your SQLite character profile across restarts.", "GW_UI_Sub", w / 2, 130, Color(6, 182, 212), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            draw.SimpleText("Press F4 or type /inv at any time to open your inventory.", "GW_UI_Caption", w / 2, 175, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 140))
+            draw.SimpleText("No stored items found.", "GW_UI_Header", w / 2, h / 2 - 12, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Open your 16-slot Backpack with [B] or interact with items using hands (+USE).", "GW_UI_Caption", w / 2, h / 2 + 16, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         return
     end
@@ -395,29 +384,17 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
     layout:SetSpaceY(14)
 
     local cardW = (scroll:GetWide() - 28) / 2
-    local cardH = 200
+    local cardH = 154
 
-    local typeColors = {
-        weapon = Color(6, 182, 212),
-        printer = Color(245, 158, 11),
-        shipment = Color(168, 85, 247),
-        generic = Color(148, 163, 184)
-    }
-
-    local typeLabels = {
-        weapon = "Weapon",
-        printer = "Money Printer",
-        shipment = "Shipment Crate",
-        generic = "Item"
-    }
-
-    for _, entry in ipairs(filtered) do
-        local it = entry.row
-        local def = entry.def
-        local rowId = it.id
-        local itemType = it.item_type or "generic"
-        local accentCol = GW.Inventory.GetQualityColor(def.quality)
-        local typeLabel = typeLabels[itemType] or "Item"
+    for _, r in ipairs(filteredRows) do
+        local rowId = tonumber(r.id) or 0
+        local itemId = r.item_id
+        local itemType = r.item_type
+        local amount = tonumber(r.amount) or 1
+        local def = GW.Inventory.GetItemData(itemId)
+        local quality = def.quality or 1
+        local qCol = GW.Inventory.QualityColors and GW.Inventory.QualityColors[quality] or Color(148, 163, 184)
+        local qName = GW.Inventory.QualityNames and GW.Inventory.QualityNames[quality] or "Standard"
 
         local card = layout:Add("DPanel")
         card:SetSize(cardW, cardH)
@@ -425,38 +402,28 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
         card.Paint = function(s, w, h)
             local isHover = s:IsHovered()
             draw.RoundedBox(8, 0, 0, w, h, isHover and Color(24, 32, 47, 240) or Color(17, 24, 39, 200))
-            draw.RoundedBoxEx(8, 0, 0, w, 4, accentCol, true, true, false, false)
+            draw.RoundedBoxEx(8, 0, 0, 4, h, qCol, true, false, true, false)
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
+            -- Item Name
             local contentX = 140
             local contentW = w - contentX - 16
+            local fitName = GW.UI.FitText(def.name, "GW_UI_Header", contentW - 80)
+            draw.SimpleText(fitName, "GW_UI_Header", contentX, 16, Color(248, 250, 252))
 
-            -- Row 1: Type Pill & Amount Pill
+            -- Quality Pill
             surface.SetFont("GW_UI_Badge")
-            local tw = surface.GetTextSize(typeLabel) + 16
-            draw.RoundedBox(4, contentX, 14, tw, 22, Color(accentCol.r, accentCol.g, accentCol.b, 35))
-            draw.SimpleText(typeLabel, "GW_UI_Badge", contentX + tw / 2, 25, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            local qTextW = surface.GetTextSize(qName) + 16
+            draw.RoundedBox(4, w - qTextW - 16, 16, qTextW, 22, Color(qCol.r, qCol.g, qCol.b, 35))
+            draw.SimpleText(qName, "GW_UI_Badge", w - 16 - qTextW / 2, 27, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-            local amtText = "x" .. tostring(it.amount or 1)
-            local amtW = surface.GetTextSize(amtText) + 16
-            draw.RoundedBox(4, contentX + tw + 8, 14, amtW, 22, Color(30, 41, 59, 200))
-            draw.SimpleText(amtText, "GW_UI_Badge", contentX + tw + 8 + amtW / 2, 25, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            -- Amount / SubType
+            local subInfo = string.format("Quantity: %dx  •  %s", amount, def.subType or "Asset")
+            draw.SimpleText(subInfo, "GW_UI_Sub", contentX, 48, Color(74, 222, 128))
 
-            -- Row 2: Title
-            local fitTitle = GW.UI.FitText(def.name, "GW_UI_Header", contentW)
-            draw.SimpleText(fitTitle, "GW_UI_Header", contentX, 44, Color(248, 250, 252), TEXT_ALIGN_LEFT)
-
-            -- Row 3: Detail description or metadata
-            local metaStr = def.desc or ""
-            if itemType == "printer" and it.item_data and it.item_data.storedCash and it.item_data.storedCash > 0 then
-                metaStr = "Stored Uncollected Cash: $" .. string.Comma(it.item_data.storedCash)
-            elseif itemType == "shipment" and it.item_data and it.item_data.weaponName then
-                metaStr = "Wholesale crate holding " .. (it.item_data.count or 10) .. "x " .. it.item_data.weaponName
-            elseif itemType == "weapon" and it.item_data and it.item_data.clip1 then
-                metaStr = "Loaded: " .. it.item_data.clip1 .. " rounds"
-            end
-
+            -- Stats / Description
+            local metaStr = def.stats or def.desc or ""
             local lines = GW.UI.WrapText(metaStr, "GW_UI_Caption", contentW)
             for i = 1, math.min(#lines, 2) do
                 draw.SimpleText(lines[i], "GW_UI_Caption", contentX, 76 + (i - 1) * 18, Color(148, 163, 184))
@@ -522,180 +489,312 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
 end
 
 -- ==========================================
--- GRID POPULATION (JOBS, WEPS, PRINTERS)
+-- GRID POPULATION (JOBS & STORE CATALOG)
 -- ==========================================
 
 function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
     local ply = LocalPlayer()
-    local layout = vgui.Create("DIconLayout", scroll)
-    layout:Dock(FILL)
-    layout:SetSpaceX(14)
-    layout:SetSpaceY(14)
 
-    -- 1. TAB: JOBS
+    -- ========================================================
+    -- 1. TAB: JOBS (3-CATEGORY ORGANIZATION)
+    -- ========================================================
     if tabId == "jobs" then
         local myJob = IsValid(ply) and ply:GetJob() or "citizen"
+        local myLvl = IsValid(ply) and ply:GetLevel() or 1
+        searchFilter = searchFilter or ""
 
-        -- Organize and sort jobs by faction (Citizens -> Street Gangs -> Law Enforcement)
-        local jobList = {}
-        for jobId, job in pairs(GW.Jobs or {}) do
-            if searchFilter ~= "" and not string.find(string.lower(job.name), searchFilter, 1, true) then
-                continue
-            end
-            table.insert(jobList, { id = jobId, data = job })
-        end
+        local categories = {
+            {
+                id = "neutral",
+                name = "Civilians",
+                title = "CIVILIANS & TRADE SERVICES",
+                desc = "Standard urban civilians, licensed merchants, clinical physicians, and vagrants",
+                color = Color(148, 163, 184)
+            },
+            {
+                id = "gang",
+                name = "Street Gangs",
+                title = "STREET GANGS & UNDERWORLD",
+                desc = "Syndicate soldiers, infiltrators, contract hitmen, and black market smugglers",
+                color = Color(245, 158, 11)
+            },
+            {
+                id = "police",
+                name = "Police",
+                title = "LAW ENFORCEMENT & GOVERNMENT",
+                desc = "Civil Protection officers, tactical SWAT units, and municipal administration",
+                color = Color(16, 185, 129)
+            }
+        }
 
-        local factionPriority = { neutral = 1, gang = 2, police = 3 }
-        table.sort(jobList, function(a, b)
-            local pA = (a.data.faction and factionPriority[a.data.faction.id]) or 99
-            local pB = (b.data.faction and factionPriority[b.data.faction.id]) or 99
-            if pA ~= pB then return pA < pB end
-            return (a.data.salary or 0) < (b.data.salary or 0)
-        end)
-
-        for _, item in ipairs(jobList) do
-            local jobId = item.id
-            local job = item.data
-
-            local cardW = (scroll:GetWide() - 28) / 2
-            local card = layout:Add("DPanel")
-            card:SetSize(cardW, 220)
-
-            local fCol = (job.faction and job.faction.color) or GW.Colors.White
-            local isMyJob = (myJob == jobId)
-            local maxTextW = cardW - 146
-
-            local myLvl = IsValid(ply) and ply:GetLevel() or 1
-            local reqJobLvl = job.level or 1
-            local hasJobLvl = (myLvl >= reqJobLvl)
-
-            -- Compute active players and available slots for this job
-            local currentCount = 0
-            for _, p in ipairs(player.GetAll()) do
-                if p:GetJob() == jobId then
-                    currentCount = currentCount + 1
-                end
-            end
-
-            local slotText = ""
-            local slotCol = Color(148, 163, 184)
-            local isFull = false
-            local maxSlots = job.max or 0
-
-            if maxSlots > 0 then
-                local available = math.max(0, maxSlots - currentCount)
-                isFull = (available <= 0)
-                if isFull then
-                    slotText = "0 / " .. maxSlots .. " Available (Full)"
-                    slotCol = Color(239, 68, 68) -- Red
-                elseif available == 1 then
-                    slotText = "1 / " .. maxSlots .. " Slot Available"
-                    slotCol = Color(245, 158, 11) -- Amber Warning
-                else
-                    slotText = available .. " / " .. maxSlots .. " Slots Available"
-                    slotCol = Color(52, 211, 153) -- Mint Green
-                end
-            else
-                slotText = "Unlimited Slots (" .. currentCount .. " Active)"
-                slotCol = Color(148, 163, 184)
-            end
-
-            card.Paint = function(s, w, h)
-                local isHover = s:IsHovered()
-                draw.RoundedBox(8, 0, 0, w, h, isHover and Color(24, 32, 47, 240) or Color(17, 24, 39, 200))
-                draw.RoundedBoxEx(8, 0, 0, w, 4, fCol, true, true, false, false)
-                surface.SetDrawColor(30, 41, 59, 180)
-                surface.DrawOutlinedRect(0, 0, w, h, 1)
-
-                -- Row 1 Left: Faction Pill
-                local fName = job.faction and job.faction.name or "Civilian"
-                surface.SetFont("GW_UI_Badge")
-                local badgeW = surface.GetTextSize(fName) + 20
-                draw.RoundedBox(4, 138, 14, badgeW, 22, Color(fCol.r, fCol.g, fCol.b, 35))
-                draw.SimpleText(fName, "GW_UI_Badge", 138 + badgeW / 2, 25, fCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-
-                -- Row 1 Right: Slot Availability Pill
-                surface.SetFont("GW_UI_Badge")
-                local slotW = surface.GetTextSize(slotText) + 18
-                local slotX = cardW - 16 - slotW
-                draw.RoundedBox(4, slotX, 14, slotW, 22, Color(slotCol.r, slotCol.g, slotCol.b, 35))
-                surface.SetDrawColor(slotCol.r, slotCol.g, slotCol.b, 90)
-                surface.DrawOutlinedRect(slotX, 14, slotW, 22, 1)
-                draw.SimpleText(slotText, "GW_UI_Badge", slotX + slotW / 2, 25, slotCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-
-                -- Row 2: Job Name (Full Row Width - Never Collides)
-                local cleanJobName = GW.UI.FitText(job.name, "GW_UI_Header", maxTextW)
-                draw.SimpleText(cleanJobName, "GW_UI_Header", 138, 42, Color(248, 250, 252))
-
-                -- Row 3: Salary & Armor Stats Line
-                local statsText = "Salary: +$" .. (job.salary or 45) .. " / 90s"
-                if (job.armor or 0) > 0 then
-                    statsText = statsText .. "   |   Armor: " .. job.armor .. "%"
-                end
-                if job.runSpeed then
-                    statsText = statsText .. "   |   Sprint: " .. job.runSpeed
-                end
-                draw.SimpleText(statsText, "GW_UI_Sub", 138, 72, Color(74, 222, 128))
-
-                -- Row 4: Multi-Line Word-Wrapped Description (No Text Clipping / Overflow)
-                local descLines = GW.UI.WrapText(job.desc or "", "GW_UI_Caption", maxTextW)
-                for i = 1, math.min(#descLines, 3) do
-                    draw.SimpleText(descLines[i], "GW_UI_Caption", 138, 98 + (i - 1) * 20, Color(148, 163, 184))
-                end
-            end
-
-            -- Interactive 3D Model Preview (Framed & Scaled)
-            local mdlPanel = vgui.Create("DModelPanel", card)
-            mdlPanel:SetPos(12, 12)
-            mdlPanel:SetSize(116, 196)
-            local previewModel = job.models and job.models[1] or "models/player/Group01/male_01.mdl"
-            mdlPanel:SetModel(previewModel)
-            mdlPanel:SetFOV(34)
-            mdlPanel:SetCamPos(Vector(46, 0, 48))
-            mdlPanel:SetLookAt(Vector(0, 0, 40))
-            mdlPanel.LayoutEntity = function(s, ent)
-                ent:SetAngles(Angle(0, 40 + RealTime() * 12, 0))
-            end
-
-            -- Enlist Button (Bottom of Card, Auto-Fit Text)
-            local btnEnlist = vgui.Create("DButton", card)
-            btnEnlist:SetSize(maxTextW, 42)
-            btnEnlist:SetPos(138, 164)
-            btnEnlist:SetText("")
-            btnEnlist:SetEnabled((not isFull and hasJobLvl) or isMyJob)
-
-            btnEnlist.Paint = function(s, w, h)
-                local btnCol = isMyJob and Color(30, 41, 59, 200) or (not hasJobLvl and Color(51, 65, 85, 180) or (isFull and Color(51, 65, 85, 180) or (s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200))))
-                draw.RoundedBox(6, 0, 0, w, h, btnCol)
-                local rawText = isMyJob and "Current Active Role" or (not hasJobLvl and ("Requires Level " .. reqJobLvl) or (isFull and ("Role Full (" .. currentCount .. "/" .. maxSlots .. ")") or ("Enlist as " .. job.name)))
-                local fitBtnText = GW.UI.FitText(rawText, "GW_UI_Btn", w - 20)
-                draw.SimpleText(fitBtnText, "GW_UI_Btn", w / 2, h / 2, (not hasJobLvl or (isFull and not isMyJob)) and Color(156, 163, 175) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            end
-
-            btnEnlist.DoClick = function()
-                if isMyJob then return end
-                if not hasJobLvl then
-                    GW.Notify(ply, string.format("You must be Level %d to become a %s!", reqJobLvl, job.name), NOTIFY_ERROR)
-                    surface.PlaySound("buttons/button10.wav")
-                    return
-                end
-                if isFull then
-                    GW.Notify(ply, "That role is currently full! (" .. currentCount .. "/" .. maxSlots .. ")", NOTIFY_ERROR)
-                    surface.PlaySound("buttons/button10.wav")
-                    return
-                end
-                net.Start("GW_ChangeJob")
-                    net.WriteString(jobId)
-                net.SendToServer()
-                mainFrame:Close()
+        -- Count total roles per category
+        local catCounts = { neutral = 0, gang = 0, police = 0 }
+        for _, job in pairs(GW.Jobs or {}) do
+            local fId = (job.faction and job.faction.id) or "neutral"
+            if catCounts[fId] ~= nil then
+                catCounts[fId] = catCounts[fId] + 1
             end
         end
 
-    -- 2. TAB: WEAPONS, PRINTERS & SHIPMENTS
+        -- Top Category Filter Buttons Bar
+        local filterBar = scroll:Add("DPanel")
+        filterBar:Dock(TOP)
+        filterBar:DockMargin(0, 0, 0, 16)
+        filterBar:SetTall(46)
+        filterBar.Paint = function(s, w, h)
+            draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 220))
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+        end
+
+        local filterButtons = {
+            { id = "all", label = "All Roles (" .. table.Count(GW.Jobs or {}) .. ")", color = Color(6, 182, 212) },
+            { id = "neutral", label = "Civilians (" .. catCounts.neutral .. ")", color = Color(148, 163, 184) },
+            { id = "gang", label = "Street Gangs (" .. catCounts.gang .. ")", color = Color(245, 158, 11) },
+            { id = "police", label = "Police (" .. catCounts.police .. ")", color = Color(16, 185, 129) }
+        }
+
+        local btnX = 8
+        for _, fBtn in ipairs(filterButtons) do
+            surface.SetFont("GW_UI_Btn")
+            local tw = surface.GetTextSize(fBtn.label) + 28
+            local b = vgui.Create("DButton", filterBar)
+            b:SetPos(btnX, 6)
+            b:SetSize(tw, 34)
+            b:SetText("")
+
+            b.Paint = function(s, bw, bh)
+                local isCur = (GW.UI.ActiveJobCategory == fBtn.id)
+                local bg = isCur and Color(fBtn.color.r, fBtn.color.g, fBtn.color.b, 45) or (s:IsHovered() and Color(30, 41, 59, 200) or Color(11, 15, 25, 140))
+                draw.RoundedBox(6, 0, 0, bw, bh, bg)
+
+                surface.SetDrawColor(isCur and fBtn.color.r or 51, isCur and fBtn.color.g or 65, isCur and fBtn.color.b or 85, isCur and 220 or 120)
+                surface.DrawOutlinedRect(0, 0, bw, bh, 1)
+
+                local textCol = isCur and fBtn.color or (s:IsHovered() and Color(248, 250, 252) or Color(148, 163, 184))
+                draw.SimpleText(fBtn.label, "GW_UI_Btn", bw / 2, bh / 2, textCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+
+            b.DoClick = function()
+                GW.UI.ActiveJobCategory = fBtn.id
+                scroll:Clear()
+                GW.UI.PopulateGrid(scroll, "jobs", mainFrame, searchFilter)
+            end
+
+            btnX = btnX + tw + 8
+        end
+
+        local cardW = (scroll:GetWide() - 28) / 2
+
+        -- Render Each Category Section
+        for _, cat in ipairs(categories) do
+            if GW.UI.ActiveJobCategory == "all" or GW.UI.ActiveJobCategory == cat.id then
+                local catJobs = {}
+                local catActivePlayers = 0
+
+                for jobId, job in pairs(GW.Jobs or {}) do
+                    local fId = (job.faction and job.faction.id) or "neutral"
+                    if fId == cat.id then
+                        if searchFilter == "" or string.find(string.lower(job.name), searchFilter, 1, true) then
+                            table.insert(catJobs, { id = jobId, data = job })
+                        end
+
+                        for _, p in ipairs(player.GetAll()) do
+                            if p:GetJob() == jobId then
+                                catActivePlayers = catActivePlayers + 1
+                            end
+                        end
+                    end
+                end
+
+                if #catJobs > 0 then
+                    table.sort(catJobs, function(a, b)
+                        return (a.data.level or 1) < (b.data.level or 1)
+                    end)
+
+                    -- Section Banner
+                    local banner = scroll:Add("DPanel")
+                    banner:Dock(TOP)
+                    banner:DockMargin(0, 0, 0, 10)
+                    banner:SetTall(48)
+                    banner.Paint = function(s, w, h)
+                        draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 240))
+                        draw.RoundedBoxEx(8, 0, 0, 4, h, cat.color, true, false, true, false)
+                        surface.SetDrawColor(30, 41, 59, 180)
+                        surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+                        -- Title & Subtitle
+                        draw.SimpleText(cat.title, "GW_UI_Sub", 18, 14, cat.color, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                        draw.SimpleText(cat.desc, "GW_UI_Caption", 18, 33, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+                        -- Right Player Activity Capsule
+                        local actText = #catJobs .. " Roles  •  " .. catActivePlayers .. " Active Players"
+                        surface.SetFont("GW_UI_Badge")
+                        local tw = surface.GetTextSize(actText) + 20
+                        draw.RoundedBox(4, w - tw - 16, 12, tw, 24, Color(cat.color.r, cat.color.g, cat.color.b, 35))
+                        surface.SetDrawColor(cat.color.r, cat.color.g, cat.color.b, 120)
+                        surface.DrawOutlinedRect(w - tw - 16, 12, tw, 24, 1)
+                        draw.SimpleText(actText, "GW_UI_Badge", w - 16 - tw / 2, 24, cat.color, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    end
+
+                    -- Grid Layout for Category
+                    local catLayout = scroll:Add("DIconLayout")
+                    catLayout:Dock(TOP)
+                    catLayout:DockMargin(0, 0, 0, 18)
+                    catLayout:SetSpaceX(14)
+                    catLayout:SetSpaceY(14)
+
+                    for _, item in ipairs(catJobs) do
+                        local jobId = item.id
+                        local job = item.data
+
+                        local card = catLayout:Add("DPanel")
+                        card:SetSize(cardW, 220)
+
+                        local fCol = (job.faction and job.faction.color) or GW.Colors.White
+                        local isMyJob = (myJob == jobId)
+                        local maxTextW = cardW - 146
+                        local reqJobLvl = job.level or 1
+                        local hasJobLvl = (myLvl >= reqJobLvl)
+
+                        local currentCount = 0
+                        for _, p in ipairs(player.GetAll()) do
+                            if p:GetJob() == jobId then currentCount = currentCount + 1 end
+                        end
+
+                        local slotText = ""
+                        local slotCol = Color(148, 163, 184)
+                        local isFull = false
+                        local maxSlots = job.max or 0
+
+                        if maxSlots > 0 then
+                            local available = math.max(0, maxSlots - currentCount)
+                            isFull = (available <= 0)
+                            if isFull then
+                                slotText = "0 / " .. maxSlots .. " Available (Full)"
+                                slotCol = Color(239, 68, 68)
+                            elseif available == 1 then
+                                slotText = "1 / " .. maxSlots .. " Slot Available"
+                                slotCol = Color(245, 158, 11)
+                            else
+                                slotText = available .. " / " .. maxSlots .. " Slots Available"
+                                slotCol = Color(52, 211, 153)
+                            end
+                        else
+                            slotText = "Unlimited (" .. currentCount .. " Active)"
+                            slotCol = Color(148, 163, 184)
+                        end
+
+                        card.Paint = function(s, w, h)
+                            local isHover = s:IsHovered()
+                            draw.RoundedBox(8, 0, 0, w, h, isHover and Color(24, 32, 47, 240) or Color(17, 24, 39, 200))
+                            draw.RoundedBoxEx(8, 0, 0, w, 4, fCol, true, true, false, false)
+                            surface.SetDrawColor(30, 41, 59, 180)
+                            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+                            -- Row 1 Left: Faction Pill
+                            local fName = job.faction and job.faction.name or "Civilian"
+                            surface.SetFont("GW_UI_Badge")
+                            local badgeW = surface.GetTextSize(fName) + 20
+                            draw.RoundedBox(4, 138, 14, badgeW, 22, Color(fCol.r, fCol.g, fCol.b, 35))
+                            draw.SimpleText(fName, "GW_UI_Badge", 138 + badgeW / 2, 25, fCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+                            -- Row 1 Right: Slot Availability Pill
+                            surface.SetFont("GW_UI_Badge")
+                            local slotW = surface.GetTextSize(slotText) + 18
+                            local slotX = cardW - 16 - slotW
+                            draw.RoundedBox(4, slotX, 14, slotW, 22, Color(slotCol.r, slotCol.g, slotCol.b, 35))
+                            surface.SetDrawColor(slotCol.r, slotCol.g, slotCol.b, 90)
+                            surface.DrawOutlinedRect(slotX, 14, slotW, 22, 1)
+                            draw.SimpleText(slotText, "GW_UI_Badge", slotX + slotW / 2, 25, slotCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+                            -- Row 2: Job Name
+                            local cleanJobName = GW.UI.FitText(job.name, "GW_UI_Header", maxTextW)
+                            draw.SimpleText(cleanJobName, "GW_UI_Header", 138, 42, Color(248, 250, 252))
+
+                            -- Row 3: Stats Line
+                            local statsText = "Salary: +$" .. (job.salary or 45) .. " / 90s"
+                            if (job.armor or 0) > 0 then
+                                statsText = statsText .. "   |   Armor: " .. job.armor .. "%"
+                            end
+                            if job.runSpeed then
+                                statsText = statsText .. "   |   Sprint: " .. job.runSpeed
+                            end
+                            draw.SimpleText(statsText, "GW_UI_Sub", 138, 72, Color(74, 222, 128))
+
+                            -- Row 4: Description
+                            local descLines = GW.UI.WrapText(job.desc or "", "GW_UI_Caption", maxTextW)
+                            for i = 1, math.min(#descLines, 3) do
+                                draw.SimpleText(descLines[i], "GW_UI_Caption", 138, 98 + (i - 1) * 20, Color(148, 163, 184))
+                            end
+                        end
+
+                        -- 3D Model Preview
+                        local mdlPanel = vgui.Create("DModelPanel", card)
+                        mdlPanel:SetPos(12, 12)
+                        mdlPanel:SetSize(116, 196)
+                        local previewModel = job.models and job.models[1] or "models/player/Group01/male_01.mdl"
+                        mdlPanel:SetModel(previewModel)
+                        mdlPanel:SetFOV(34)
+                        mdlPanel:SetCamPos(Vector(46, 0, 48))
+                        mdlPanel:SetLookAt(Vector(0, 0, 40))
+                        mdlPanel.LayoutEntity = function(s, ent)
+                            ent:SetAngles(Angle(0, 40 + RealTime() * 12, 0))
+                        end
+
+                        -- Enlist Button
+                        local btnEnlist = vgui.Create("DButton", card)
+                        btnEnlist:SetSize(maxTextW, 42)
+                        btnEnlist:SetPos(138, 164)
+                        btnEnlist:SetText("")
+                        btnEnlist:SetEnabled((not isFull and hasJobLvl) or isMyJob)
+
+                        btnEnlist.Paint = function(s, w, h)
+                            local btnCol = isMyJob and Color(30, 41, 59, 200) or (not hasJobLvl and Color(51, 65, 85, 180) or (isFull and Color(51, 65, 85, 180) or (s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200))))
+                            draw.RoundedBox(6, 0, 0, w, h, btnCol)
+                            local rawText = isMyJob and "Current Active Role" or (not hasJobLvl and ("Requires Level " .. reqJobLvl) or (isFull and ("Role Full (" .. currentCount .. "/" .. maxSlots .. ")") or ("Enlist as " .. job.name)))
+                            local fitBtnText = GW.UI.FitText(rawText, "GW_UI_Btn", w - 20)
+                            draw.SimpleText(fitBtnText, "GW_UI_Btn", w / 2, h / 2, (not hasJobLvl or (isFull and not isMyJob)) and Color(156, 163, 175) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                        end
+
+                        btnEnlist.DoClick = function()
+                            if isMyJob then return end
+                            if not hasJobLvl then
+                                GW.Notify(ply, string.format("You must be Level %d to become a %s!", reqJobLvl, job.name), NOTIFY_ERROR)
+                                surface.PlaySound("buttons/button10.wav")
+                                return
+                            end
+                            if isFull then
+                                GW.Notify(ply, "That role is currently at capacity!", NOTIFY_ERROR)
+                                surface.PlaySound("buttons/button10.wav")
+                                return
+                            end
+
+                            net.Start("GW_ChangeJob")
+                                net.WriteString(jobId)
+                            net.SendToServer()
+                            surface.PlaySound("buttons/button14.wav")
+                            mainFrame:Close()
+                        end
+                    end
+                end
+            end
+        end
+
+    -- ========================================================
+    -- 2. STORE TABS (DYNAMIC WHOLESALE/MARKUP PRICING & CHECKMARKED PREREQUISITES)
+    -- ========================================================
     else
         local myMoney = IsValid(ply) and ply:GetMoney() or 0
-        local plyJob = IsValid(ply) and ply:GetJob() or "citizen"
         local myLevel = IsValid(ply) and ply:GetLevel() or 1
+        local plyJob = IsValid(ply) and ply:GetJob() or "citizen"
+        local isHobo = (plyJob == "hobo")
+        local isPolice = IsValid(ply) and ply.IsPolice and ply:IsPolice()
+
+        local layout = vgui.Create("DIconLayout", scroll)
+        layout:Dock(FILL)
+        layout:SetSpaceX(14)
+        layout:SetSpaceY(14)
 
         local itemsList = {}
         for itemId, item in pairs(GW.ShopItems or {}) do
@@ -712,11 +811,14 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 continue
             end
 
-            -- Determine purchase & lock status
+            -- Determine effective purchase cost via dynamic wholesale/retail pricing engine
+            local effectiveCost = GW.GetItemCost(item, ply)
             local reqItemLevel = item.level or 1
             local canBuyLevel = (myLevel >= reqItemLevel)
-            local canAfford = (myMoney >= (item.cost or 0))
+            local canAfford = (myMoney >= effectiveCost)
 
+            -- Job Requirement Validation
+            local hasJobReq = (item.jobs ~= nil) or (item.job ~= nil)
             local canBuyJob = true
             local reqJobName = ""
             if item.jobs then
@@ -733,78 +835,67 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 reqJobName = jData and jData.name or item.job
             end
 
-            local isLocked = (not canBuyJob) or (not canBuyLevel)
+            -- Police & Hobo Restrictions
+            local isPoliceProhibited = isPolice and (item.category == "printers" or item.isContraband or item.type == "shipment" or (item.jobs and table.HasValue(item.jobs, "black_market_dealer")) or (item.jobs and table.HasValue(item.jobs, "thief")))
+            local isHoboProhibited = isHobo
 
-            -- Priority order / Lock Reason Grouping:
-            -- 1: Unlocked & Affordable (can purchase right now)
-            -- 2: Unlocked, but currently insolvent (needs more funds)
-            -- 3: Level Locked (Job permitted, but player level is too low) -> Sorted ascending by required level
-            -- 4: Job Locked (Level sufficient, but role/faction restricted) -> Sorted by role
-            -- 5: Both Level & Job Locked -> Sorted ascending by required level
+            local isLocked = (not canBuyJob) or (not canBuyLevel) or isPoliceProhibited or isHoboProhibited
+
+            -- Sorting Priority
             local rank = 1
             if not isLocked and canAfford then
                 rank = 1
             elseif not isLocked and not canAfford then
                 rank = 2
             elseif not canBuyLevel and canBuyJob then
-                rank = 3 -- Level Locked
+                rank = 3
             elseif canBuyLevel and not canBuyJob then
-                rank = 4 -- Job Locked
+                rank = 4
             else
-                rank = 5 -- Both Level and Job Locked
+                rank = 5
             end
 
             table.insert(itemsList, {
                 id = itemId,
                 item = item,
                 rank = rank,
+                effectiveCost = effectiveCost,
                 canBuyLevel = canBuyLevel,
                 canBuyJob = canBuyJob,
                 canAfford = canAfford,
+                hasJobReq = hasJobReq,
                 reqItemLevel = reqItemLevel,
                 reqJobName = reqJobName,
+                isPoliceProhibited = isPoliceProhibited,
+                isHoboProhibited = isHoboProhibited,
                 isLocked = isLocked
             })
         end
 
         table.sort(itemsList, function(a, b)
-            if a.rank ~= b.rank then
-                return a.rank < b.rank
-            end
-
-            -- If Level Locked (rank 3 or rank 5): sort strictly ASCENDING by required level
+            if a.rank ~= b.rank then return a.rank < b.rank end
             if a.rank == 3 or a.rank == 5 then
-                if a.reqItemLevel ~= b.reqItemLevel then
-                    return a.reqItemLevel < b.reqItemLevel
-                end
+                if a.reqItemLevel ~= b.reqItemLevel then return a.reqItemLevel < b.reqItemLevel end
             end
-
-            -- If Job Locked (rank 4): sort by required job name
             if a.rank == 4 then
-                if a.reqJobName ~= b.reqJobName then
-                    return a.reqJobName < b.reqJobName
-                end
+                if a.reqJobName ~= b.reqJobName then return a.reqJobName < b.reqJobName end
             end
-
-            -- Tiebreaker within group: cost ascending
-            local costA = a.item.cost or 0
-            local costB = b.item.cost or 0
-            if costA ~= costB then
-                return costA < costB
-            end
-
-            -- Alphabetical tiebreaker
+            if a.effectiveCost ~= b.effectiveCost then return a.effectiveCost < b.effectiveCost end
             return (a.item.name or "") < (b.item.name or "")
         end)
 
         for _, entry in ipairs(itemsList) do
             local itemId = entry.id
             local item = entry.item
+            local effectiveCost = entry.effectiveCost
             local canBuyLevel = entry.canBuyLevel
             local canBuyJob = entry.canBuyJob
             local canAfford = entry.canAfford
+            local hasJobReq = entry.hasJobReq
             local reqItemLevel = entry.reqItemLevel
             local reqJobName = entry.reqJobName
+            local isPoliceProhibited = entry.isPoliceProhibited
+            local isHoboProhibited = entry.isHoboProhibited
             local isLocked = entry.isLocked
 
             local cardW = (scroll:GetWide() - 28) / 2
@@ -857,82 +948,91 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 draw.RoundedBox(4, 16, 14, 80, 26, Color(pCol.r, pCol.g, pCol.b, 35))
                 draw.SimpleText(pLabel, "GW_UI_Badge", 56, 27, pCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-                -- Item Name in Header Font (Auto-Fitted to prevent clipping)
+                -- Item Name
                 local fitItemName = GW.UI.FitText(item.name, "GW_UI_Header", cardW - 116)
                 draw.SimpleText(fitItemName, "GW_UI_Header", 108, 14, Color(248, 250, 252))
 
-                -- Big Bold Price Tag
-                local priceStr = (item.cost == 0) and "FREE" or ("$" .. string.Comma(item.cost))
+                -- Dynamic Price Tag
+                local priceStr = (effectiveCost == 0) and "FREE" or ("$" .. string.Comma(effectiveCost))
                 draw.SimpleText(priceStr, "GW_UI_Price", 18, 54, Color(74, 222, 128))
 
-                -- Convenience / Street Retail Markup Indicator Pill
-                local markupPct = GW.GetItemMarkupPercent and GW.GetItemMarkupPercent(item)
-                if markupPct and markupPct > 0 then
-                    surface.SetFont("GW_UI_Price")
-                    local pw, _ = surface.GetTextSize(priceStr)
-                    local badgeX = 18 + pw + 12
-                    local markupTxt = "+" .. markupPct .. "% Shop Markup"
+                -- Wholesale Badge vs 200%-300% Markup Pill
+                local isWholesaleActive = (item.wholesaleCost and effectiveCost <= item.wholesaleCost)
+                surface.SetFont("GW_UI_Price")
+                local pw, _ = surface.GetTextSize(priceStr)
+                local badgeX = 18 + pw + 12
+                local badgeY = 56
+                local badgeH = 22
+
+                if isWholesaleActive then
                     surface.SetFont("GW_UI_Badge")
-                    local mw, mh = surface.GetTextSize(markupTxt)
+                    local wText = "Wholesale Direct Price"
+                    local mw, _ = surface.GetTextSize(wText)
                     local badgeW = mw + 16
-                    local badgeH = 22
-                    local badgeY = 56
-
-                    -- Render Amber/Gold Premium Tag
-                    draw.RoundedBox(4, badgeX, badgeY, badgeW, badgeH, Color(245, 158, 11, 40))
-                    surface.SetDrawColor(245, 158, 11, 140)
+                    draw.RoundedBox(4, badgeX, badgeY, badgeW, badgeH, Color(16, 185, 129, 35))
+                    surface.SetDrawColor(16, 185, 129, 140)
                     surface.DrawOutlinedRect(badgeX, badgeY, badgeW, badgeH, 1)
-                    draw.SimpleText(markupTxt, "GW_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText(wText, "GW_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                else
+                    local markupPct = GW.GetItemMarkupPercent and GW.GetItemMarkupPercent(item, ply)
+                    if markupPct and markupPct > 0 then
+                        surface.SetFont("GW_UI_Badge")
+                        local markupTxt = "+" .. markupPct .. "% Shop Markup"
+                        local mw, _ = surface.GetTextSize(markupTxt)
+                        local badgeW = mw + 16
+                        draw.RoundedBox(4, badgeX, badgeY, badgeW, badgeH, Color(245, 158, 11, 40))
+                        surface.SetDrawColor(245, 158, 11, 140)
+                        surface.DrawOutlinedRect(badgeX, badgeY, badgeW, badgeH, 1)
+                        draw.SimpleText(markupTxt, "GW_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    end
                 end
 
-                -- Level or Job Requirement Pill (Aligned above action button)
-                if not canBuyLevel and not canBuyJob then
-                    local dualTag = "Req: LVL " .. reqItemLevel .. " & " .. (reqJobName ~= "" and reqJobName or "Role")
+                -- Persistent Job & Level Prerequisite Pill (Marked Green with Checkmark When Satisfied!)
+                local hasLevelReq = (reqItemLevel and reqItemLevel > 1)
+                if isHoboProhibited then
                     draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
                     surface.SetDrawColor(239, 68, 68, 90)
                     surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                    local fitDualTag = GW.UI.FitText(dualTag, "GW_UI_Caption", 186)
-                    draw.SimpleText(fitDualTag, "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                elseif not canBuyLevel then
-                    local lvlTag = "Requires Level " .. reqItemLevel
-                    draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(245, 158, 11, 40))
-                    surface.SetDrawColor(245, 158, 11, 140)
-                    surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                    local fitLvlTag = GW.UI.FitText(lvlTag, "GW_UI_Caption", 186)
-                    draw.SimpleText(fitLvlTag, "GW_UI_Caption", cardW - 114, 64, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                elseif not canBuyJob and reqJobName ~= "" then
-                    local lockTag = "Requires: " .. reqJobName
+                    draw.SimpleText("Hobos Cannot Buy Items", "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                elseif isPoliceProhibited then
                     draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
                     surface.SetDrawColor(239, 68, 68, 90)
                     surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                    local fitLockTag = GW.UI.FitText(lockTag, "GW_UI_Caption", 186)
-                    draw.SimpleText(fitLockTag, "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("Prohibited for Law Enforcement", "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                elseif hasJobReq then
+                    if canBuyJob then
+                        -- Requirement met: PERSISTENT GREEN CHECKMARK PILL
+                        local checkText = (hasLevelReq and canBuyLevel) and ("✓ " .. reqJobName .. " (LVL " .. reqItemLevel .. "+)") or ("✓ Requires: " .. reqJobName)
+                        draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(16, 185, 129, 35))
+                        surface.SetDrawColor(16, 185, 129, 140)
+                        surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
+                        local fitCheck = GW.UI.FitText(checkText, "GW_UI_Caption", 186)
+                        draw.SimpleText(fitCheck, "GW_UI_Caption", cardW - 114, 64, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    else
+                        -- Requirement unmet: RED WARNING PILL
+                        local lockTag = "Requires: " .. reqJobName
+                        draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
+                        surface.SetDrawColor(239, 68, 68, 90)
+                        surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
+                        local fitLock = GW.UI.FitText(lockTag, "GW_UI_Caption", 186)
+                        draw.SimpleText(fitLock, "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    end
+                elseif hasLevelReq then
+                    if canBuyLevel then
+                        draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(16, 185, 129, 35))
+                        surface.SetDrawColor(16, 185, 129, 140)
+                        surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
+                        draw.SimpleText("✓ Level " .. reqItemLevel .. " Unlocked", "GW_UI_Caption", cardW - 114, 64, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    else
+                        draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(245, 158, 11, 40))
+                        surface.SetDrawColor(245, 158, 11, 140)
+                        surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
+                        draw.SimpleText("Requires Level " .. reqItemLevel, "GW_UI_Caption", cardW - 114, 64, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    end
                 end
 
-                -- Detail subtitle (Word-Wrapped within left content area so it never collides with button)
-                local subText = ""
-                if item.desc then
-                    subText = item.desc
-                elseif item.count then
-                    subText = "Crate contains " .. item.count .. "x items"
-                elseif item.category == "networking" then
-                    subText = "Network appliance for broadcast domain"
-                elseif item.type == "entity" then
-                    subText = "Generates recurring cash revenue"
-                elseif item.type == "armor" then
-                    subText = "Restores Kevlar body armor to 100%"
-                elseif item.type == "medkit" then
-                    subText = "Restores +60 Health immediately"
-                elseif item.type == "ammo" then
-                    subText = "Replenishes tactical ammo reserves"
-                elseif item.type == "buff" then
-                    subText = isItemDebuff and "Instantly inflicts status debuff" or "Instantly applies status buff"
-                elseif item.type == "cleanse" then
-                    subText = "Clears all active buffs and debuffs"
-                elseif item.type == "consumable" then
-                    subText = "Adds usable consumable item to bag"
-                end
-
+                -- Item Description
+                local subText = item.desc or ""
                 if subText ~= "" then
                     local subLines = GW.UI.WrapText(subText, "GW_UI_Caption", leftContentW)
                     for i = 1, math.min(#subLines, 2) do
@@ -940,15 +1040,15 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                     end
                 end
 
-                -- Savings tip when item has kiosk markup
-                if markupPct and markupPct > 0 and item.markupRole then
+                -- Savings Tip for Non-Specialists
+                if not isWholesaleActive and item.markupRole then
                     local tipText = "★ Tip: Buy from a " .. item.markupRole .. " to avoid this markup!"
                     local fitTip = GW.UI.FitText(tipText, "GW_UI_Caption", leftContentW)
                     draw.SimpleText(fitTip, "GW_UI_Caption", 18, 134, Color(251, 191, 36, 200))
                 end
             end
 
-            -- Purchase Action Button (Right Side, Fitted Text)
+            -- Purchase Action Button
             local btnBuy = vgui.Create("DButton", card)
             btnBuy:SetSize(200, 46)
             btnBuy:SetPos(cardW - 214, 88)
@@ -957,9 +1057,18 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
             btnBuy.Paint = function(s, w, h)
                 local btnCol = Color(16, 185, 129, 220)
-                local text = (item.cost == 0) and "Apply (Free)" or ("Purchase ($" .. string.Comma(item.cost) .. ")")
+                local text = (effectiveCost == 0) and "Apply (Free)" or ("Purchase ($" .. string.Comma(effectiveCost) .. ")")
+                if item.wholesaleCost and effectiveCost <= item.wholesaleCost then
+                    text = "Purchase ($" .. string.Comma(effectiveCost) .. " Wholesale)"
+                end
 
-                if not canBuyLevel and not canBuyJob then
+                if isHoboProhibited then
+                    btnCol = Color(51, 65, 85, 180)
+                    text = "Hobos Cannot Buy Items"
+                elseif isPoliceProhibited then
+                    btnCol = Color(51, 65, 85, 180)
+                    text = (item.category == "printers" and "Printers Prohibited") or "Contraband Prohibited"
+                elseif not canBuyLevel and not canBuyJob then
                     btnCol = Color(51, 65, 85, 180)
                     text = "Requires Level & Role"
                 elseif not canBuyLevel then
@@ -981,6 +1090,16 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
             end
 
             btnBuy.DoClick = function()
+                if isHoboProhibited then
+                    GW.Notify(ply, "Hobos cannot purchase items! You can only use building tools.", NOTIFY_ERROR)
+                    surface.PlaySound("buttons/button10.wav")
+                    return
+                end
+                if isPoliceProhibited then
+                    GW.Notify(ply, "Police officers cannot purchase printers or contraband!", NOTIFY_ERROR)
+                    surface.PlaySound("buttons/button10.wav")
+                    return
+                end
                 if not canBuyLevel and not canBuyJob then
                     GW.Notify(ply, string.format("You must be Level %d and employed as %s to purchase this!", reqItemLevel, reqJobName ~= "" and reqJobName or "Specialist"), NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
@@ -996,6 +1115,12 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
+                if not canAfford then
+                    GW.Notify(ply, "You cannot afford this item ($" .. effectiveCost .. ")!", NOTIFY_ERROR)
+                    surface.PlaySound("buttons/button10.wav")
+                    return
+                end
+
                 net.Start("GW_BuyItem")
                     net.WriteString(itemId)
                 net.SendToServer()

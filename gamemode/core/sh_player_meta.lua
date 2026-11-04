@@ -22,8 +22,16 @@ if meta then
         return GW.Jobs[self:GetJob()] or GW.Jobs["citizen"]
     end
 
-    -- Player Gang Methods
+    -- Player Gang Methods (Active gang is suspended while playing as Police or Civilian)
+    function meta:GetRawGang()
+        return self:GetNWString("GW_Gang", "")
+    end
+
     function meta:GetGang()
+        local job = self:GetJobData()
+        if not job or not job.faction or job.faction.id ~= "gang" then
+            return ""
+        end
         return self:GetNWString("GW_Gang", "")
     end
 
@@ -31,11 +39,15 @@ if meta then
         return self:GetGang() ~= ""
     end
 
+    function meta:HasStoredGang()
+        return self:GetRawGang() ~= ""
+    end
+
     function meta:GetFaction()
         local job = self:GetJobData()
         local baseFaction = job and job.faction or GW.Factions.FACTION_CITIZEN
 
-        -- If in a player-created gang, return dynamic faction object with custom gang color
+        -- If in a player-created gang and on the Street Gang faction, return dynamic faction object
         local gangName = self:GetGang()
         if gangName ~= "" and baseFaction.id == "gang" then
             return {
@@ -62,6 +74,16 @@ if meta then
     function meta:IsPolice()
         local f = self:GetFaction()
         return f and f.id == "police"
+    end
+
+    function meta:IsCivilian()
+        local job = self:GetJobData()
+        return job and job.faction and job.faction.id == "neutral"
+    end
+
+    function meta:IsGangFaction()
+        local job = self:GetJobData()
+        return job and job.faction and job.faction.id == "gang"
     end
 
     -- Level & Progression Methods

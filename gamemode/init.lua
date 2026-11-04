@@ -197,25 +197,35 @@ end
 function GM:PlayerCanPickupWeapon(ply, wep)
     if not IsValid(ply) or not IsValid(wep) then return false end
 
+    -- Hobo Restriction: Hobos can only use building tools and hands
+    if ply:GetJob() == "hobo" and not (GW.HoboAllowedWeapons and GW.HoboAllowedWeapons[wep:GetClass()]) then
+        return false
+    end
+
     -- Allow programmatic Give() calls (job spawn loadout, vendor purchase, inventory equip)
     if ply.GW_GivingWeapon then
         return true
     end
 
     -- NEVER allow picking up world weapons as ammo if the player already has that weapon!
-    -- This prevents Source engine from turning dropped/shipment guns into reserve ammo.
     if ply:HasWeapon(wep:GetClass()) then
         return false
     end
 
-    -- Prevent automatic walk-over pickup of dropped or world weapons;
-    -- weapons should be deliberately picked up via +USE (E key) or Hands into inventory
+    -- Prevent automatic walk-over pickup of dropped or world weapons
     return false
 end
 
 function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
     if not IsValid(ply) or not IsValid(newWep) then return end
     local class = newWep:GetClass()
+
+    -- Hobo Restriction: Hobos can only wield building tools and hands
+    if ply:GetJob() == "hobo" and not (GW.HoboAllowedWeapons and GW.HoboAllowedWeapons[class]) then
+        GW.Notify(ply, "Hobos can only use building tools and hands!", NOTIFY_ERROR)
+        return true -- Blocks switching to this weapon
+    end
+
     local def = GW.Inventory and GW.Inventory.GetItemData and GW.Inventory.GetItemData(class)
     local reqLvl = (def and def.level) or (newWep.RequiredLevel or 1)
     if reqLvl > 1 and ply:GetLevel() < reqLvl then

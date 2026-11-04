@@ -87,9 +87,20 @@ function GW.GetRequiredXP(level)
     return math.floor(GW.Config.Level.BaseXP * (level ^ GW.Config.Level.Exponent))
 end
 
--- F4 Shop Retail Surcharge & Markup Settings
+-- F4 Shop Retail Surcharge & Markup Settings (200% - 300% convenience markup)
 GW.Config.ShowShopMarkup = true           -- Display markup badges and savings hints in F4 menu
-GW.Config.DefaultShopMarkupPercent = 65  -- Default surcharge percentage for public kiosk convenience items
+GW.Config.DefaultShopMarkupPercent = 250  -- Default surcharge percentage for public kiosk convenience items
+
+-- Whitelist of allowed tools and RP equipment for the Hobo job
+GW.HoboAllowedWeapons = {
+    ["weapon_physgun"] = true,
+    ["gmod_tool"] = true,
+    ["weapon_physcannon"] = true,
+    ["weapon_fists"] = true,
+    ["weapon_gw_keys"] = true,
+    ["weapon_bugbait"] = true,
+    ["gmod_camera"] = true
+}
 
 -- Default Colors
 GW.Colors = {
@@ -119,16 +130,52 @@ function GW.GetGangColor(gangName)
     return HSVToColor(hash, 0.8, 0.95)
 end
 
+-- Helper: Retrieve dynamic purchase price for an item based on player's job (Wholesale vs Retail)
+function GW.GetItemCost(item, ply)
+    if not item then return 0 end
+    local baseCost = item.cost or 0
+    if not IsValid(ply) then return baseCost end
+
+    local plyJob = ply:GetJob()
+    local qualifiesWholesale = false
+
+    if item.wholesaleJob and plyJob == item.wholesaleJob then
+        qualifiesWholesale = true
+    elseif item.wholesaleJobs and table.HasValue(item.wholesaleJobs, plyJob) then
+        qualifiesWholesale = true
+    elseif item.markupRole then
+        local jobData = ply:GetJobData()
+        if jobData and string.lower(jobData.name) == string.lower(item.markupRole) then
+            qualifiesWholesale = true
+        end
+    end
+
+    if qualifiesWholesale and item.wholesaleCost then
+        return item.wholesaleCost
+    end
+
+    return baseCost
+end
+
 -- Helper: Retrieve configured or calculated shop markup percentage for an item
-function GW.GetItemMarkupPercent(item)
+function GW.GetItemMarkupPercent(item, ply)
     if not GW.Config.ShowShopMarkup then return nil end
     if not item then return nil end
+
+    -- If player is a specialist receiving wholesale cost, no retail markup applies to them
+    if IsValid(ply) and item.wholesaleCost then
+        local cost = GW.GetItemCost(item, ply)
+        if cost <= item.wholesaleCost then
+            return nil
+        end
+    end
+
     if item.markupPercent then return item.markupPercent end
     if item.wholesaleCost and item.cost and item.cost > item.wholesaleCost then
         return math.Round(((item.cost - item.wholesaleCost) / item.wholesaleCost) * 100)
     end
     if item.isMarkedUp then
-        return GW.Config.DefaultShopMarkupPercent or 65
+        return GW.Config.DefaultShopMarkupPercent or 250
     end
     return nil
 end
@@ -141,10 +188,11 @@ GW.ShopItems = {
     ["ammo_universal"] = { 
         name = "Universal Ammo Crate", 
         level = 1,
-        cost = 35, 
+        cost = 70, 
         wholesaleCost = 20,
-        markupPercent = 75,
+        markupPercent = 250,
         markupRole = "Arms Dealer",
+        wholesaleJob = "arms_dealer",
         type = "ammo", 
         category = "supplies", 
         desc = "Emergency street ammunition pack for pistols, rifles, shotguns & magnums." 
@@ -152,10 +200,11 @@ GW.ShopItems = {
     ["item_bandage"] = {
         name = "Tactical Field Bandage (Bag Item)",
         level = 1,
-        cost = 12,
+        cost = 18,
         wholesaleCost = 5,
-        markupPercent = 140,
+        markupPercent = 260,
         markupRole = "Pharmacist",
+        wholesaleJob = "pharmacist",
         type = "consumable",
         category = "supplies",
         itemId = "consumable_bandage",
@@ -191,7 +240,8 @@ GW.ShopItems = {
         weapon = "weapon_gw_glock", 
         weaponName = "Glock-18", 
         count = 10, 
-        jobs = { "arms_dealer" } 
+        jobs = { "arms_dealer" },
+        isContraband = true
     },
     ["shipment_shotgun"] = { 
         name = "Shipment: Shotgun (10x)", 
@@ -201,7 +251,8 @@ GW.ShopItems = {
         weapon = "weapon_gw_shotgun", 
         weaponName = "Pump Shotgun", 
         count = 10, 
-        jobs = { "arms_dealer" } 
+        jobs = { "arms_dealer" },
+        isContraband = true
     },
 
     -- ========================================================
@@ -214,6 +265,7 @@ GW.ShopItems = {
         type = "weapon", 
         class = "weapon_gw_lockpick", 
         jobs = { "black_market_dealer", "thief" }, 
+        isContraband = true,
         desc = "Mechanical lock bypass tool. Used to breach locked doors and security pins." 
     },
     ["shipment_lockpick"] = { 
@@ -224,7 +276,8 @@ GW.ShopItems = {
         weapon = "weapon_gw_lockpick", 
         weaponName = "Tactical Lockpick", 
         count = 5, 
-        jobs = { "black_market_dealer" } 
+        jobs = { "black_market_dealer" },
+        isContraband = true
     },
     ["item_illegal_stim"] = {
         name = "Black Market Adrenaline (Bag Item)",
@@ -234,6 +287,7 @@ GW.ShopItems = {
         category = "supplies",
         itemId = "consumable_illegal_stim",
         jobs = { "black_market_dealer" },
+        isContraband = true,
         desc = "Underground combat injector. Grants +40% speed and 15% damage reduction for 20s."
     },
     ["shipment_deagle"] = { 
@@ -244,7 +298,8 @@ GW.ShopItems = {
         weapon = "weapon_gw_deagle", 
         weaponName = "Desert Eagle", 
         count = 10, 
-        jobs = { "black_market_dealer" } 
+        jobs = { "black_market_dealer" },
+        isContraband = true
     },
     ["shipment_ak47"] = { 
         name = "Shipment: AK-47 (10x)", 
@@ -254,7 +309,8 @@ GW.ShopItems = {
         weapon = "weapon_gw_ak47", 
         weaponName = "AK-47", 
         count = 10, 
-        jobs = { "black_market_dealer" } 
+        jobs = { "black_market_dealer" },
+        isContraband = true
     },
 
     -- ========================================================
@@ -282,7 +338,11 @@ GW.ShopItems = {
     ["medkit"] = { 
         name = "First Aid Kit (Instant)", 
         level = 1,
-        cost = 25, 
+        cost = 85, 
+        wholesaleCost = 25,
+        markupPercent = 240,
+        markupRole = "Pharmacist",
+        wholesaleJob = "pharmacist",
         type = "medkit", 
         category = "supplies", 
         desc = "Emergency clinical trauma pack; restores +60 Health immediately." 
@@ -294,7 +354,11 @@ GW.ShopItems = {
     ["weapon_wiretool"] = { 
         name = "Copper Wiring Tool", 
         level = 1,
-        cost = 15, 
+        cost = 50, 
+        wholesaleCost = 15,
+        markupPercent = 233,
+        markupRole = "Cyber Engineer",
+        wholesaleJob = "cyber_engineer",
         type = "weapon", 
         class = "weapon_gw_wiretool", 
         category = "networking", 
@@ -303,7 +367,11 @@ GW.ShopItems = {
     ["weapon_repairtool"] = { 
         name = "Cryo-Thermal Calibrator", 
         level = 2,
-        cost = 30, 
+        cost = 105, 
+        wholesaleCost = 30,
+        markupPercent = 250,
+        markupRole = "Cyber Engineer",
+        wholesaleJob = "cyber_engineer",
         type = "weapon", 
         class = "weapon_gw_repairtool", 
         category = "networking", 
@@ -343,6 +411,7 @@ GW.ShopItems = {
         type = "weapon", 
         class = "weapon_gw_cyberphone", 
         category = "networking", 
+        jobs = { "cyber_engineer" },
         desc = "Handheld mobile CyberDeck handset exclusively for Cyber Engineers. Runs CyberDeck OS with built-in wireless spectrum reconnaissance and mobile Metasploit." 
     },
     ["module_undervolt"] = { 
@@ -352,6 +421,7 @@ GW.ShopItems = {
         type = "entity", 
         class = "gw_module_undervolt", 
         category = "networking", 
+        isContraband = true,
         desc = "Microcontroller module that drops operating voltage (-75% heat, +400% lifespan)." 
     },
     ["module_overclock"] = { 
@@ -361,6 +431,7 @@ GW.ShopItems = {
         type = "entity", 
         class = "gw_module_overclock", 
         category = "networking", 
+        isContraband = true,
         desc = "High-frequency module that boosts printer cash yield by +50% (+60% heat output)." 
     },
 
@@ -374,6 +445,7 @@ GW.ShopItems = {
         type = "entity", 
         class = "gw_printer_bronze", 
         category = "printers",
+        isContraband = true,
         desc = "Entry-level contraband printer. Generates steady cash revenue."
     },
     ["printer_silver"] = { 
@@ -383,6 +455,7 @@ GW.ShopItems = {
         type = "entity", 
         class = "gw_printer_silver", 
         category = "printers",
+        isContraband = true,
         desc = "Commercial grade contraband printer. High efficiency throughput."
     },
     ["printer_diamond"] = { 
@@ -392,6 +465,7 @@ GW.ShopItems = {
         type = "entity", 
         class = "gw_printer_diamond", 
         category = "printers",
+        isContraband = true,
         desc = "Maximum tier industrial printer. High yields, benefits greatly from networking."
     },
     ["entity_resource_machine"] = {

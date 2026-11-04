@@ -26,6 +26,7 @@ function GW.Doors.OpenDoorMenu()
     local isOwned = IsValid(owner)
     local isOwner = isOwned and (owner == ply)
     local cost = (GW.Config and GW.Config.DoorCost) or 15
+    local isHobo = (ply:GetJob() == "hobo")
 
     local w, h = 380, 200
     local frame = vgui.Create("DFrame")
@@ -58,7 +59,7 @@ function GW.Doors.OpenDoorMenu()
         -- Subtitle Info
         local subInfo
         if not isOwned then
-            subInfo = string.format("Vacant Real Estate  •  Price: $%s", string.Comma(cost))
+            subInfo = isHobo and "Vacant Real Estate  •  Hobos Cannot Purchase" or string.format("Vacant Real Estate  •  Price: $%s", string.Comma(cost))
         elseif isOwner then
             local refund = math.floor(cost * 0.7)
             subInfo = string.format("Owner: %s  •  Refund on Sale: +$%s", ply:Nick(), string.Comma(refund))
@@ -100,13 +101,20 @@ function GW.Doors.OpenDoorMenu()
         descLabel:SetSize(w - 68, 22)
         descLabel:SetFont("GW_FontSmall")
         descLabel:SetTextColor(Color(226, 232, 240))
-        descLabel:SetText("Purchase this door to lock, unlock, and secure access.")
+        descLabel:SetText(isHobo and "Hobos are homeless and cannot purchase properties." or "Purchase this door to lock, unlock, and secure access.")
 
         local buyBtn = vgui.Create("DButton", card)
         buyBtn:SetSize(w - 68, 42)
         buyBtn:SetPos(16, 46)
         buyBtn:SetText("")
+        buyBtn:SetEnabled(not isHobo)
         buyBtn.Paint = function(s, bw, bh)
+            if isHobo then
+                draw.RoundedBox(6, 0, 0, bw, bh, Color(51, 65, 85, 180))
+                draw.SimpleText("HOBOS CANNOT PURCHASE PROPERTY", "GW_UI_Btn", bw / 2, bh / 2, Color(156, 163, 175), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                return
+            end
+
             local canAfford = ply:CanAfford(cost)
             local bg = s:IsHovered() and (canAfford and Color(16, 185, 129, 220) or Color(239, 68, 68, 160))
                 or (canAfford and Color(5, 150, 105, 180) or Color(30, 41, 59, 140))
@@ -117,6 +125,11 @@ function GW.Doors.OpenDoorMenu()
             draw.SimpleText(txt, "GW_UI_Btn", bw / 2, bh / 2, txtCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         buyBtn.DoClick = function()
+            if isHobo then
+                GW.Notify(ply, "Hobos are homeless and cannot purchase properties!", NOTIFY_ERROR)
+                surface.PlaySound("buttons/button10.wav")
+                return
+            end
             if not ply:CanAfford(cost) then
                 surface.PlaySound("buttons/button10.wav")
                 return

@@ -1,6 +1,6 @@
 --[[
     sv_gangs.lua - Player-Created Gang Management with SQLite Persistence
-    Author: Toxic
+    Author: Toxic & Antigravity
 --]]
 
 GW.Gangs = GW.Gangs or {}
@@ -17,6 +17,11 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
         table.remove(args, 1)
         local gangName = string.Trim(table.concat(args, " "))
 
+        if not ply:IsGangFaction() then
+            GW.Notify(ply, "Only Street Gang members can create a gang! Switch to a Gang role in F4 first.", NOTIFY_ERROR)
+            return ""
+        end
+
         if #gangName < 2 or #gangName > 24 then
             GW.Notify(ply, "Gang name must be between 2 and 24 characters!", NOTIFY_ERROR)
             return ""
@@ -27,8 +32,8 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
             return ""
         end
 
-        if ply:IsInGang() then
-            GW.Notify(ply, "You are already in a gang ('" .. ply:GetGang() .. "')! Use /leavegang first.", NOTIFY_ERROR)
+        if ply:HasStoredGang() then
+            GW.Notify(ply, "You are already in a gang ('" .. ply:GetRawGang() .. "')! Use /leavegang first.", NOTIFY_ERROR)
             return ""
         end
 
@@ -65,6 +70,11 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
             return ""
         end
 
+        if not ply:IsGangFaction() then
+            GW.Notify(ply, "Your gang is inactive while off-duty. Switch to Street Gangs to invite members.", NOTIFY_ERROR)
+            return ""
+        end
+
         local gang = ply:GetGang()
         if gang == "" then
             GW.Notify(ply, "You must be in a gang to invite others! Use /creategang <name>", NOTIFY_ERROR)
@@ -84,7 +94,12 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
             return ""
         end
 
-        if target:IsInGang() then
+        if not target:IsGangFaction() then
+            GW.Notify(ply, target:Nick() .. " cannot join a gang while playing as " .. target:GetJobData().name .. "! They must switch to Street Gangs first.", NOTIFY_ERROR)
+            return ""
+        end
+
+        if target:HasStoredGang() then
             GW.Notify(ply, target:Nick() .. " is already in a gang!", NOTIFY_ERROR)
             return ""
         end
@@ -96,6 +111,11 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
 
     -- 3. Accept Gang Invite: /acceptgang
     elseif cmd == "/acceptgang" then
+        if not ply:IsGangFaction() then
+            GW.Notify(ply, "You cannot join a gang while playing as " .. ply:GetJobData().name .. "! Switch to Street Gangs in F4 first.", NOTIFY_ERROR)
+            return ""
+        end
+
         local pendingGang = GW.GangInvites[ply:SteamID()]
         if not pendingGang then
             GW.Notify(ply, "You have no pending gang invites!", NOTIFY_ERROR)
@@ -115,16 +135,16 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
 
         -- Notify gang members
         for _, p in ipairs(player.GetAll()) do
-            if p:GetGang() == pendingGang and p ~= ply then
+            if p:GetRawGang() == pendingGang and p ~= ply then
                 GW.Notify(p, ply:Nick() .. " has joined your gang!", NOTIFY_GENERIC)
             end
         end
         return ""
 
-    -- 4. Leave Gang: /leavegang
+    -- 4. Leave Gang: /leavegang (Allowed even while off-duty)
     elseif cmd == "/leavegang" then
-        local gang = ply:GetGang()
-        if gang == "" then
+        local storedGang = ply:GetRawGang()
+        if storedGang == "" then
             GW.Notify(ply, "You are not currently in any gang!", NOTIFY_ERROR)
             return ""
         end
@@ -137,10 +157,10 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
             GW.Database.RemoveGangMember(ply:SteamID())
         end
 
-        GW.Notify(ply, "You left the gang '" .. gang .. "'.", NOTIFY_GENERIC)
+        GW.Notify(ply, "You left the gang '" .. storedGang .. "'.", NOTIFY_GENERIC)
 
         for _, p in ipairs(player.GetAll()) do
-            if p:GetGang() == gang then
+            if p:GetRawGang() == storedGang and p ~= ply then
                 GW.Notify(p, ply:Nick() .. " has left your gang.", NOTIFY_GENERIC)
             end
         end
@@ -148,6 +168,11 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
 
     -- 5. Disband Gang: /disbandgang (Leader only)
     elseif cmd == "/disbandgang" then
+        if not ply:IsGangFaction() then
+            GW.Notify(ply, "You must be playing as a Street Gangster to manage your gang!", NOTIFY_ERROR)
+            return ""
+        end
+
         local gang = ply:GetGang()
         if gang == "" then
             GW.Notify(ply, "You are not in a gang!", NOTIFY_ERROR)
@@ -164,7 +189,7 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
         end
 
         for _, p in ipairs(player.GetAll()) do
-            if p:GetGang() == gang then
+            if p:GetRawGang() == gang then
                 p:SetGang("")
                 p:SetNWBool("GW_IsGangLeader", false)
                 GW.Notify(p, "Your gang '" .. gang .. "' was disbanded by the leader.", NOTIFY_ERROR)
@@ -174,6 +199,15 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
 
     -- 6. Gang Info & Vault Banking: /gang [deposit|withdraw|tax]
     elseif cmd == "/gang" then
+        if not ply:IsGangFaction() then
+            if ply:HasStoredGang() then
+                GW.Notify(ply, string.format("Your gang '%s' is temporarily suspended while on duty as %s. Switch to Street Gangs to participate.", ply:GetRawGang(), ply:GetJobData().name), NOTIFY_HINT, 6)
+            else
+                GW.Notify(ply, "You are not in a gang. Switch to Street Gangs and type /creategang <name> to form one!", NOTIFY_HINT)
+            end
+            return ""
+        end
+
         local gang = ply:GetGang()
         if gang == "" then
             GW.Notify(ply, "You are not in a gang. Type /creategang <name> to form one!", NOTIFY_HINT)
@@ -251,12 +285,16 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
         GW.Notify(ply, "--- Gang: " .. gang .. " ---", NOTIFY_GENERIC)
         GW.Notify(ply, string.format("Gang Vault Balance: $%d", bank), NOTIFY_GENERIC)
         GW.Notify(ply, "Total Registered Members: " .. #dbMembers, NOTIFY_GENERIC)
-        GW.Notify(ply, "Online Members (" .. #members .. "): " .. table.concat(members, ", "), NOTIFY_GENERIC)
+        GW.Notify(ply, "Online Active Gangsters (" .. #members .. "): " .. table.concat(members, ", "), NOTIFY_GENERIC)
         GW.Notify(ply, "Controlled Turfs: " .. (#turfs > 0 and table.concat(turfs, ", ") or "None"), NOTIFY_GENERIC)
         return ""
 
     -- 7. Set Turf Tax: /settax <5-30> or /turftax <5-30>
     elseif cmd == "/settax" or cmd == "/turftax" then
+        if not ply:IsGangFaction() then
+            GW.Notify(ply, "You must be in an active street gang to configure territory taxes!", NOTIFY_ERROR)
+            return ""
+        end
         local gang = ply:GetGang()
         if gang == "" then
             GW.Notify(ply, "You must be in a gang to configure territory taxes!", NOTIFY_ERROR)
@@ -273,9 +311,14 @@ hook.Add("PlayerSay", "GW_GangChatCommands", function(ply, text)
 
     -- 8. Private Gang Chat: /g <msg> or /gangchat <msg>
     elseif cmd == "/g" or cmd == "/gangchat" then
+        if not ply:IsGangFaction() then
+            GW.Notify(ply, "Gang chat is unavailable while playing as " .. ply:GetJobData().name .. "!", NOTIFY_ERROR)
+            return ""
+        end
+
         local gang = ply:GetGang()
         if gang == "" then
-            GW.Notify(ply, "You must be in a gang to use gang chat!", NOTIFY_ERROR)
+            GW.Notify(ply, "You must be in an active gang to use gang chat!", NOTIFY_ERROR)
             return ""
         end
 

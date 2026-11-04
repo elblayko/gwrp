@@ -23,6 +23,13 @@ end
 function ENT:Use(activator, caller)
     if not IsValid(activator) or not activator:IsPlayer() then return end
 
+    -- Hobo Restriction: Hobos cannot use weapon shipments
+    if activator:GetJob() == "hobo" then
+        GW.Notify(activator, "Hobos cannot retrieve weapons from shipments! You can only use building tools.", NOTIFY_ERROR)
+        activator:EmitSound("common/warning.wav", 65, 100)
+        return
+    end
+
     local now = CurTime()
     self.NextUsePerPlayer = self.NextUsePerPlayer or {}
     if (self.NextUsePerPlayer[activator] or 0) > now then return end
