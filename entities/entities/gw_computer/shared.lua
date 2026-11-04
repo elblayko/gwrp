@@ -20,4 +20,8 @@ function ENT:SetupDataTables()
     self:NetworkVar("Entity", 0, "ConnectedSwitch")
     self:NetworkVar("Int", 0, "AssignedPort")
     self:NetworkVar("Entity", 1, "OwnerPlayer")
+    self:NetworkVar("Bool", 0, "BotnetActive")
+    self:NetworkVar("Int", 1, "BotnetYield")
+    self:NetworkVar("Int", 2, "BotnetTotalEarned")
+    self:NetworkVar("Entity", 2, "BotnetOperator")
 end

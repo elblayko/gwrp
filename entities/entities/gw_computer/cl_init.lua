@@ -59,15 +59,26 @@ function ENT:Draw()
     cam.Start3D2D(myPos, ang, 0.08)
     local ip = self:GetIPAddress()
     local isNet = IsValid(self:GetConnectedSwitch()) and (ip and ip ~= "")
+    local isBotnet = self.GetBotnetActive and self:GetBotnetActive()
+    local botnetYield = self.GetBotnetYield and self:GetBotnetYield() or 0
     local statusText = isNet and ("IP: " .. ip) or "OFFLINE (NO CARRIER)"
     local statusCol = isNet and Color(74, 222, 128) or Color(239, 68, 68)
 
-    draw.RoundedBox(6, -115, -34, 230, 68, Color(15, 23, 42, 235))
-    draw.RoundedBox(6, -113, -32, 226, 64, Color(30, 41, 59, 240))
+    local boxH = isBotnet and 86 or 68
+    local boxY = isBotnet and -43 or -34
+    draw.RoundedBox(6, -125, boxY, 250, boxH, Color(15, 23, 42, 235))
+    draw.RoundedBox(6, -123, boxY + 2, 246, boxH - 4, Color(30, 41, 59, 240))
 
-    draw.SimpleText("CYBERDECK TERMINAL", "GW_FontSmall", 0, -24, Color(56, 189, 248), TEXT_ALIGN_CENTER)
-    draw.SimpleText(statusText, "GW_FontSmall", 0, -5, statusCol, TEXT_ALIGN_CENTER)
-    draw.SimpleText("[E] Access Shell", "GW_FontSmall", 0, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
+    if isBotnet then
+        draw.SimpleText("CYBERDECK TERMINAL", "GW_FontSmall", 0, -33, Color(56, 189, 248), TEXT_ALIGN_CENTER)
+        draw.SimpleText(statusText, "GW_FontSmall", 0, -15, statusCol, TEXT_ALIGN_CENTER)
+        draw.SimpleText(string.format("BOTNET C2: +$%d / 20s", botnetYield), "GW_FontSmall", 0, 4, Color(250, 204, 21), TEXT_ALIGN_CENTER)
+        draw.SimpleText("[E] Access Shell", "GW_FontSmall", 0, 23, Color(148, 163, 184), TEXT_ALIGN_CENTER)
+    else
+        draw.SimpleText("CYBERDECK TERMINAL", "GW_FontSmall", 0, -24, Color(56, 189, 248), TEXT_ALIGN_CENTER)
+        draw.SimpleText(statusText, "GW_FontSmall", 0, -5, statusCol, TEXT_ALIGN_CENTER)
+        draw.SimpleText("[E] Access Shell", "GW_FontSmall", 0, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
+    end
     cam.End3D2D()
 end
 
@@ -204,6 +215,15 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
             "  Ethernet Status   : " ..
             (swValid and "CONNECTED (eth0 UP, 1000BASE-T Full Duplex)" or "NO CARRIER (Cable unplugged)"),
             swValid and "green" or "red")
+        local isBot = IsValid(computerEnt) and computerEnt.GetBotnetActive and computerEnt:GetBotnetActive()
+        if isBot then
+            AddTerminalLine(
+                string.format("  Cloud Botnet C2   : ACTIVE (+$%d / 20s) - Type 'botnet status' or 'botnet stop'.",
+                    computerEnt.GetBotnetYield and computerEnt:GetBotnetYield() or 0),
+                "highlight")
+        else
+            AddTerminalLine("  Cloud Botnet C2   : IDLE - Type 'botnet start' to launch cloud attacks (Requires WAN Uplink).", "highlight")
+        end
     end
     AddTerminalLine("--------------------------------------------------------------------------------", "dark")
     AddTerminalLine("  Type 'help' to list available commands.", "white")
@@ -387,13 +407,21 @@ net.Receive("GW_ComputerCommandResponse", function()
     local rawCmd = net.ReadString()
     local lineCount = net.ReadUInt(8)
 
-    if not IsValid(ActiveTerminal) then return end
-
+    local lines = {}
     for i = 1, lineCount do
         local lineText = net.ReadString()
         local lineColor = net.ReadString()
-        ActiveTerminal.AddTerminalLine(lineText, lineColor)
+        table.insert(lines, { text = lineText, color = lineColor })
     end
 
-    surface.PlaySound("buttons/button14.wav")
+    if not IsValid(ActiveTerminal) then return end
+    if IsValid(computer) and IsValid(ActiveTerminal.ComputerEntity) and ActiveTerminal.ComputerEntity ~= computer then
+        return
+    end
+
+    for _, line in ipairs(lines) do
+        ActiveTerminal.AddTerminalLine(line.text, line.color)
+    end
+
+    surface.PlaySound(rawCmd == "botnet_stream" and "buttons/button16.wav" or "buttons/button14.wav")
 end)

@@ -332,6 +332,9 @@ ENT.ConnectPrinter = ENT.ConnectDevice
 
 local function CleanDeviceParams(dev)
     if not IsValid(dev) then return end
+    if dev.GetBotnetActive and dev:GetBotnetActive() and dev.StopBotnet then
+        dev:StopBotnet("Ethernet link to L3 Switch lost.")
+    end
     if dev.SetIPAddress then dev:SetIPAddress("") end
     if dev.SetConnectedSwitch then dev:SetConnectedSwitch(NULL) end
     if dev.SetAssignedPort then dev:SetAssignedPort(0) end
@@ -583,11 +586,13 @@ function ENT:RecalculateNetwork(visited)
         totalEff = totalEff + eff
     end
 
-    -- Update Resource Fabricator efficiency based on network load (100% when 2+ are attached)
+    -- Update Resource Fabricator efficiency & Botnet C2 computers based on network load
     for _, dev in ipairs(validDevices) do
         if dev:GetClass() == "gw_resource_machine" then
             local eff = (#allPrintersInDomain >= 2 or count >= 2) and (GW.Config.PrinterNetworkEfficiency3 or 100) or (GW.Config.PrinterNetworkEfficiency2 or 80)
             dev:SetEfficiency(eff)
+        elseif dev:GetClass() == "gw_computer" and dev.RefreshBotnetState then
+            dev:RefreshBotnetState()
         end
     end
 

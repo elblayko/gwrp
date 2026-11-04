@@ -225,17 +225,51 @@ function GW.Network.RecalculateWANMesh()
     end
 end
 
--- Finds the active WAN uplink connected to a switch (if any)
-function GW.Network.GetUplinkForSwitch(switchEnt)
+-- Finds the active WAN uplink connected to a switch or its SFP-trunked broadcast domain (if any)
+function GW.Network.GetUplinkForSwitch(switchEnt, visited)
     if not IsValid(switchEnt) or switchEnt:GetClass() ~= "gw_network_switch" then return nil end
     if not switchEnt.Ports then return nil end
 
+    visited = visited or {}
+    if visited[switchEnt] then return nil end
+    visited[switchEnt] = true
+
+    -- 1. Check direct ports on this switch first
     for portNum = 1, 3 do
         local pData = switchEnt.Ports[portNum]
         if pData then
             local dev = pData.device
-            if IsValid(dev) and dev:GetClass() == "gw_wan_uplink" then
+            if IsValid(dev) and (dev:GetClass() == "gw_wan_uplink" or dev.IsWANUplink) then
                 return dev
+            end
+        end
+    end
+
+    -- 2. Traverse SFP-trunked switches in the broadcast domain (Ports 3 and 4)
+    for portNum = 3, 4 do
+        local pData = switchEnt.Ports[portNum]
+        if pData then
+            local otherSw = pData.device or pData.switch
+            if IsValid(otherSw) and otherSw:GetClass() == "gw_network_switch" and not visited[otherSw] then
+                local found = GW.Network.GetUplinkForSwitch(otherSw, visited)
+                if IsValid(found) then
+                    return found
+                end
+            end
+        end
+    end
+
+    return nil
+end
+
+-- Finds any Personal Computer actively running the Cloud Botnet C2 daemon in the switch's broadcast domain
+function GW.Network.GetActiveBotnetForSwitch(switchEnt)
+    if not IsValid(switchEnt) then return nil end
+    local devices = GW.Network.GetBroadcastDomain(switchEnt)
+    for _, dev in ipairs(devices) do
+        if dev.type == "computer" and IsValid(dev.entity) then
+            if dev.entity.GetBotnetActive and dev.entity:GetBotnetActive() then
+                return dev.entity
             end
         end
     end
@@ -354,6 +388,9 @@ function GW.Network.GetActiveWANSpectrum(origin, maxDist)
                     rssi = -1 * math.random(35, 65)
                 end
 
+                local botnetPC = IsValid(sw) and GW.Network.GetActiveBotnetForSwitch and GW.Network.GetActiveBotnetForSwitch(sw) or nil
+                local hasBotnet = IsValid(botnetPC)
+
                 table.insert(spectrum, {
                     entity = uplink,
                     bssid = bssid,
@@ -365,7 +402,8 @@ function GW.Network.GetActiveWANSpectrum(origin, maxDist)
                     encryption = "WPA3-ENT-AES256",
                     isOnline = uplink:GetIsOnline(),
                     peers = uplink:GetLinkedPeerCount() or 0,
-                    subnet = subnet
+                    subnet = subnet,
+                    hasBotnet = hasBotnet
                 })
             end
         end

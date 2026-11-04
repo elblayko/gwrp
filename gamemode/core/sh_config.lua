@@ -42,14 +42,21 @@ GW.Config.PrinterStandaloneEfficiency = 60 -- 1 printer or unlinked = 60%
 GW.Config.PrinterNetworkEfficiency2 = 80   -- 2 printers on switch = 80%
 GW.Config.PrinterNetworkEfficiency3 = 100  -- 3 printers on switch = 100%
 
+-- Cloud Botnet C2 Daemon (Personal Computer + Satellite WAN Uplink)
+GW.Config.BotnetTickInterval = 20.0           -- Seconds between automated cloud attack payouts
+GW.Config.BotnetBaseTrickle = 2               -- Minimum cash per tick when 0 printers are connected
+GW.Config.BotnetPrinterYieldMultiplier = 0.50 -- Fraction of connected printers' base yield paid per tick (~1/3 = acts as a 4th printer)
+GW.Config.BotnetMaxCountedPrinters = 24       -- Max printers on the broadcast domain that contribute hashpower
+GW.Config.BotnetEngineerBonusMultiplier = 1.5 -- Payout multiplier when started by a Cyber Engineer (+25%)
+
 -- Centralized Entity Quality Registry (Entities can also set ENT.ItemQuality in their shared.lua)
 GW.Config.EntityQualities = {
     ["gw_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
     ["gw_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
     ["gw_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
     ["gw_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "2x Cu + 2x SFP (10G/Cu Combo + 10G Uplink) | L3 Layer" },
-    ["gw_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-3 Terminal | Port Scanner" },
-    ["gw_wan_uplink"] = { quality = 3, subType = "Wireless Gateway", stats = "Long-Range L3 Mesh | WPA3 Encrypted" },
+    ["gw_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-3 Terminal | Cloud Botnet C2" },
+    ["gw_wan_uplink"] = { quality = 3, subType = "Wireless Gateway", stats = "Cloud Botnet Gateway | WPA3 L3 Mesh" },
     ["gw_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
     ["gw_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },
     ["gw_resource_machine"] = { quality = 1, subType = "Automated Extractor", stats = "Extracts Metals & Blueprints | Network Capable" },
@@ -396,7 +403,8 @@ GW.ShopItems = {
         type = "entity",
         class = "gw_computer",
         category = "networking",
-        desc = "Hacking OS terminal; connect to switch for network operations & nmap."
+        desc =
+        "CyberDeck OS terminal. Connect to an L3 switch with a Satellite WAN Uplink to run automated Cloud Botnet C2 attacks (scales with networked printers), plus nmap & Metasploit."
     },
     ["entity_wan_uplink"] = {
         name = "Satellite WAN Uplink",
@@ -406,7 +414,7 @@ GW.ShopItems = {
         class = "gw_wan_uplink",
         category = "networking",
         desc =
-        "Encrypted microwave satellite dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to link separate networks wirelessly across the map with matching keys."
+        "Encrypted microwave satellite dish. Unlocks automated Cloud Botnet C2 income on a networked Personal Computer and links separate L3 switch networks wirelessly across the map."
     },
     ["weapon_cyberphone"] = {
         name = "CyberDeck Mobile Phone",

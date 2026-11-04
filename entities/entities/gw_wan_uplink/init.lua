@@ -73,8 +73,18 @@ end
 function ENT:UpdateKey(newKey)
     if not newKey or string.len(newKey) < 2 then return end
     local cleanKey = string.Trim(string.upper(string.sub(newKey, 1, 16)))
+    local oldKey = self:GetEncryptionKey()
     self:SetEncryptionKey(cleanKey)
     self:EmitSound("ambient/energy/zap1.wav", 65, 120)
+
+    -- Changing encryption key interrupts any active Cloud Botnet C2 tunnel on this broadcast domain
+    if oldKey and oldKey ~= "" and oldKey ~= cleanKey then
+        local sw = self:GetConnectedSwitch()
+        local botnetPC = IsValid(sw) and GW.Network and GW.Network.GetActiveBotnetForSwitch and GW.Network.GetActiveBotnetForSwitch(sw)
+        if IsValid(botnetPC) and botnetPC.StopBotnet then
+            botnetPC:StopBotnet("WAN encryption key changed — C2 tunnel handshake dropped.")
+        end
+    end
 
     GW.Network.RecalculateWANMesh()
     self:UpdateWireOutputs()
@@ -105,6 +115,8 @@ end
 
 function ENT:DisconnectFromSwitch()
     local sw = self:GetConnectedSwitch()
+    local botnetPC = IsValid(sw) and GW.Network and GW.Network.GetActiveBotnetForSwitch and GW.Network.GetActiveBotnetForSwitch(sw)
+
     if IsValid(sw) and sw.DisconnectDevice then
         sw:DisconnectDevice(self)
     end
@@ -112,6 +124,10 @@ function ENT:DisconnectFromSwitch()
     self:SetConnectedSwitch(NULL)
     self:SetIPAddress("")
     self:SetAssignedPort(0)
+
+    if IsValid(botnetPC) and botnetPC.StopBotnet then
+        botnetPC:StopBotnet("Satellite WAN Uplink disconnected from L3 Switch.")
+    end
 
     GW.Network.RecalculateWANMesh()
     self:UpdateWireOutputs()

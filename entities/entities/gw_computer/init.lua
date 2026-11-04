@@ -8,6 +8,21 @@ AddCSLuaFile("cl_init.lua")
 AddCSLuaFile("shared.lua")
 include("shared.lua")
 
+local BotnetCloudTargets = {
+    { name = "Apex Financial Cloud",      ip = "45.33.102.18",    vector = "OAuth Token Replay" },
+    { name = "Meridian Crypto Custodian", ip = "198.51.100.44",   vector = "Hot-Wallet API Drain" },
+    { name = "Solstice Offshore Ledger",  ip = "203.0.113.89",    vector = "SQLi Wire Transfer" },
+    { name = "Kestrel Defense Payroll",   ip = "91.198.174.192",  vector = "Credential Stuffing" },
+    { name = "Vanguard MedTech Vault",    ip = "185.199.108.153", vector = "Ransomware Extortion" },
+    { name = "NovaBank SWIFT Relay",      ip = "104.16.132.229",  vector = "BGP Session Hijack" },
+    { name = "Synthetix DeFi Liquidity",  ip = "172.67.188.91",   vector = "Smart-Contract Flash Siphon" },
+    { name = "Helios Logistics ERP",      ip = "151.101.1.69",    vector = "Invoice Redirect Payload" },
+    { name = "Aegis Insurance Treasury",  ip = "34.117.59.81",    vector = "Automated Claim Forgery" },
+    { name = "Cobalt Exchange Cold-Link", ip = "52.84.228.114",   vector = "SSH Key Exfiltration" }
+}
+
+local BOTNET_TICK_INTERVAL = 20.0
+
 function ENT:Initialize()
     self:SetModel(self.ComputerModel or "models/props/cs_office/computer.mdl")
     self:PhysicsInit(SOLID_VPHYSICS)
@@ -23,6 +38,13 @@ function ENT:Initialize()
     self:SetIPAddress("")
     self:SetAssignedPort(0)
     self:SetConnectedSwitch(NULL)
+    self:SetBotnetActive(false)
+    self:SetBotnetYield(0)
+    self:SetBotnetTotalEarned(0)
+    self:SetBotnetOperator(NULL)
+
+    self.BotnetWANKey = ""
+    self.BotnetCyclesCompleted = 0
 
     -- Wiremod Support
     if WireLib then
@@ -30,7 +52,10 @@ function ENT:Initialize()
         WireLib.CreateOutputs(self, {
             "IsNetworked",
             "AssignedPort",
-            "GatewaySwitch [ENTITY]"
+            "GatewaySwitch [ENTITY]",
+            "BotnetActive",
+            "BotnetYield",
+            "BotnetTotalEarned"
         })
         self:UpdateWireOutputs()
     end
@@ -49,14 +74,237 @@ function ENT:UpdateWireOutputs()
     WireLib.TriggerOutput(self, "IsNetworked", isNet)
     WireLib.TriggerOutput(self, "AssignedPort", self:GetAssignedPort() or 0)
     WireLib.TriggerOutput(self, "GatewaySwitch", self:GetConnectedSwitch())
+    WireLib.TriggerOutput(self, "BotnetActive", self:GetBotnetActive() and 1 or 0)
+    WireLib.TriggerOutput(self, "BotnetYield", self:GetBotnetYield() or 0)
+    WireLib.TriggerOutput(self, "BotnetTotalEarned", self:GetBotnetTotalEarned() or 0)
 
     local ip = self:GetIPAddress()
     local ipStr = (ip and ip ~= "") and ("IP: " .. ip) or "NO CARRIER"
     local portStr = isNet == 1 and ("Port " .. self:GetAssignedPort()) or "Unlinked"
-    WireLib.SetOverlayText(self, string.format("[GWRP CyberDeck Terminal]\nStatus: %s\n%s", portStr, ipStr))
+    local botStr = self:GetBotnetActive() and string.format("\nBotnet C2: ACTIVE (+$%d/20s)", self:GetBotnetYield() or 0) or
+        ""
+    WireLib.SetOverlayText(self, string.format("[GWRP CyberDeck Terminal]\nStatus: %s\n%s%s", portStr, ipStr, botStr))
+end
+
+function ENT:PushTerminalLines(ply, lines)
+    if not IsValid(ply) or not ply:IsPlayer() or not lines or #lines == 0 then return end
+    net.Start("GW_ComputerCommandResponse")
+    net.WriteEntity(self)
+    net.WriteString("botnet_stream")
+    net.WriteUInt(math.min(#lines, 250), 8)
+    for i = 1, math.min(#lines, 250) do
+        net.WriteString(lines[i].text or "")
+        net.WriteString(lines[i].color or "white")
+    end
+    net.Send(ply)
+end
+
+function ENT:GetBroadcastDomainPrinters()
+    local sw = self:GetConnectedSwitch()
+    if not IsValid(sw) or not GW.Network or not GW.Network.GetBroadcastDomain then
+        return {}
+    end
+
+    local devices = GW.Network.GetBroadcastDomain(sw)
+    local printers = {}
+    for _, dev in ipairs(devices) do
+        if dev.type == "printer" and IsValid(dev.entity) then
+            table.insert(printers, dev.entity)
+        end
+    end
+
+    table.sort(printers, function(a, b)
+        return (a.PrintAmount or 4) > (b.PrintAmount or 4)
+    end)
+
+    return printers
+end
+
+function ENT:CalculateBotnetYield(operator)
+    local printers = self:GetBroadcastDomainPrinters()
+    local maxNodes = (GW.Config and GW.Config.BotnetMaxCountedPrinters) or 3
+    local baseTrickle = (GW.Config and GW.Config.BotnetBaseTrickle) or 2
+    local yieldMult = (GW.Config and GW.Config.BotnetPrinterYieldMultiplier) or (1 / 3)
+    local engMult = (GW.Config and GW.Config.BotnetEngineerBonusMultiplier) or 1.25
+
+    local countedPrinters = math.min(#printers, maxNodes)
+    local totalBasePrinterYield = 0
+
+    for i = 1, countedPrinters do
+        local p = printers[i]
+        totalBasePrinterYield = totalBasePrinterYield + (p.PrintAmount or 4)
+    end
+
+    -- Base trickle when 0 printers connected; scaled by BotnetPrinterYieldMultiplier when printers are connected
+    local yield = baseTrickle
+    if countedPrinters > 0 then
+        yield = math.max(baseTrickle, math.Round(totalBasePrinterYield * yieldMult))
+    end
+
+    local op = IsValid(operator) and operator or self:GetBotnetOperator()
+    local isEng = IsValid(op) and op.GetJob and (op:GetJob() == "cyber_engineer")
+    if isEng then
+        yield = math.ceil(yield * engMult)
+    end
+
+    return yield, #printers, countedPrinters, isEng
+end
+
+function ENT:StopBotnet(reason)
+    local timerName = "GW_BotnetTick_" .. self:EntIndex()
+    timer.Remove(timerName)
+
+    local wasActive = self:GetBotnetActive()
+    local operator = self:GetBotnetOperator()
+
+    self:SetBotnetActive(false)
+    self:SetBotnetYield(0)
+    self.BotnetWANKey = ""
+    self:UpdateWireOutputs()
+
+    if wasActive then
+        self:EmitSound("buttons/button10.wav", 65, 95)
+        if reason and IsValid(operator) and operator:IsPlayer() then
+            GW.Notify(operator, "Botnet C2 Halted: " .. reason, NOTIFY_ERROR)
+            self:PushTerminalLines(operator, {
+                { text = string.format("[!] [BOTNET-C2] DAEMON HALTED: %s", reason), color = "red" }
+            })
+        end
+    end
+end
+
+function ENT:RefreshBotnetState()
+    if not self:GetBotnetActive() then return end
+
+    local sw = self:GetConnectedSwitch()
+    if not IsValid(sw) then
+        self:StopBotnet("Ethernet link to L3 Switch disconnected.")
+        return
+    end
+
+    local uplink = GW.Network and GW.Network.GetUplinkForSwitch and GW.Network.GetUplinkForSwitch(sw)
+    if not IsValid(uplink) then
+        self:StopBotnet("Satellite WAN Uplink disconnected from broadcast domain.")
+        return
+    end
+
+    local curKey = string.Trim(string.upper(uplink:GetEncryptionKey() or ""))
+    if curKey == "" or (self.BotnetWANKey ~= "" and curKey ~= self.BotnetWANKey) then
+        self:StopBotnet("Satellite WAN encryption key changed — C2 tunnel dropped.")
+        return
+    end
+
+    local operator = self:GetBotnetOperator()
+    if not IsValid(operator) then
+        local owner = self:GetOwnerPlayer()
+        if IsValid(owner) then
+            operator = owner
+            self:SetBotnetOperator(owner)
+        else
+            self:StopBotnet("Operator session disconnected.")
+            return
+        end
+    end
+
+    local newYield = self:CalculateBotnetYield(operator)
+    self:SetBotnetYield(newYield)
+    self:UpdateWireOutputs()
+end
+
+function ENT:BotnetCycle()
+    if not self:GetBotnetActive() then return end
+
+    self:RefreshBotnetState()
+    if not self:GetBotnetActive() then return end
+
+    local operator = self:GetBotnetOperator()
+    if not IsValid(operator) or not operator:IsPlayer() then
+        self:StopBotnet("Operator session offline.")
+        return
+    end
+
+    local yield, totalPrinters = self:CalculateBotnetYield(operator)
+    self:SetBotnetYield(yield)
+
+    operator:AddMoney(yield)
+    local newTotal = (self:GetBotnetTotalEarned() or 0) + yield
+    self:SetBotnetTotalEarned(newTotal)
+    self.BotnetCyclesCompleted = (self.BotnetCyclesCompleted or 0) + 1
+    self:UpdateWireOutputs()
+
+    self:EmitSound("ambient/levels/labs/coinslot1.wav", 58, 115)
+
+    local target = BotnetCloudTargets[math.random(1, #BotnetCloudTargets)]
+    self:PushTerminalLines(operator, {
+        {
+            text = string.format(
+                "[+] [BOTNET-C2] Cycle #%d | Breached %s (%s) via %s -> Exfiltrated +$%s (%d Printer Node%s)",
+                self.BotnetCyclesCompleted,
+                target.name,
+                target.ip,
+                target.vector,
+                string.Comma(yield),
+                totalPrinters,
+                totalPrinters == 1 and "" or "s"
+            ),
+            color = "green"
+        }
+    })
+end
+
+function ENT:StartBotnet(ply)
+    local sw = self:GetConnectedSwitch()
+    if not IsValid(sw) then
+        return false, "Interface eth0 has NO CARRIER. Wire this computer to an L3 Switch first."
+    end
+
+    local uplink = GW.Network and GW.Network.GetUplinkForSwitch and GW.Network.GetUplinkForSwitch(sw)
+    if not IsValid(uplink) then
+        return false,
+            "No Satellite WAN Uplink detected on this broadcast domain. Wire a WAN Uplink dish to your switch to reach cloud targets."
+    end
+
+    local existingBotnet = GW.Network and GW.Network.GetActiveBotnetForSwitch and GW.Network.GetActiveBotnetForSwitch(sw)
+    if IsValid(existingBotnet) and existingBotnet ~= self then
+        return false,
+            string.format("A Cloud Botnet C2 daemon is already running on this network (%s).",
+                existingBotnet:GetIPAddress() or "peer terminal")
+    end
+
+    local wanKey = string.Trim(string.upper(uplink:GetEncryptionKey() or ""))
+    if wanKey == "" then
+        return false, "Satellite WAN Uplink has no valid encryption key configured."
+    end
+
+    self.BotnetWANKey = wanKey
+    self.BotnetCyclesCompleted = 0
+    self:SetBotnetOperator(ply)
+    self:SetBotnetActive(true)
+
+    local yield, totalPrinters, countedPrinters, isEng = self:CalculateBotnetYield(ply)
+    self:SetBotnetYield(yield)
+    self:UpdateWireOutputs()
+
+    self:EmitSound("ambient/machines/thumper_startup1.wav", 65, 130)
+
+    local tickInterval = (GW.Config and GW.Config.BotnetTickInterval) or BOTNET_TICK_INTERVAL
+    local timerName = "GW_BotnetTick_" .. self:EntIndex()
+    timer.Create(timerName, tickInterval, 0, function()
+        if not IsValid(self) then
+            timer.Remove(timerName)
+            return
+        end
+        self:BotnetCycle()
+    end)
+
+    return true, yield, totalPrinters, countedPrinters, isEng, uplink
 end
 
 function ENT:DisconnectFromSwitch()
+    if self:GetBotnetActive() then
+        self:StopBotnet("Ethernet cable unplugged from L3 Switch.")
+    end
+
     local sw = self:GetConnectedSwitch()
     if IsValid(sw) and (sw.DisconnectDevice or sw.DisconnectPrinter) then
         if sw.DisconnectDevice then
@@ -267,9 +515,20 @@ net.Receive("GW_RunComputerCommand", function(len, ply)
                     table.insert(responseLines,
                         { text = "80/tcp   OPEN  http         Switch Management Web Console", color = "cyan" })
                 elseif dev.type == "computer" then
+                    local ent = dev.entity
+                    local isBotnet = IsValid(ent) and ent.GetBotnetActive and ent:GetBotnetActive()
                     table.insert(responseLines, { text = "PORT     STATE SERVICE      VERSION", color = "muted" })
                     table.insert(responseLines,
                         { text = "23/tcp   OPEN  telnet       CyberDeck BSD Terminal Daemon", color = "blue" })
+                    if isBotnet then
+                        table.insert(responseLines,
+                            {
+                                text = string.format(
+                                    "6667/tcp OPEN  irc-c2       Cloud Botnet C2 Daemon (+$%d/20s) [BOTNET ACTIVE]",
+                                    ent.GetBotnetYield and ent:GetBotnetYield() or 0),
+                                color = "highlight"
+                            })
+                    end
                 elseif dev.type == "synthesizer" then
                     local ent = dev.entity
                     local eff = (IsValid(ent) and ent.GetEfficiency) and ent:GetEfficiency() or 60
@@ -449,11 +708,12 @@ net.Receive("GW_RunComputerCommand", function(len, ply)
         else
             for _, sig in ipairs(spectrum) do
                 local subStr = sig.subnet > 0 and string.format("192.168.%d.0/24", sig.subnet) or "Unlinked"
+                local botTag = sig.hasBotnet and " [BOTNET ACTIVE]" or ""
                 table.insert(responseLines,
                     {
-                        text = string.format("%-18s %4ddBm %4du  %2d  WPA3-ENT %-15s %s", sig.bssid, sig.rssi,
-                            sig.dist or 0, sig.channel, subStr, sig.ssid),
-                        color = "green"
+                        text = string.format("%-18s %4ddBm %4du  %2d  WPA3-ENT %-15s %s%s", sig.bssid, sig.rssi,
+                            sig.dist or 0, sig.channel, subStr, sig.ssid, botTag),
+                        color = sig.hasBotnet and "highlight" or "green"
                     })
             end
         end
@@ -1076,9 +1336,161 @@ net.Receive("GW_RunComputerCommand", function(len, ply)
                 end
             end
         end
+    elseif cmd == "botnet" or cmd == "c2" then
+        if isPhone then
+            table.insert(responseLines,
+                {
+                    text = "[-] botnet: Cloud Botnet C2 daemon requires dedicated x86_64 Personal Computer hardware.",
+                    color =
+                    "red"
+                })
+            table.insert(responseLines,
+                { text = "    Mobile ARM handsets cannot host continuous C2 attack threads.", color = "muted" })
+        elseif arg1 == "start" or arg1 == "run" then
+            if computer:GetBotnetActive() then
+                computer:RefreshBotnetState()
+                if computer:GetBotnetActive() then
+                    table.insert(responseLines,
+                        {
+                            text = string.format(
+                                "[*] Cloud Botnet C2 daemon is already running (+$%s / 20s). Type 'botnet status' or 'botnet stop'.",
+                                string.Comma(computer:GetBotnetYield() or 0)),
+                            color = "yellow"
+                        })
+                end
+            else
+                local ok, yieldOrErr, totalPrinters, countedPrinters, isEng, uplink = computer:StartBotnet(ply)
+                if not ok then
+                    table.insert(responseLines, { text = "[-] botnet: Failed to initialize C2 daemon:", color = "red" })
+                    table.insert(responseLines, { text = "    " .. tostring(yieldOrErr), color = "yellow" })
+                else
+                    local wanKey = IsValid(uplink) and uplink:GetEncryptionKey() or "WAN"
+                    local engBonusStr = isEng and " [Cyber Engineer +25% Bonus Active]" or ""
+                    table.insert(responseLines,
+                        { text = "=== Cloud Botnet C2 Daemon Initialized (v4.2-hydra) ===", color = "cyan" })
+                    table.insert(responseLines,
+                        {
+                            text = string.format("[+] Satellite WAN Tunnel Up : Gateway %s (Key: %s)",
+                                IsValid(uplink) and (uplink:GetIPAddress() ~= "" and uplink:GetIPAddress() or "Attached") or
+                                "Attached",
+                                wanKey),
+                            color = "green"
+                        })
+                    table.insert(responseLines,
+                        {
+                            text = string.format(
+                                "[+] Compute Cluster Nodes   : %d Money Printer%s attached (%d active hash node%s)",
+                                totalPrinters, totalPrinters == 1 and "" or "s",
+                                countedPrinters, countedPrinters == 1 and "" or "s"),
+                            color = "white"
+                        })
+                    table.insert(responseLines,
+                        {
+                            text = string.format("[+] Automated Payout Rate   : +$%s every 20s (Direct to wallet)%s",
+                                string.Comma(yieldOrErr), engBonusStr),
+                            color = "highlight"
+                        })
+                    table.insert(responseLines,
+                        {
+                            text =
+                            "[!] WARNING: Active C2 traffic flags your Satellite WAN Uplink as [BOTNET ACTIVE] on wireless airmon scans.",
+                            color = "yellow"
+                        })
+                    table.insert(responseLines,
+                        {
+                            text = "[*] Launching continuous automated attacks against remote cloud targets...",
+                            color = "muted"
+                        })
+                end
+            end
+        elseif arg1 == "stop" or arg1 == "kill" or arg1 == "halt" then
+            if not computer:GetBotnetActive() then
+                table.insert(responseLines,
+                    {
+                        text = "[-] botnet: No active Cloud Botnet C2 daemon is running on this terminal.",
+                        color =
+                        "yellow"
+                    })
+            else
+                local totalEarned = computer:GetBotnetTotalEarned() or 0
+                local cycles = computer.BotnetCyclesCompleted or 0
+                computer:StopBotnet(nil)
+                table.insert(responseLines,
+                    { text = "[+] Cloud Botnet C2 daemon gracefully terminated.", color = "green" })
+                table.insert(responseLines,
+                    {
+                        text = string.format("    Completed Attack Cycles : %d  |  Total Session Siphoned : $%s",
+                            cycles, string.Comma(totalEarned)),
+                        color = "cyan"
+                    })
+            end
+        else
+            -- Default: status & help
+            computer:RefreshBotnetState()
+            local isActive = computer:GetBotnetActive()
+            local uplink = isConnected and GW.Network and GW.Network.GetUplinkForSwitch and
+                GW.Network.GetUplinkForSwitch(sw) or nil
+            local estYield, totalPrinters, countedPrinters, isEng = computer:CalculateBotnetYield(ply)
+            local operator = computer:GetBotnetOperator()
+            local opName = IsValid(operator) and operator:Nick() or "None"
+            local maxNodes = GW.Config.BotnetMaxCountedPrinters or 3
+
+            table.insert(responseLines, { text = "=== Cloud Botnet C2 Attack Daemon Status ===", color = "cyan" })
+            table.insert(responseLines,
+                {
+                    text = string.format("  Daemon State        : %s",
+                        isActive and "ACTIVE (Attacking Cloud Targets)" or "IDLE (Stopped)"),
+                    color = isActive and "green" or "yellow"
+                })
+            table.insert(responseLines,
+                {
+                    text = string.format("  Satellite WAN Link  : %s",
+                        IsValid(uplink) and
+                        string.format("CONNECTED (Key: %s | IP: %s)", uplink:GetEncryptionKey() or "NONE",
+                            uplink:GetIPAddress() or "DHCP") or "MISSING (Wire a Satellite WAN Uplink to your switch)"),
+                    color = IsValid(uplink) and "cyan" or "red"
+                })
+            table.insert(responseLines,
+                {
+                    text = string.format("  Printer Hash Nodes  : %d connected (%d/%d optimal compute nodes)",
+                        totalPrinters, countedPrinters, maxNodes),
+                    color = totalPrinters > 0 and "green" or "muted"
+                })
+            table.insert(responseLines,
+                {
+                    text = string.format("  Payout Yield (20s)  : +$%s / cycle%s",
+                        string.Comma(isActive and (computer:GetBotnetYield() or estYield) or estYield),
+                        isEng and " (Includes +25% Cyber Engineer Bonus)" or ""),
+                    color = "highlight"
+                })
+            if isActive then
+                table.insert(responseLines,
+                    {
+                        text = string.format("  Active Operator     : %s  |  Cycles: %d  |  Total Earned: $%s",
+                            opName, computer.BotnetCyclesCompleted or 0,
+                            string.Comma(computer:GetBotnetTotalEarned() or 0)),
+                        color = "white"
+                    })
+            end
+            table.insert(responseLines,
+                { text = "----------------------------------------------------------------------", color = "dark" })
+            table.insert(responseLines, { text = "Commands:", color = "white" })
+            table.insert(responseLines,
+                { text = "  botnet start   - Start continuous automated cloud cyber-attacks", color = "green" })
+            table.insert(responseLines,
+                { text = "  botnet stop    - Halt the botnet daemon & drop C2 traffic", color = "yellow" })
+            table.insert(responseLines,
+                { text = "  botnet status  - View cluster compute nodes & payout rate", color = "white" })
+        end
     elseif cmd == "help" then
         table.insert(responseLines,
             { text = "=== CyberDeck OS - Built-in Shell Utility Commands ===", color = "cyan" })
+        table.insert(responseLines,
+            {
+                text = "  botnet       - Launch automated Cloud Botnet C2 daemon (Requires WAN Uplink)",
+                color =
+                "green"
+            })
         table.insert(responseLines,
             {
                 text = "  nmap         - Scan reachable broadcast domain & routed WAN mesh device IP addresses",
