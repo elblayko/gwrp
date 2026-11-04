@@ -57,17 +57,17 @@ function ENT:Draw()
     ang:RotateAroundAxis(ang:Forward(), 90)
 
     cam.Start3D2D(myPos, ang, 0.08)
-        local ip = self:GetIPAddress()
-        local isNet = IsValid(self:GetConnectedSwitch()) and (ip and ip ~= "")
-        local statusText = isNet and ("IP: " .. ip) or "OFFLINE (NO CARRIER)"
-        local statusCol = isNet and Color(74, 222, 128) or Color(239, 68, 68)
+    local ip = self:GetIPAddress()
+    local isNet = IsValid(self:GetConnectedSwitch()) and (ip and ip ~= "")
+    local statusText = isNet and ("IP: " .. ip) or "OFFLINE (NO CARRIER)"
+    local statusCol = isNet and Color(74, 222, 128) or Color(239, 68, 68)
 
-        draw.RoundedBox(6, -115, -34, 230, 68, Color(15, 23, 42, 235))
-        draw.RoundedBox(6, -113, -32, 226, 64, Color(30, 41, 59, 240))
+    draw.RoundedBox(6, -115, -34, 230, 68, Color(15, 23, 42, 235))
+    draw.RoundedBox(6, -113, -32, 226, 64, Color(30, 41, 59, 240))
 
-        draw.SimpleText("GWRP CYBERDECK TERMINAL", "GW_FontSmall", 0, -24, Color(56, 189, 248), TEXT_ALIGN_CENTER)
-        draw.SimpleText(statusText, "GW_FontSmall", 0, -5, statusCol, TEXT_ALIGN_CENTER)
-        draw.SimpleText("[E] Access Shell", "GW_FontSmall", 0, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
+    draw.SimpleText("CYBERDECK TERMINAL", "GW_FontSmall", 0, -24, Color(56, 189, 248), TEXT_ALIGN_CENTER)
+    draw.SimpleText(statusText, "GW_FontSmall", 0, -5, statusCol, TEXT_ALIGN_CENTER)
+    draw.SimpleText("[E] Access Shell", "GW_FontSmall", 0, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
     cam.End3D2D()
 end
 
@@ -83,7 +83,8 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
     local swValid = IsValid(switchEnt)
     local subnet = swValid and (switchEnt.GetSubnetID and switchEnt:GetSubnetID() or 1) or 0
     local localIP = (ipStr and ipStr ~= "") and ipStr or (isPhone and "10.84.1.25" or "127.0.0.1")
-    local domainLabel = isPhone and "WIRELESS SUITE (802.11ax / SAT-WAN Mesh)" or (swValid and string.format("192.168.%d.0/24 (Gateway: 192.168.%d.1)", subnet, subnet) or "DISCONNECTED (No broadcast domain)")
+    local domainLabel = isPhone and "WIRELESS SUITE (802.11ax / SAT-WAN Mesh)" or
+        (swValid and string.format("192.168.%d.0/24 (Gateway: 192.168.%d.1)", subnet, subnet) or "DISCONNECTED (No broadcast domain)")
     local ifaceName = isPhone and "wlan0" or "eth0"
     local isIfaceUp = isPhone or swValid
 
@@ -121,8 +122,11 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
         -- Title text
-        local title = isPhone and string.format("GWRP CYBERDECK MOBILE OS v2.4 -- [ Handset: %s | IP: %s ]", ifaceName, localIP) or string.format("GWRP CYBERDECK OS v2.4 -- [ Interface: %s | IP: %s ]", ifaceName, localIP)
-        draw.SimpleText(title, "GW_Terminal_Header", 14, 10, isIfaceUp and Color(74, 222, 128) or Color(248, 113, 113), TEXT_ALIGN_LEFT)
+        local title = isPhone and
+            string.format("CYBERDECK MOBILE OS v2.4 -- [ Handset: %s | IP: %s ]", ifaceName, localIP) or
+            string.format("CYBERDECK OS v2.4 -- [ Interface: %s | IP: %s ]", ifaceName, localIP)
+        draw.SimpleText(title, "GW_Terminal_Header", 14, 10, isIfaceUp and Color(74, 222, 128) or Color(248, 113, 113),
+            TEXT_ALIGN_LEFT)
     end
 
     -- Close Button
@@ -188,15 +192,18 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
     -- Welcome Banner Lines
     AddTerminalLine("================================================================================", "dark")
     if isPhone then
-        AddTerminalLine("  GWRP CYBERDECK MOBILE OPERATING SYSTEM - KERNEL 2.4.19-ARM (wlan0)", "cyan")
+        AddTerminalLine("  CYBERDECK MOBILE OPERATING SYSTEM - KERNEL 2.4.19-ARM (wlan0)", "cyan")
         AddTerminalLine(string.format("  Mobile Device IP  : %s", localIP), "green")
         AddTerminalLine("  Wireless Suite    : ONLINE (802.11ax / SAT-WAN Mesh Enabled)", "green")
         AddTerminalLine("  Type 'airmon' to scan wireless WAN airspace, or 'wan connect <key>' to link.", "highlight")
     else
-        AddTerminalLine("  GWRP CYBERDECK OPERATING SYSTEM - KERNEL 2.4.19 (x86_64)", "cyan")
+        AddTerminalLine("  CYBERDECK OPERATING SYSTEM - KERNEL 2.4.19 (x86_64)", "cyan")
         AddTerminalLine(string.format("  Local Host IP     : %s", localIP), "green")
         AddTerminalLine(string.format("  Broadcast Domain  : %s", domainLabel), "white")
-        AddTerminalLine("  Ethernet Status   : " .. (swValid and "CONNECTED (eth0 UP, 1000BASE-T Full Duplex)" or "NO CARRIER (Cable unplugged)"), swValid and "green" or "red")
+        AddTerminalLine(
+            "  Ethernet Status   : " ..
+            (swValid and "CONNECTED (eth0 UP, 1000BASE-T Full Duplex)" or "NO CARRIER (Cable unplugged)"),
+            swValid and "green" or "red")
     end
     AddTerminalLine("--------------------------------------------------------------------------------", "dark")
     AddTerminalLine("  Type 'help' to list available commands.", "white")
@@ -219,7 +226,7 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
     local promptLabel = vgui.Create("DLabel", bottomPanel)
     promptLabel:SetPos(10, 8)
     promptLabel:SetFont("GW_Terminal_Bold")
-    promptLabel:SetText("root@gw-deck:~#")
+    promptLabel:SetText("root@cyberdeck:~#")
     promptLabel:SetTextColor(Color(74, 222, 128))
     promptLabel:SizeToContents()
 
@@ -263,7 +270,7 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
         if val == "" then return end
 
         surface.PlaySound("buttons/button15.wav")
-        local promptPrefix = inMSF and (promptLabel:GetText()) or "root@gw-deck:~# "
+        local promptPrefix = inMSF and (promptLabel:GetText()) or "root@cyberdeck:~# "
         AddTerminalLine(promptPrefix .. val, "highlight")
 
         local cmdLower = string.lower(val)
@@ -302,32 +309,32 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
                 end
                 UpdatePrompt()
                 net.Start("GW_RunComputerCommand")
-                    net.WriteEntity(computerEnt)
-                    net.WriteString("msf use " .. (parts[2] or ""))
+                net.WriteEntity(computerEnt)
+                net.WriteString("msf use " .. (parts[2] or ""))
                 net.SendToServer()
                 return
             end
 
             if cmdLower == "help" then
                 net.Start("GW_RunComputerCommand")
-                    net.WriteEntity(computerEnt)
-                    net.WriteString("msf help")
+                net.WriteEntity(computerEnt)
+                net.WriteString("msf help")
                 net.SendToServer()
                 return
             end
 
             if cmdLower == "show modules" or cmdLower == "modules" or cmdLower == "show" then
                 net.Start("GW_RunComputerCommand")
-                    net.WriteEntity(computerEnt)
-                    net.WriteString("msf modules")
+                net.WriteEntity(computerEnt)
+                net.WriteString("msf modules")
                 net.SendToServer()
                 return
             end
 
             if c1 == "run" or c1 == "exploit" then
                 net.Start("GW_RunComputerCommand")
-                    net.WriteEntity(computerEnt)
-                    net.WriteString("msf run " .. (parts[2] or ""))
+                net.WriteEntity(computerEnt)
+                net.WriteString("msf run " .. (parts[2] or ""))
                 net.SendToServer()
                 return
             end
@@ -335,8 +342,8 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
             -- Default: forward directly to server with "msf " prefix if not already
             local forwardCmd = (string.sub(val, 1, 4) == "msf ") and val or ("msf " .. val)
             net.Start("GW_RunComputerCommand")
-                net.WriteEntity(computerEnt)
-                net.WriteString(forwardCmd)
+            net.WriteEntity(computerEnt)
+            net.WriteString(forwardCmd)
             net.SendToServer()
             return
         else
@@ -352,15 +359,15 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
                 currentMSFMod = "cash_siphon"
                 UpdatePrompt()
                 net.Start("GW_RunComputerCommand")
-                    net.WriteEntity(computerEnt)
-                    net.WriteString("msf")
+                net.WriteEntity(computerEnt)
+                net.WriteString("msf")
                 net.SendToServer()
                 return
             end
 
             net.Start("GW_RunComputerCommand")
-                net.WriteEntity(computerEnt)
-                net.WriteString(val)
+            net.WriteEntity(computerEnt)
+            net.WriteString(val)
             net.SendToServer()
         end
     end

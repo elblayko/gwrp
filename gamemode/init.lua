@@ -106,6 +106,7 @@ function GM:ShutDown()
 end
 
 function GM:PlayerSpawn(ply)
+    ply:UnSpectate()
     player_manager.SetPlayerClass(ply, "player_sandbox")
 
     local job = ply:GetJobData()
@@ -235,13 +236,33 @@ function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
 end
 
 function GM:PlayerDeath(victim, inflictor, attacker)
-    -- Rapid Dispatch: Patrol Officers respawn in 5s, baseline for all other roles is 15s
-    local defaultSecs = (GW.Config and GW.Config.DefaultRespawnTime) or 15
+    -- Rapid Dispatch: Patrol Officers respawn in 5s, baseline for all other roles is 30s
+    local defaultSecs = (GW.Config and GW.Config.DefaultRespawnTime) or 30
     local policeSecs = (GW.Config and GW.Config.PoliceRespawnTime) or 5
     local respawnSecs = (victim:GetJob() == "police_officer") and policeSecs or defaultSecs
     victim.NextSpawnTime = CurTime() + respawnSecs
 
+    local killerName = "Unknown"
+    if IsValid(attacker) then
+        if attacker == victim then
+            killerName = "Suicide"
+        elseif attacker:IsPlayer() then
+            killerName = attacker:Nick()
+        elseif attacker.GetClass then
+            killerName = attacker:GetClass()
+        end
+    elseif IsValid(inflictor) then
+        if inflictor == victim then
+            killerName = "Suicide"
+        elseif inflictor.GetClass then
+            killerName = inflictor:GetClass()
+        end
+    else
+        killerName = "Suicide"
+    end
+
     net.Start("GW_PlayerDied")
+        net.WriteString(killerName)
         net.WriteUInt(respawnSecs, 8)
     net.Send(victim)
 
@@ -283,6 +304,13 @@ function GM:PlayerDeathThink(ply)
     if (ply.NextSpawnTime or 0) > CurTime() then
         return false
     end
+
+    -- Respawn automatically once timer finishes, or immediately on click / jump
+    if ply:KeyPressed(IN_ATTACK) or ply:KeyPressed(IN_ATTACK2) or ply:KeyPressed(IN_JUMP) or CurTime() >= (ply.NextSpawnTime or 0) then
+        ply:Spawn()
+        return true
+    end
+
     return true
 end
 

@@ -11,7 +11,7 @@ GW.Config.DropMoneyOnDeathMax = 75
 GW.Config.GangCreationCost = 200 -- cost to register a new player gang
 
 -- Respawn Times
-GW.Config.DefaultRespawnTime = 15 -- Baseline respawn time for all players (seconds)
+GW.Config.DefaultRespawnTime = 30 -- Baseline respawn time for all players (seconds)
 GW.Config.PoliceRespawnTime = 5   -- Rapid dispatch respawn for base police officer (seconds)
 
 -- Turf Warfare
