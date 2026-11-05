@@ -24,7 +24,7 @@ GangWars RP is a Garry's Mod roleplay gamemode built around three competing grou
 
 ## Features
 
-- **17 jobs across 3 factions**, with level gates and per-job slot limits.
+- **15 jobs across 3 factions**, with level gates, specialized equipment, and per-job slot limits.
 - **Player-run gangs** with MariaDB-backed rosters, ranks, invites and private gang chat.
 - **Turf warfare**: flag poles with timed captures and periodic dividends, per-map zone profiles and an admin setup tool.
 - **Economy**: salary paydays, dropped cash, an F4 shop with job/level restrictions and retail markups, and purchasable doors.
@@ -75,40 +75,129 @@ GangWars RP is a Garry's Mod roleplay gamemode built around three competing grou
 
 ## Concept of Operations
 
-### Intent
-Create a self-sustaining crime-and-order sandbox. Every economic activity creates risk and a counter-play opportunity for another faction.
+### Faction Viewpoints & Philosophies
 
-### Actors
+The metropolis is driven by a tri-faction power dynamic where commerce, violent underworld syndication, and state enforcement constantly clash. Every economic venture generates exposure, and every faction capability introduces tactical counter-play.
 
-| Actor | Goal | Main tools | Counter-play |
-|---|---|---|---|
-| **Citizens** (Citizen, Pharmacist, Cyber Engineer, Security Contractor, Arms Dealer, Hobo) | Build bases, run printers, provide services | Printers, doors, clinic pods, networking, crafting | Police may seize printers. Gangs and hackers target them. |
-| **Street Gangs** (Gangster, Gang Leader, Thief, Hitman, Black Market Dealer) | Control turf, steal and raid, trade contraband | Turf poles, lockpicks, shipments, stims | Police contest turf. Rival gangs fight. |
-| **Police / SWAT** (Officer, Chief, SWAT, Mayor) | Suppress contraband, hold turf, enforce *wanted* status | Contraband scanner, stunstick, battering ram, bounties | Gang resistance. Police capture turf as the shared "Police" claimant. |
+#### 1. Civilian Faction (Commerce, Enterprise & Specialist Services)
+- **Core Philosophy:** Economic self-determination, capital accumulation, and free-market opportunism. Civilians thrive by constructing secure bases, engineering multi-printer networks, and vending essential goods and services.
+- **Key Objectives:** Build fortified compounds with keypad doors, maximize money printer networking efficiency (up to 100%), deploy automated Clinic Pods and Gun Kiosks, and reinvest revenue into property upkeep and advanced hardware.
+- **Faction Interactions:**
+  - *Vs. Gangs:* Gangs view civilians as primary targets for burglary, extortion, and protection racket taxes (5%–30%). Civilians must hire private security or arm themselves, though they may quietly purchase black-market hardware.
+  - *Vs. Police:* Police provide protection from street violence, but aggressively search and seize unregistered money printers (+50% bounty to patrol officers).
 
-### Core gameplay loop
+#### 2. Street Gangs Faction (Territory, Extortion & Syndication)
+- **Core Philosophy:** Collective dominance, territorial sovereignty, and predatory extraction. Street gangs reject state authority, leveraging armed syndicates to seize public turf, extort local commerce, and traffic illegal contraband.
+- **Key Objectives:** Form player syndicates (`/creategang`), conquer and defend map flag poles for passive dividends, levy protection taxes (`/settax 5-30`), crack civilian vaults with tactical lockpicks, and execute contract hits.
+- **Faction Interactions:**
+  - *Vs. Civilians:* Civilians are revenue sources to be shaken down for protection taxes, raided for printer loot, or serviced with illicit weapons and stims.
+  - *Vs. Police:* Police are direct operational adversaries. Gangs gain a **Turf Defender Bonus** (+$100 and +100 XP per officer slain on claimed territory). However, criminal acts inflict persistent *Wanted* status that survives death and disconnects.
 
+#### 3. Police / SWAT Faction (Order, Interdiction & Civil Protection)
+- **Core Philosophy:** Urban pacification, contraband interdiction, and strict civil defense. Law enforcement maintains city stability by breaking organized crime syndicates, neutralizing illegal money print farms, and upholding the Mayor's authority.
+- **Key Objectives:** Patrol urban sectors with wireless Contraband Scanners, execute dynamic tactical breaches using the SWAT Battering Ram, neutralize illegal printers for cash bounties, capture territory under the unified `"Police"` claimant, and enforce citywide lockdowns.
+- **Faction Interactions:**
+  - *Vs. Civilians:* Civilians are citizens under state protection, yet are subject to scanning, warrantless perimeter checks, and property raids if contraband signals are detected.
+  - *Vs. Gangs:* Gangs are armed combatants to be neutralized, disarmed, and pushed out of occupied urban territories.
+
+---
+
+### Core Gameplay Loops & Threat Models
+
+#### Civilian Faction Capability & Threat Model
 ```mermaid
 flowchart LR
-    A[Join as Citizen] --> B[Earn salary every 90s]
-    B --> C[Buy printers, doors, tools in F4]
-    C --> D[Network printers for up to 100% efficiency]
-    D --> E{Threats}
-    E -->|Police raid| F[Printer seized, bounty to officer]
-    E -->|Overheat| G[Vent minigame or explosion]
-    E -->|Rival gang / hackers| H[Defend, or cash siphoned]
-    D --> I[Level up: unlock jobs and gear]
-    I --> J[Form a gang and capture turf]
-    J --> K[Dividends every 90s]
-    K --> C
+    subgraph Civilian["Civilian Operations"]
+        direction TB
+        Join["Join as Civilian"] --> Salary["Earn salary every 90s"]
+        Salary --> Base["Base Fortification & Doors"]
+        Base --> Print["Money Printing & Networking"]
+        Print --> Serv["Specialist Services & Kiosks"]
+        Serv --> Econ["Commercial Profit & Upkeep"]
+        Econ --> Base
+    end
+
+    subgraph Security["Threats & System Vulnerabilities"]
+        direction TB
+        T_Thief["Thief Infiltration"] --> V_Lock{"Pickable Lock"}
+        T_Police["Police Contraband Raid"] --> V_Sig{"RF Leak"}
+        T_Heat["Overclocking Neglect"] --> V_Heat{"Core Heat"}
+        T_Gang["Gang Extortion Racket"] --> V_Turf{"Rival Turf"}
+    end
+
+    V_Lock --> Base
+    V_Sig --> Print
+    V_Heat --> Print
+    V_Turf --> Serv
+
+    style Join fill:#0284c7,stroke:#0369a1,stroke-width:3px,color:#ffffff,font-weight:bold
 ```
 
-### Risk / reward summary
-- **Printers** pay well at high efficiency but heat up. Unvented printers explode and deal blast damage.
-- **Networking** boosts printer efficiency (60% → 80% → 100%) but cables snap past a maximum length and exposed networks can be scanned and exploited.
-- **Police** are rewarded for confiscating printers (+50% for Patrol Officers) and for seizing territory.
-- **Turf** gives gang members passive income and XP, but capturing requires staying within 220 units of the pole for 15 seconds without dying.
-- **Death** drops 10% of your cash (capped at $75), and *Wanted* status persists across death and logout.
+#### Street Gangs Faction Capability & Threat Model
+```mermaid
+flowchart LR
+    subgraph Gangs["Street Gang Operations"]
+        direction TB
+        Join["Join as Street Gang"] --> Syndicate["Found / Join Syndicate: /creategang"]
+        Syndicate --> Turf["Capture & Hold Turf Poles"]
+        Turf --> Vault["Syndicate Banking & Racket Tax"]
+        Vault --> Black["Black Market Arms & Stims"]
+        Black --> Raid["Base Infiltration & Lockpick Raids"]
+        Raid --> Turf
+    end
+
+    subgraph UnderworldRisks["Threats & Operational Vulnerabilities"]
+        direction TB
+        T_Rival["Rival Gang Incursion"] --> V_Hold{"15s Zone"}
+        T_Police["Police Rapid Response"] --> V_Alarm{"Turf Alert"}
+        T_Bounty["Law Enforcement Hunt"] --> V_Wanted{"Wanted Status"}
+        T_Decay["Economic Wealth Tax"] --> V_Tax{"Vault Decay"}
+    end
+
+    V_Hold --> Turf
+    V_Alarm --> Turf
+    V_Wanted --> Raid
+    V_Tax --> Vault
+
+    style Join fill:#d97706,stroke:#b45309,stroke-width:3px,color:#ffffff,font-weight:bold
+```
+
+#### Police / SWAT Faction Capability & Threat Model
+```mermaid
+flowchart LR
+    subgraph Police["Police / SWAT Operations"]
+        direction TB
+        Join["Join as Law Enforcement"] --> Loadout["Equip Duty Gear, Scanner & Ram"]
+        Loadout --> Scan["Patrol & Scan Wireless Contraband"]
+        Scan --> Breach["SWAT Battering Ram Door Breach"]
+        Breach --> Seize["Printer Confiscation & Bounties"]
+        Seize --> Pacify["Pacify Turf for Shared 'Police' Control"]
+        Pacify --> Marshal["Mayoral Warrants & City Lockdowns"]
+        Marshal --> Loadout
+    end
+
+    subgraph PoliceRisks["Threats & Operational Vulnerabilities"]
+        direction TB
+        T_Ambush["Entrenched Gang Crossfire"] --> V_Speed{"Armor Weight"}
+        T_Synd["Gang Turf Counter-Attack"] --> V_Buff{"Gang Turf Buff"}
+        T_Assassin["Contract Hitman Assassin"] --> V_VIP{"Mayor Armor"}
+        T_Noise["Decoy RF Noise"] --> V_Range{"Scanner Limit"}
+    end
+
+    V_Speed --> Breach
+    V_Buff --> Pacify
+    V_VIP --> Marshal
+    V_Range --> Scan
+
+    style Join fill:#059669,stroke:#047857,stroke-width:3px,color:#ffffff,font-weight:bold
+```
+
+### Risk / Reward Summary
+- **Printers:** High financial yield at max efficiency (up to 100%), but heat generates explosion risks if unvented, and radio emissions invite police raids.
+- **Networking:** L3 switches and cables elevate printer output from 60% up to 100%, but cables snap if extended beyond 550 units (800 for fiber) and expose the network to remote sniffing.
+- **Police Interdiction:** Officers earn direct cash bounties (+50% for Patrol Officers) for confiscating illegal printers and pacifying territory.
+- **Turf Conquest:** Holding a flag pole yields passive syndicate dividends every 90s, but requires surviving within 450 units of the pole for 15s under public broadcast.
+- **Death & Bounties:** Dying drops 10% of carried wallet cash (capped at $75). *Wanted* status is permanent across deaths and disconnects until served or cleared.
 
 ---
 
@@ -290,25 +379,37 @@ The admin HUD also provides: set job/gang/health/armor, godmode, goto/bring/resp
 
 ## Jobs Reference
 
-| Faction | Job | Lvl | Salary | Slots |
-|---|---|---|---|---|
-| Citizens | Citizen | 1 | $6 | ∞ |
-| | Pharmacist | 1 | $12 | 3 |
-| | Cyber Engineer | 3 | $14 | 3 |
-| | Security Contractor | 2 | $13 | 4 |
-| | Arms Dealer | 2 | $10 | 3 |
-| | Hobo | 1 | $0 | 4 |
-| Gangs | Gangster | 1 | $10 | 16 |
-| | Gang Leader | 5 | $20 | 4 |
-| | Thief | 3 | $10 | 4 |
-| | Hitman | 6 | $16 | 2 |
-| | Black Market Dealer | 4 | $12 | 2 |
-| Police | Police Officer | 1 | $16 | 6 |
-| | Police Chief | 5 | $25 | 1 |
-| | SWAT Specialist | 7 | $22 | 2 |
-| | Mayor | 5 | $35 | 1 |
+Every job receives baseline items (`weapon_fists`, `gw_keys`, `weapon_physgun`, `weapon_physcannon`, `gmod_tool`). Police spawn with duty ammunition and have a rapid 5-second respawn timer (15 seconds for all other factions).
 
-All jobs receive fists, keys, physgun, gravity gun and toolgun. Police also spawn with duty ammo. Officers respawn in 5 s; everyone else in 15 s.
+### 1. Civilian & Specialty Services Faction
+
+| Job & Tier | Stats & Loadout | Core Capabilities & Exclusive Mechanics | Relation to Civilians | Relation to Street Gangs | Relation to Police / SWAT | Vulnerabilities & Direct Counters |
+|---|---|---|---|---|---|---|
+| **Citizen**<br>`Lvl 1 · $6/90s · ∞ slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Fists | Base construction, money printer farming, resource gathering, door ownership. | Baseline commerce partner. Pools money for shared properties. | Target for muggings, base lockpicking, and turf protection taxes. | Protected by law, but subject to printer confiscation raids. | Unarmed, zero armor. Easily suppressed by any armed faction member. |
+| **Pharmacist**<br>`Lvl 1 · $12/90s · 3 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Medkit | Deploys automated **Triage Clinic Pods**; dispenses field heals & Adrenaline stim buffs for passive profits. | Supplies medkits and health services to civil residents and traders. | Sells high-demand medical aid to syndicates; high-value extortion target. | Legal medical merchant; provides field assistance to patrol units. | Low combat survivability; vulnerable during clinic maintenance. |
+| **Cyber Engineer**<br>`Lvl 3 · $14/90s · 3 slots` | • Armor: 10<br>• Speed: 160 / 240<br>• Weapons: Wiretool | Networks printers, optimizes hardware with **Cryo Calibrator** (+20% yield, −25% heat), wireless terminal exploits. | Invaluable technical contractor; maximizes civilian farm profit to 100%. | Can hack or tap gang networks; target of gang recruitment or extortion. | Monitored for cyber-crimes and unauthorized terminal hacking. | Fragile 10 armor; vulnerable while operating stationary terminals. |
+| **Security Contractor**<br>`Lvl 2 · $13/90s · 4 slots` | • Armor: 50<br>• Speed: 160 / 240<br>• Weapons: Stunstick | Hired protection specialist with high base armor; guards printer vaults, stores, and VIP compounds. | Provides muscle and sentry protection for civilian store owners and farms. | Direct deterrent against Thief lockpick raids and extortion attempts. | Auxiliary peacekeeper; cooperates during lawful investigations. | Limited to melee stunstick on spawn; outranged by firearms. |
+| **Arms Dealer**<br>`Lvl 2 · $10/90s · 3 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Fists | Authorized gun merchant; orders wholesale weapon shipments (Glock, Shotgun), ammo crates, Kevlar vests. | Equips civilians with legal firearms and personal protection equipment. | Black-market competitor; frequently targeted for shipment hijackings. | Legitimate commercial vendor, provided shipments remain uncompromised. | Weapon shipments can be physically intercepted or stolen before stocking. |
+| **Hobo**<br>`Lvl 1 · $0/90s · 4 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Bugbait | Scrap architecture builder; exempt from tax structures and property upkeep laws; begs for loose cash. | Comic relief and street informant; trades scrap materials with residents. | Ignored by gangs due to zero wallet wealth; occasional street lookout. | Immunity from commercial regulations; immune to printer bounties. | Zero salary income; completely defenseless with only Bugbait. |
+
+### 2. Street Gangs & Underworld Faction
+
+| Job & Tier | Stats & Loadout | Core Capabilities & Exclusive Mechanics | Relation to Civilians | Relation to Street Gangs | Relation to Police / SWAT | Vulnerabilities & Direct Counters |
+|---|---|---|---|---|---|---|
+| **Gangster**<br>`Lvl 1 · $10/90s · 16 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Fists | Frontline soldier; joins player syndicates, contests flag poles, defends printers, street muscle. | Extorts unaligned civilians; shakes down independent businesses. | Core manpower for syndicate turf wars and group compound defense. | Primary combatant; gains Turf Defender bonus (+$100/100XP) per slain cop. | Spawns unarmed; requires external weapon shipments to be lethal. |
+| **Gang Leader**<br>`Lvl 5 · $20/90s · 4 slots` | • Armor: 50<br>• Speed: 160 / 240<br>• Weapons: Fists | Syndicate founder; executes `/creategang`, withdraws gang vault funds, sets territory tax (`/settax 5-30`). | Enforces territorial protection rackets on all civilian printers in owned turf. | Commands gang soldiers, orchestrates turf captures, finances arms crates. | High-priority arrest target; wanted status persists permanently. | Focus-fire target during raids; 2% vault wealth decay over $5,000. |
+| **Thief**<br>`Lvl 3 · $10/90s · 4 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Lockpick | Infiltrator; bypasses door keypads with lockpicks to crack vaults, extract contraband, and steal cash. | Plunders civilian compounds, breaks into unattended money printer setups. | Recon and infiltration specialist for syndicate compound breaches. | Subject to instant arrest/lethal force upon lockpicking detection. | Caught defenseless with lockpick drawn; audible clicking exposes stealth. |
+| **Hitman**<br>`Lvl 6 · $16/90s · 2 slots` | • Armor: 30<br>• Speed: 160 / 240<br>• Weapons: Lockpick | Covert assassin; accepts targeted murder contracts, stealth infiltration, high-precision executions. | Accepts civilian contracts to eliminate extortionists or rival competitors. | High-tier asset for executing opposing gang leaders or rival officers. | Prime target: frequently contracted to assassinate the Mayor. | Contract failures or visible weapons trigger immediate wanted flags. |
+| **Black Market Dealer**<br>`Lvl 4 · $12/90s · 2 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Fists | Contraband smuggler; exclusive vendor of heavy weapons (AK-47, Deagle shipments), lockpicks, stims. | Sells illegal military hardware and tactical tools to desperate civilians. | Armorer and supplier for underworld syndicates and raid teams. | Target of contraband interdiction; possessing shipments is an arrestable offense. | No innate armor; shipment orders are expensive and highly visible targets. |
+
+### 3. Police / SWAT Faction
+
+| Job & Tier | Stats & Loadout | Core Capabilities & Exclusive Mechanics | Relation to Civilians | Relation to Street Gangs | Relation to Police / SWAT | Vulnerabilities & Direct Counters |
+|---|---|---|---|---|---|---|
+| **Police Officer**<br>`Lvl 1 · $16/90s · 6 slots` | • Armor: 30<br>• Speed: **230 / 350**<br>• Weapons: Glock, Stunstick, Scanner | Rapid pursuit interceptor (top 350 sprint speed); scans wireless contraband, earns +50% printer bounties. | Patrols civilian districts, provides protection from muggers and thieves. | Actively hunts wanted gangsters; contests flag poles under `"Police"`. | Vanguard responder; 5-second rapid respawn timer keeps boots on the ground. | Lightweight armor (30); vulnerable to coordinated assault rifles. |
+| **Police Chief**<br>`Lvl 5 · $25/90s · 1 slot` | • Armor: 50<br>• Speed: 220 / 315<br>• Weapons: Deagle, Shotgun, Stunstick | Tactical commander; coordinates street patrols, authorizes warrants, initiates city lockdowns. | Enforces law and order; commands district cordons and civil protection. | Direct operational nemesis to Gang Leaders; suppresses turf incursions. | Field leader for Civil Protection; wields devastating close-range firepower. | Only 1 slot available; losing the Chief disorganizes police response. |
+| **SWAT Specialist**<br>`Lvl 7 · $22/90s · 2 slots` | • Armor: **100**<br>• Speed: **160 / 230**<br>• Weapons: Shotgun, Battering Ram | Heavy siege breacher; instant dynamic door breaches with **Battering Ram**, absorbs heavy damage. | Shields civilians during active gang shootouts and hostile base raids. | Breaches heavily fortified gang compounds and illegal printer bunkers. | Ironclad frontline anchor; spearheads room-clearing operations. | **Heavy speed penalty** (160 walk / 230 run); vulnerable to open-field kiting. |
+| **Mayor**<br>`Lvl 5 · $35/90s · 1 slot` | • Armor: 25<br>• Speed: 160 / 240<br>• Weapons: Deagle | Chief executive; declares citywide curfews, signs search warrants, manages public governance. | Sets commercial climate; protected by civil law and private contractors. | Target of extortion and contract hits; symbol of state authority. | Commander-in-chief; directs Police Chief and initiates tactical lockdowns. | High-visibility VIP model (Breen); primary contract target for Hitmen. |
 
 ---
 
