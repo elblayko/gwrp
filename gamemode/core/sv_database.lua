@@ -29,12 +29,17 @@ function GRID.Database.Escape(str)
     if GRID.Database.Connection and GRID.Database.Connection.escape then
         return "'" .. GRID.Database.Connection:escape(tostring(str)) .. "'"
     end
-    -- Fallback escaping
+    -- SQLite fallback: use the engine's native quoting (doubles single quotes)
+    if GRID.Database.UseSQLiteFallback then
+        return sql.SQLStr(tostring(str))
+    end
+    -- Fallback escaping (plain-text replace; a literal "\0" in a Lua pattern matches
+    -- the empty string and would inject \0 between every character)
     local s = tostring(str)
-    s = string.gsub(s, "\\", "\\\\")
-    s = string.gsub(s, "'", "\\'")
-    s = string.gsub(s, "\"", "\\\"")
-    s = string.gsub(s, "\0", "\\0")
+    s = string.Replace(s, "\\", "\\\\")
+    s = string.Replace(s, "'", "\\'")
+    s = string.Replace(s, "\"", "\\\"")
+    s = string.Replace(s, "\0", "\\0")
     return "'" .. s .. "'"
 end
 
@@ -134,7 +139,35 @@ end
 -- STORED PROCEDURE WRAPPERS (100% Stored Procedures for Writes)
 -- ========================================================
 
+-- SQLite has no stored procedures (no CALL). Emulate the ones needed for local dev.
+GRID.Database.SQLiteProcedures = {
+    grid_clear_map_turfs = "DELETE FROM grid_turfs WHERE map = ?;",
+    grid_save_map_turf = "INSERT OR REPLACE INTO grid_turfs (map, turf_id, name, pos_x, pos_y, pos_z, radius, owner, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    grid_delete_map_turf = "DELETE FROM grid_turfs WHERE map = ? AND turf_id = ?;",
+    grid_set_turf_tax = function(p)
+        return GRID.Database.FormatQuery("UPDATE grid_turfs SET tax_rate = ? WHERE map = ? AND turf_id = ?;", { p[3], p[1], p[2] })
+    end,
+    grid_set_setting = "INSERT OR REPLACE INTO grid_settings (key, val) VALUES (?, ?);",
+}
+GRID.Database.SQLiteWarned = GRID.Database.SQLiteWarned or {}
+
 function GRID.Database.CallProcedure(procName, params, onDone, onError)
+    if GRID.Database.UseSQLiteFallback then
+        local emu = GRID.Database.SQLiteProcedures[procName]
+        if isstring(emu) then
+            GRID.Database.Execute(GRID.Database.FormatQuery(emu, params), onDone, onError)
+        elseif isfunction(emu) then
+            GRID.Database.Execute(emu(params), onDone, onError)
+        else
+            if not GRID.Database.SQLiteWarned[procName] then
+                GRID.Database.SQLiteWarned[procName] = true
+                print(string.format("[GRID DB] SQLite fallback: no emulation for procedure '%s', skipping.", procName))
+            end
+            if onDone then onDone({}) end
+        end
+        return
+    end
+
     local placeholders = {}
     for i = 1, #params do
         table.insert(placeholders, "?")
