@@ -205,7 +205,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
     local jobName = jobData.name or "Citizen"
     local gangName = ply:GetGang()
     local isGang = (gangName ~= "")
-    local badgeCol = isGang and GW.GetGangColor(gangName) or (jobData.faction and jobData.faction.color or Color(56, 189, 248))
+    local badgeCol = isGang and GW.GetGangColor(gangName) or
+    (jobData.faction and jobData.faction.color or Color(56, 189, 248))
     local badgeText = isGang and (gangName .. " • " .. jobName) or jobName
 
     -- Background Obsidian Card
@@ -231,7 +232,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
     draw.RoundedBox(4, badgeX, headerY, badgeW, 22, Color(badgeCol.r, badgeCol.g, badgeCol.b, 35))
     surface.SetDrawColor(badgeCol.r, badgeCol.g, badgeCol.b, 160)
     surface.DrawOutlinedRect(badgeX, headerY, badgeW, 22, 1)
-    draw.SimpleText(fitBadge, "GW_UI_Badge", badgeX + badgeW / 2, headerY + 11, badgeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(fitBadge, "GW_UI_Badge", badgeX + badgeW / 2, headerY + 11, badgeCol, TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
     -- Player Level Capsule Pill
     local curLevel = ply.GetLevel and ply:GetLevel() or 1
@@ -243,7 +245,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
     draw.RoundedBox(4, lvlBadgeX, headerY, lvlBadgeW, 22, Color(245, 158, 11, 40))
     surface.SetDrawColor(245, 158, 11, 180)
     surface.DrawOutlinedRect(lvlBadgeX, headerY, lvlBadgeW, 22, 1)
-    draw.SimpleText(lvlBadgeText, "GW_UI_Badge", lvlBadgeX + lvlBadgeW / 2, headerY + 11, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(lvlBadgeText, "GW_UI_Badge", lvlBadgeX + lvlBadgeW / 2, headerY + 11, Color(251, 191, 36),
+        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- Player Nickname (Word/length fitted to avoid badge overlap)
     local nickX = lvlBadgeX + lvlBadgeW + 8
@@ -283,7 +286,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
     draw.RoundedBox(4, hudX + 14, hpY, 32, barH, Color(239, 68, 68, 35))
     surface.SetDrawColor(239, 68, 68, 160)
     surface.DrawOutlinedRect(hudX + 14, hpY, 32, barH, 1)
-    draw.SimpleText("HP", "GW_UI_Badge", hudX + 14 + 16, hpY + barH / 2, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("HP", "GW_UI_Badge", hudX + 14 + 16, hpY + barH / 2, Color(248, 113, 113), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
     draw.RoundedBox(4, trackX, hpY, trackW, barH, Color(17, 24, 39, 240))
     surface.SetDrawColor(30, 41, 59, 180)
@@ -296,15 +300,18 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
         draw.RoundedBox(2, trackX + 1, hpY + 1, math.max(4, fillW - 2), 2, Color(254, 202, 202, 70))
     end
     local hpStr = string.format("%d / %d", math.max(0, math.ceil(smoothHP)), maxHP)
-    draw.SimpleText(hpStr, "GW_UI_Badge", trackX + trackW - 7, hpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(hpStr, "GW_UI_Badge", trackX + trackW - 8, hpY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(hpStr, "GW_UI_Badge", trackX + trackW - 7, hpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT,
+        TEXT_ALIGN_CENTER)
+    draw.SimpleText(hpStr, "GW_UI_Badge", trackX + trackW - 8, hpY + barH / 2, Color(255, 255, 255, 240),
+        TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
     -- Armor Bar Row
     local armorY = hudY + 65
     draw.RoundedBox(4, hudX + 14, armorY, 32, barH, Color(6, 182, 212, 35))
     surface.SetDrawColor(6, 182, 212, 160)
     surface.DrawOutlinedRect(hudX + 14, armorY, 32, barH, 1)
-    draw.SimpleText("AP", "GW_UI_Badge", hudX + 14 + 16, armorY + barH / 2, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("AP", "GW_UI_Badge", hudX + 14 + 16, armorY + barH / 2, Color(34, 211, 238), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
     draw.RoundedBox(4, trackX, armorY, trackW, barH, Color(17, 24, 39, 240))
     surface.SetDrawColor(30, 41, 59, 180)
@@ -317,15 +324,18 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
         draw.RoundedBox(2, trackX + 1, armorY + 1, math.max(4, fillW - 2), 2, Color(165, 243, 252, 70))
     end
     local armorStr = string.format("%d / 100", math.max(0, math.ceil(smoothArmor)))
-    draw.SimpleText(armorStr, "GW_UI_Badge", trackX + trackW - 7, armorY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(armorStr, "GW_UI_Badge", trackX + trackW - 8, armorY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(armorStr, "GW_UI_Badge", trackX + trackW - 7, armorY + barH / 2 + 1, Color(0, 0, 0, 180),
+        TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(armorStr, "GW_UI_Badge", trackX + trackW - 8, armorY + barH / 2, Color(255, 255, 255, 240),
+        TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
     -- XP Progress Bar Row
     local xpY = hudY + 86
     draw.RoundedBox(4, hudX + 14, xpY, 32, barH, Color(245, 158, 11, 35))
     surface.SetDrawColor(245, 158, 11, 160)
     surface.DrawOutlinedRect(hudX + 14, xpY, 32, barH, 1)
-    draw.SimpleText("XP", "GW_UI_Badge", hudX + 14 + 16, xpY + barH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("XP", "GW_UI_Badge", hudX + 14 + 16, xpY + barH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
     draw.RoundedBox(4, trackX, xpY, trackW, barH, Color(17, 24, 39, 240))
     surface.SetDrawColor(30, 41, 59, 180)
@@ -337,9 +347,12 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
         draw.RoundedBox(4, trackX, xpY, fillW, barH, Color(245, 158, 11))
         draw.RoundedBox(2, trackX + 1, xpY + 1, math.max(4, fillW - 2), 2, Color(253, 230, 138, 80))
     end
-    local xpStr = isMaxLvl and "MAX LEVEL (50)" or string.format("%s / %s XP (%d%%)", string.Comma(math.ceil(smoothXP)), string.Comma(reqXP), math.floor(xpPct * 100))
-    draw.SimpleText(xpStr, "GW_UI_Badge", trackX + trackW - 7, xpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(xpStr, "GW_UI_Badge", trackX + trackW - 8, xpY + barH / 2, Color(255, 255, 255, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    local xpStr = isMaxLvl and "MAX LEVEL (50)" or
+    string.format("%s / %s XP (%d%%)", string.Comma(math.ceil(smoothXP)), string.Comma(reqXP), math.floor(xpPct * 100))
+    draw.SimpleText(xpStr, "GW_UI_Badge", trackX + trackW - 7, xpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT,
+        TEXT_ALIGN_CENTER)
+    draw.SimpleText(xpStr, "GW_UI_Badge", trackX + trackW - 8, xpY + barH / 2, Color(255, 255, 255, 240),
+        TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
     -- Slate Mid Divider Line
     surface.SetDrawColor(30, 41, 59, 200)
@@ -352,7 +365,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
     draw.RoundedBox(4, hudX + 14, econY, 24, 24, Color(16, 185, 129, 35))
     surface.SetDrawColor(16, 185, 129, 160)
     surface.DrawOutlinedRect(hudX + 14, econY, 24, 24, 1)
-    draw.SimpleText("$", "GW_UI_Badge", hudX + 14 + 12, econY + 12, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("$", "GW_UI_Badge", hudX + 14 + 12, econY + 12, Color(52, 211, 153), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
     -- Cash Value
     local moneyStr = GW.FormatMoney(ply:GetMoney())
@@ -370,7 +384,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
     draw.RoundedBox(4, salPillX, econY, salPillW, 24, Color(24, 32, 47, 240))
     surface.SetDrawColor(30, 41, 59, 220)
     surface.DrawOutlinedRect(salPillX, econY, salPillW, 24, 1)
-    draw.SimpleText(salaryStr, "GW_UI_Badge", salPillX + salPillW / 2, econY + 12, Color(56, 189, 248), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(salaryStr, "GW_UI_Badge", salPillX + salPillW / 2, econY + 12, Color(56, 189, 248), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
     -- 2.5 Floating Animated +XP Popups (Ascending above the HUD card)
     local now = CurTime()
@@ -394,7 +409,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
             draw.RoundedBox(4, px, currentY, pw, 24, Color(11, 15, 25, math.min(alpha, 220)))
             surface.SetDrawColor(245, 158, 11, math.min(alpha, 180))
             surface.DrawOutlinedRect(px, currentY, pw, 24, 1)
-            draw.SimpleText(p.text, "GW_UI_Header", px + pw / 2, currentY + 12, Color(251, 191, 36, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(p.text, "GW_UI_Header", px + pw / 2, currentY + 12, Color(251, 191, 36, alpha),
+                TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
     end
 
@@ -423,10 +439,13 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
 
             -- Banner Content
             local titleTxt = "★ LEVEL UP! REACHED LEVEL " .. levelUpBanner.level .. " ★"
-            draw.SimpleText(titleTxt, "GW_UI_Title", bX + bW / 2, bY + 24, Color(251, 191, 36, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(titleTxt, "GW_UI_Title", bX + bW / 2, bY + 24, Color(251, 191, 36, alpha), TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
 
-            local rewardTxt = string.format("Cash Reward: +$%s  •  Health Fully Restored!", string.Comma(levelUpBanner.reward))
-            draw.SimpleText(rewardTxt, "GW_UI_Sub", bX + bW / 2, bY + 54, Color(74, 222, 128, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            local rewardTxt = string.format("Cash Reward: +$%s  •  Health Fully Restored!",
+                string.Comma(levelUpBanner.reward))
+            draw.SimpleText(rewardTxt, "GW_UI_Sub", bX + bW / 2, bY + 54, Color(74, 222, 128, alpha), TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
         end
     end
 
@@ -458,7 +477,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
             -- Weapon Name
             local wepName = wep:GetPrintName() or "WEAPON"
             local fitName = GW.UI.FitText(string.upper(wepName), "GW_UI_Badge", ammoW - 28)
-            draw.SimpleText(fitName, "GW_UI_Badge", ammoX + ammoW - 14, ammoY + 16, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(fitName, "GW_UI_Badge", ammoX + ammoW - 14, ammoY + 16, Color(148, 163, 184),
+                TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
             -- Divider
             surface.SetDrawColor(30, 41, 59, 200)
@@ -466,10 +486,13 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
 
             -- Ammo Numbers
             if clip >= 0 then
-                draw.SimpleText(tostring(clip), "GW_FontAmmo", ammoX + ammoW - 14 - 55, ammoY + 52, Color(245, 158, 11), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-                draw.SimpleText("/ " .. reserve, "GW_UI_Sub", ammoX + ammoW - 14, ammoY + 55, Color(203, 213, 225), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(tostring(clip), "GW_FontAmmo", ammoX + ammoW - 14 - 55, ammoY + 52, Color(245, 158, 11),
+                    TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("/ " .. reserve, "GW_UI_Sub", ammoX + ammoW - 14, ammoY + 55, Color(203, 213, 225),
+                    TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
             else
-                draw.SimpleText(tostring(reserve), "GW_FontAmmo", ammoX + ammoW - 14, ammoY + 52, Color(245, 158, 11), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(tostring(reserve), "GW_FontAmmo", ammoX + ammoW - 14, ammoY + 52, Color(245, 158, 11),
+                    TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
             end
         end
     end
@@ -491,6 +514,10 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
             local gangName = ent:GetNWString("GW_DoorFaction", "")
             local isOwned = IsValid(owner)
             local isOwner = isOwned and (owner == ply)
+
+            -- Do not display purchase HUD on unpurchasable map doors
+            if not isOwned and ent:GetClass() == "func_door" then return end
+
             local canAccess = ent.CanAccessDoor and ent:CanAccessDoor(ply)
             local cost = (GW.Config and GW.Config.DoorCost) or 15
 
@@ -506,13 +533,15 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
                 accentCol = Color(52, 211, 153)
                 badgeText = "YOUR DOOR"
                 titleText = ply:Nick()
-                local gangStr = (gangName ~= "" and gangName ~= "neutral") and ("Faction: " .. string.upper(gangName)) or "Private Residence"
+                local gangStr = (gangName ~= "" and gangName ~= "neutral") and ("Faction: " .. string.upper(gangName)) or
+                "Private Residence"
                 subText = gangStr
                 subCol = Color(148, 163, 184)
                 promptText = "[F2] Manage / Sell Property"
                 promptCol = Color(74, 222, 128)
             elseif isOwned then
-                local gangCol = (gangName ~= "" and gangName ~= "neutral" and GW.GetGangColor) and GW.GetGangColor(gangName) or nil
+                local gangCol = (gangName ~= "" and gangName ~= "neutral" and GW.GetGangColor) and
+                GW.GetGangColor(gangName) or nil
                 if canAccess then
                     accentCol = gangCol or Color(6, 182, 212)
                     badgeText = "GANG ACCESS"
@@ -525,7 +554,8 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
                     accentCol = gangCol or Color(251, 191, 36)
                     badgeText = "OCCUPIED"
                     titleText = owner:Nick()
-                    local gangStr = (gangName ~= "" and gangName ~= "neutral") and ("Faction: " .. string.upper(gangName)) or "Private Residence"
+                    local gangStr = (gangName ~= "" and gangName ~= "neutral") and
+                    ("Faction: " .. string.upper(gangName)) or "Private Residence"
                     subText = gangStr
                     subCol = Color(148, 163, 184)
                     promptText = "Restricted Access  •  Trespassers Beware"
@@ -550,17 +580,20 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
             draw.RoundedBox(4, cardX + 8, tagY + 8, badgeW, 20, Color(accentCol.r, accentCol.g, accentCol.b, 40))
             surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 160)
             surface.DrawOutlinedRect(cardX + 8, tagY + 8, badgeW, 20, 1)
-            draw.SimpleText(badgeText, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(badgeText, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
 
             local maxTitleW = cardW - badgeW - 24
             local fitTitle = GW.UI.FitText(titleText, "GW_UI_Badge", maxTitleW)
-            draw.SimpleText(fitTitle, "GW_UI_Badge", cardX + badgeW + 16, tagY + 18, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(fitTitle, "GW_UI_Badge", cardX + badgeW + 16, tagY + 18, Color(248, 250, 252),
+                TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Row 2: Subtitle Info
             draw.SimpleText(subText, "GW_FontSmall", cardX + 12, tagY + 44, subCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Row 3: Prompt Action
-            draw.SimpleText(promptText, "GW_UI_Caption", cardX + 12, tagY + 68, promptCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(promptText, "GW_UI_Caption", cardX + 12, tagY + 68, promptCol, TEXT_ALIGN_LEFT,
+                TEXT_ALIGN_CENTER)
         elseif distSqr <= (160 * 160) and ent:GetClass() == "gw_clinic_pod" then
             local tagX = ScrW() / 2
             local tagY = ScrH() / 2 + 36
@@ -575,177 +608,200 @@ hook.Add("HUDPaint", "GW_DrawMainHUD", function()
             surface.SetDrawColor(52, 211, 153, 200)
             surface.DrawOutlinedRect(tagX - totalW / 2, tagY, totalW, totalH, 1)
 
-            draw.SimpleText(podTitle, "GW_UI_Badge", tagX, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(podTitle, "GW_UI_Badge", tagX, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
         elseif distSqr <= (160 * 160) and ent.HasItemQuality and ent:HasItemQuality() then
             local qData = ent:GetItemQualityData()
             if qData then
-            local entName = ent.PrintName or ent:GetClass()
-            local qName = qData.name
-            local qCol = qData.color
+                local entName = ent.PrintName or ent:GetClass()
+                local qName = qData.name
+                local qCol = qData.color
 
-            local tagX = ScrW() / 2
-            local tagY = ScrH() / 2 + 36
+                local tagX = ScrW() / 2
+                local tagY = ScrH() / 2 + 36
 
-            surface.SetFont("GW_UI_Badge")
-            local nameW = surface.GetTextSize(entName)
-            local badgeW = surface.GetTextSize(qName) + 16
+                surface.SetFont("GW_UI_Badge")
+                local nameW = surface.GetTextSize(entName)
+                local badgeW = surface.GetTextSize(qName) + 16
 
-            -- Up-Close Raycast UI: Layer-3 Network Switch
-            if ent:GetClass() == "gw_network_switch" then
-                local cardW = 380
-                local cardH = 96
-                local cardX = tagX - cardW / 2
+                -- Up-Close Raycast UI: Layer-3 Network Switch
+                if ent:GetClass() == "gw_network_switch" then
+                    local cardW = 380
+                    local cardH = 96
+                    local cardX = tagX - cardW / 2
 
-                draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
-                surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
-                surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+                    draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+                    surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
+                    surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
 
-                -- Header: Quality Pill + Switch Title
-                draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
-                draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    -- Header: Quality Pill + Switch Title
+                    draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
+                    draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER,
+                        TEXT_ALIGN_CENTER)
+                    draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252),
+                        TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-                -- 4 Ports Status Row: Ports 1..2 (Copper), Port 3 (SFP Combo 10G/1G), Port 4 (Dedicated SFP 10G)
-                local p1 = ent.GetPort1Active and ent:GetPort1Active()
-                local p2 = ent.GetPort2Active and ent:GetPort2Active()
-                local p3 = ent.GetPort3Active and ent:GetPort3Active()
-                local p3Is10G = ent.GetPort3Is10G and ent:GetPort3Is10G()
-                local p4 = ent.GetPort4Active and ent:GetPort4Active()
+                    -- 4 Ports Status Row: Ports 1..2 (Copper), Port 3 (SFP Combo 10G/1G), Port 4 (Dedicated SFP 10G)
+                    local p1 = ent.GetPort1Active and ent:GetPort1Active()
+                    local p2 = ent.GetPort2Active and ent:GetPort2Active()
+                    local p3 = ent.GetPort3Active and ent:GetPort3Active()
+                    local p3Is10G = ent.GetPort3Is10G and ent:GetPort3Is10G()
+                    local p4 = ent.GetPort4Active and ent:GetPort4Active()
 
-                local portW = 86
-                local portH = 24
-                local portY = tagY + 34
-                local ports = {
-                    { name = "P1", active = p1, x = cardX + 10, isSFP = false, is10G = false, isCombo = false },
-                    { name = "P2", active = p2, x = cardX + 101, isSFP = false, is10G = false, isCombo = false },
-                    { name = "P3", active = p3, x = cardX + 192, isSFP = true, is10G = p3Is10G, isCombo = true },
-                    { name = "P4", active = p4, x = cardX + 283, isSFP = true, is10G = true, isCombo = false }
-                }
+                    local portW = 86
+                    local portH = 24
+                    local portY = tagY + 34
+                    local ports = {
+                        { name = "P1", active = p1, x = cardX + 10,  isSFP = false, is10G = false,   isCombo = false },
+                        { name = "P2", active = p2, x = cardX + 101, isSFP = false, is10G = false,   isCombo = false },
+                        { name = "P3", active = p3, x = cardX + 192, isSFP = true,  is10G = p3Is10G, isCombo = true },
+                        { name = "P4", active = p4, x = cardX + 283, isSFP = true,  is10G = true,    isCombo = false }
+                    }
 
-                for _, pt in ipairs(ports) do
-                    local bg, col, txt
-                    if pt.isCombo then
-                        if pt.active then
-                            bg = pt.is10G and Color(6, 182, 212, 35) or Color(16, 185, 129, 35)
-                            col = pt.is10G and Color(56, 189, 248) or Color(52, 211, 153)
-                            txt = pt.is10G and "P3: 10G" or "P3: 1G Cu"
+                    for _, pt in ipairs(ports) do
+                        local bg, col, txt
+                        if pt.isCombo then
+                            if pt.active then
+                                bg = pt.is10G and Color(6, 182, 212, 35) or Color(16, 185, 129, 35)
+                                col = pt.is10G and Color(56, 189, 248) or Color(52, 211, 153)
+                                txt = pt.is10G and "P3: 10G" or "P3: 1G Cu"
+                            else
+                                bg = Color(30, 41, 59, 140)
+                                col = Color(100, 116, 139)
+                                txt = "P3: COMBO"
+                            end
+                        elseif pt.isSFP then
+                            bg = pt.active and Color(6, 182, 212, 35) or Color(30, 41, 59, 140)
+                            col = pt.active and Color(56, 189, 248) or Color(100, 116, 139)
+                            txt = pt.active and "P4: 10G" or "P4: SFP"
                         else
-                            bg = Color(30, 41, 59, 140)
-                            col = Color(100, 116, 139)
-                            txt = "P3: COMBO"
+                            bg = pt.active and Color(16, 185, 129, 35) or Color(30, 41, 59, 140)
+                            col = pt.active and Color(52, 211, 153) or Color(148, 163, 184)
+                            txt = pt.active and (pt.name .. ": LINK") or (pt.name .. ": OPEN")
                         end
-                    elseif pt.isSFP then
-                        bg = pt.active and Color(6, 182, 212, 35) or Color(30, 41, 59, 140)
-                        col = pt.active and Color(56, 189, 248) or Color(100, 116, 139)
-                        txt = pt.active and "P4: 10G" or "P4: SFP"
-                    else
-                        bg = pt.active and Color(16, 185, 129, 35) or Color(30, 41, 59, 140)
-                        col = pt.active and Color(52, 211, 153) or Color(148, 163, 184)
-                        txt = pt.active and (pt.name .. ": LINK") or (pt.name .. ": OPEN")
+
+                        draw.RoundedBox(4, pt.x, portY, portW, portH, bg)
+                        surface.SetDrawColor(col.r, col.g, col.b, 160)
+                        surface.DrawOutlinedRect(pt.x, portY, portW, portH, 1)
+                        draw.SimpleText(txt, "GW_UI_Caption", pt.x + portW / 2, portY + 12, col, TEXT_ALIGN_CENTER,
+                            TEXT_ALIGN_CENTER)
                     end
 
-                    draw.RoundedBox(4, pt.x, portY, portW, portH, bg)
-                    surface.SetDrawColor(col.r, col.g, col.b, 160)
-                    surface.DrawOutlinedRect(pt.x, portY, portW, portH, 1)
-                    draw.SimpleText(txt, "GW_UI_Caption", pt.x + portW / 2, portY + 12, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                end
+                    -- Hardware Status Row
+                    local p3Status = p3 and (p3Is10G and "P3: 10G SFP Mode" or "P3: 1G Copper Mode") or
+                    "P3: SFP Combo Open"
+                    local p4Status = p4 and "P4: 10G Uplink UP" or "P4: 10G Uplink Open"
+                    local linksTxt = string.format("%s | %s", p3Status, p4Status)
 
-                -- Hardware Status Row
-                local p3Status = p3 and (p3Is10G and "P3: 10G SFP Mode" or "P3: 1G Copper Mode") or "P3: SFP Combo Open"
-                local p4Status = p4 and "P4: 10G Uplink UP" or "P4: 10G Uplink Open"
-                local linksTxt = string.format("%s | %s", p3Status, p4Status)
+                    draw.SimpleText(linksTxt, "GW_UI_Caption", cardX + cardW / 2, tagY + 75, Color(203, 213, 225),
+                        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-                draw.SimpleText(linksTxt, "GW_UI_Caption", cardX + cardW / 2, tagY + 75, Color(203, 213, 225), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    -- Up-Close Raycast UI: Satellite WAN Uplink Gateway
+                elseif ent:GetClass() == "gw_wan_uplink" then
+                    local cardW = 360
+                    local cardH = 92
+                    local cardX = tagX - cardW / 2
 
-            -- Up-Close Raycast UI: Satellite WAN Uplink Gateway
-            elseif ent:GetClass() == "gw_wan_uplink" then
-                local cardW = 360
-                local cardH = 92
-                local cardX = tagX - cardW / 2
+                    draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+                    surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
+                    surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
 
-                draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
-                surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
-                surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+                    -- Header: Quality Pill + Name
+                    draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
+                    draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER,
+                        TEXT_ALIGN_CENTER)
+                    draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252),
+                        TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-                -- Header: Quality Pill + Name
-                draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
-                draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    -- Key and Mesh Status Row
+                    local key = ent.GetEncryptionKey and ent:GetEncryptionKey() or "NONE"
+                    local isOnline = ent.GetIsOnline and ent:GetIsOnline()
+                    local peers = ent.GetLinkedPeerCount and ent:GetLinkedPeerCount() or 0
+                    local statusCol = isOnline and Color(52, 211, 153) or Color(245, 158, 11)
+                    local statusTxt = isOnline and string.format("ONLINE (%d PEER%s)", peers, peers == 1 and "" or "S") or
+                    "SEARCHING"
 
-                -- Key and Mesh Status Row
-                local key = ent.GetEncryptionKey and ent:GetEncryptionKey() or "NONE"
-                local isOnline = ent.GetIsOnline and ent:GetIsOnline()
-                local peers = ent.GetLinkedPeerCount and ent:GetLinkedPeerCount() or 0
-                local statusCol = isOnline and Color(52, 211, 153) or Color(245, 158, 11)
-                local statusTxt = isOnline and string.format("ONLINE (%d PEER%s)", peers, peers == 1 and "" or "S") or "SEARCHING"
+                    draw.SimpleText(string.format("Encryption Key: %s", key), "GW_UI_BodyBold", cardX + 12, tagY + 40,
+                        Color(56, 189, 248), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    draw.SimpleText(statusTxt, "GW_UI_Badge", cardX + cardW - 12, tagY + 40, statusCol, TEXT_ALIGN_RIGHT,
+                        TEXT_ALIGN_CENTER)
 
-                draw.SimpleText(string.format("Encryption Key: %s", key), "GW_UI_BodyBold", cardX + 12, tagY + 40, Color(56, 189, 248), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText(statusTxt, "GW_UI_Badge", cardX + cardW - 12, tagY + 40, statusCol, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                    -- Attachment and Hint Row
+                    local sw = ent.GetConnectedSwitch and ent:GetConnectedSwitch()
+                    local swTxt = IsValid(sw) and
+                    string.format("Connected: L3 Switch Port %d (Active L3 Route)", ent:GetAssignedPort() or 0) or
+                    "Unlinked: Connect to L3 Switch via Wire Tool"
+                    draw.SimpleText(swTxt, "GW_UI_Caption", cardX + 12, tagY + 68, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+                        TEXT_ALIGN_CENTER)
 
-                -- Attachment and Hint Row
-                local sw = ent.GetConnectedSwitch and ent:GetConnectedSwitch()
-                local swTxt = IsValid(sw) and string.format("Connected: L3 Switch Port %d (Active L3 Route)", ent:GetAssignedPort() or 0) or "Unlinked: Connect to L3 Switch via Wire Tool"
-                draw.SimpleText(swTxt, "GW_UI_Caption", cardX + 12, tagY + 68, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    -- Up-Close Raycast UI: Contraband Money Printers
+                elseif ent.PrintAmount ~= nil or ent:GetClass():find("gw_printer_") then
+                    local cardW = 340
+                    local cardH = 102
+                    local cardX = tagX - cardW / 2
 
-            -- Up-Close Raycast UI: Contraband Money Printers
-            elseif ent.PrintAmount ~= nil or ent:GetClass():find("gw_printer_") then
-                local cardW = 340
-                local cardH = 102
-                local cardX = tagX - cardW / 2
+                    draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+                    surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
+                    surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
 
-                draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
-                surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
-                surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+                    -- Header: Quality Pill + Printer Name
+                    draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
+                    draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER,
+                        TEXT_ALIGN_CENTER)
+                    draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252),
+                        TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-                -- Header: Quality Pill + Printer Name
-                draw.RoundedBox(4, cardX + 8, tagY + 6, badgeW, 20, Color(qCol.r, qCol.g, qCol.b, 40))
-                draw.SimpleText(qName, "GW_UI_Badge", cardX + 8 + badgeW / 2, tagY + 16, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                draw.SimpleText(entName, "GW_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    -- Stored Cash Row
+                    local cash = ent.GetStoredCash and ent:GetStoredCash() or 0
+                    draw.SimpleText(string.format("Stored Cash: +$%d", cash), "GW_FontSmall", cardX + 12, tagY + 39,
+                        GW.Colors.MoneyGreen, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-                -- Stored Cash Row
-                local cash = ent.GetStoredCash and ent:GetStoredCash() or 0
-                draw.SimpleText(string.format("Stored Cash: +$%d", cash), "GW_FontSmall", cardX + 12, tagY + 39, GW.Colors.MoneyGreen, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    -- Temperature Row (Dedicated line to prevent clipping with undervolt tag)
+                    local temp = ent.GetTemperature and ent:GetTemperature() or 20
+                    local isUv = ent.GetHasUndervolt and ent:GetHasUndervolt()
+                    local tempCol = temp > 75 and GW.Colors.HealthRed or
+                    (isUv and Color(56, 189, 248) or Color(203, 213, 225))
+                    local tempTxt = isUv and string.format("Temp: %d°C / 100°C (Undervolted)", temp) or
+                    string.format("Temp: %d°C / 100°C", temp)
+                    draw.SimpleText(tempTxt, "GW_UI_Caption", cardX + 12, tagY + 61, tempCol, TEXT_ALIGN_LEFT,
+                        TEXT_ALIGN_CENTER)
 
-                -- Temperature Row (Dedicated line to prevent clipping with undervolt tag)
-                local temp = ent.GetTemperature and ent:GetTemperature() or 20
-                local isUv = ent.GetHasUndervolt and ent:GetHasUndervolt()
-                local tempCol = temp > 75 and GW.Colors.HealthRed or (isUv and Color(56, 189, 248) or Color(203, 213, 225))
-                local tempTxt = isUv and string.format("Temp: %d°C / 100°C (Undervolted)", temp) or string.format("Temp: %d°C / 100°C", temp)
-                draw.SimpleText(tempTxt, "GW_UI_Caption", cardX + 12, tagY + 61, tempCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    -- Efficiency Row
+                    local eff = ent.GetEfficiency and ent:GetEfficiency() or 60
+                    if not eff or eff <= 0 then eff = 60 end
 
-                -- Efficiency Row
-                local eff = ent.GetEfficiency and ent:GetEfficiency() or 60
-                if not eff or eff <= 0 then eff = 60 end
+                    local effCol, effTxt
+                    if eff >= 100 then
+                        effCol = Color(52, 211, 153)
+                        effTxt = "Efficiency: 100%"
+                    elseif eff <= 60 then
+                        effCol = Color(251, 191, 36)
+                        effTxt = "Efficiency: 60%"
+                    else
+                        effCol = Color(56, 189, 248)
+                        effTxt = "Efficiency: 80%"
+                    end
 
-                local effCol, effTxt
-                if eff >= 100 then
-                    effCol = Color(52, 211, 153)
-                    effTxt = "Efficiency: 100%"
-                elseif eff <= 60 then
-                    effCol = Color(251, 191, 36)
-                    effTxt = "Efficiency: 60%"
+                    draw.SimpleText(effTxt, "GW_UI_Caption", cardX + 12, tagY + 83, effCol, TEXT_ALIGN_LEFT,
+                        TEXT_ALIGN_CENTER)
+
+                    -- Standard Raycast Badge for Other In-World Entities
                 else
-                    effCol = Color(56, 189, 248)
-                    effTxt = "Efficiency: 80%"
+                    local totalW = nameW + badgeW + 24
+                    draw.RoundedBox(6, tagX - totalW / 2, tagY, totalW, 30, Color(11, 15, 25, 240))
+                    surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
+                    surface.DrawOutlinedRect(tagX - totalW / 2, tagY, totalW, 30, 1)
+
+                    -- Quality Pill Badge
+                    draw.RoundedBox(4, tagX - totalW / 2 + 6, tagY + 4, badgeW, 22, Color(qCol.r, qCol.g, qCol.b, 40))
+                    draw.SimpleText(qName, "GW_UI_Badge", tagX - totalW / 2 + 6 + badgeW / 2, tagY + 15, qCol,
+                        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+                    -- Entity Name
+                    draw.SimpleText(entName, "GW_UI_Badge", tagX - totalW / 2 + badgeW + 14, tagY + 15,
+                        Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
                 end
-
-                draw.SimpleText(effTxt, "GW_UI_Caption", cardX + 12, tagY + 83, effCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-            -- Standard Raycast Badge for Other In-World Entities
-            else
-                local totalW = nameW + badgeW + 24
-                draw.RoundedBox(6, tagX - totalW / 2, tagY, totalW, 30, Color(11, 15, 25, 240))
-                surface.SetDrawColor(qCol.r, qCol.g, qCol.b, 200)
-                surface.DrawOutlinedRect(tagX - totalW / 2, tagY, totalW, 30, 1)
-
-                -- Quality Pill Badge
-                draw.RoundedBox(4, tagX - totalW / 2 + 6, tagY + 4, badgeW, 22, Color(qCol.r, qCol.g, qCol.b, 40))
-                draw.SimpleText(qName, "GW_UI_Badge", tagX - totalW / 2 + 6 + badgeW / 2, tagY + 15, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-
-                -- Entity Name
-                draw.SimpleText(entName, "GW_UI_Badge", tagX - totalW / 2 + badgeW + 14, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             end
         end
     end
-end
 end)

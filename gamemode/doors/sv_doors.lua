@@ -24,6 +24,12 @@ net.Receive("GW_DoorAction", function(len, ply)
     local currentOwner = ent:GetNWEntity("GW_DoorOwner")
 
     if action == "buy" then
+        -- Disallow purchasing func_door entities
+        if ent:GetClass() == "func_door" then
+            GW.Notify(ply, "This type of door cannot be purchased!", NOTIFY_ERROR)
+            return
+        end
+
         -- Hobos cannot purchase property
         if ply:GetJob() == "hobo" then
             GW.Notify(ply, "Hobos are homeless and cannot purchase properties!", NOTIFY_ERROR)
