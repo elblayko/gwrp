@@ -1,4 +1,4 @@
-﻿-- ========================================================
+-- ========================================================
 -- GridRP (GRID) - Production MariaDB Schema
 -- Database Architecture: 100% Stored Procedures & Analytical Views
 -- Engine: InnoDB | Standard: MariaDB 10.6+ / 11.x
@@ -266,7 +266,7 @@ GROUP BY action_type;
 DELIMITER $$
 
 -- Telemetry Logging Procedure
-CREATE PROCEDURE grid_log_telemetry(
+CREATE OR REPLACE PROCEDURE grid_log_telemetry(
     IN p_category VARCHAR(20),
     IN p_action_type VARCHAR(48),
     IN p_actor_steamid VARCHAR(20),
@@ -283,7 +283,7 @@ BEGIN
 END$$
 
 -- Player Management Procedures
-CREATE PROCEDURE grid_upsert_player(
+CREATE OR REPLACE PROCEDURE grid_upsert_player(
     IN p_steamid VARCHAR(20),
     IN p_name VARCHAR(64),
     IN p_money BIGINT,
@@ -308,7 +308,7 @@ BEGIN
         last_seen = p_last_seen;
 END$$
 
-CREATE PROCEDURE grid_update_player_money(
+CREATE OR REPLACE PROCEDURE grid_update_player_money(
     IN p_steamid VARCHAR(20),
     IN p_money BIGINT,
     IN p_last_seen INT UNSIGNED
@@ -319,7 +319,7 @@ BEGIN
     WHERE steamid = p_steamid;
 END$$
 
-CREATE PROCEDURE grid_update_player_gang(
+CREATE OR REPLACE PROCEDURE grid_update_player_gang(
     IN p_steamid VARCHAR(20),
     IN p_gang VARCHAR(32),
     IN p_last_seen INT UNSIGNED
@@ -330,7 +330,7 @@ BEGIN
     WHERE steamid = p_steamid;
 END$$
 
-CREATE PROCEDURE grid_update_player_job(
+CREATE OR REPLACE PROCEDURE grid_update_player_job(
     IN p_steamid VARCHAR(20),
     IN p_job VARCHAR(32),
     IN p_last_seen INT UNSIGNED
@@ -341,7 +341,7 @@ BEGIN
     WHERE steamid = p_steamid;
 END$$
 
-CREATE PROCEDURE grid_update_player_level_xp(
+CREATE OR REPLACE PROCEDURE grid_update_player_level_xp(
     IN p_steamid VARCHAR(20),
     IN p_level INT,
     IN p_xp BIGINT,
@@ -354,7 +354,7 @@ BEGIN
 END$$
 
 -- Gangs & Atomic Vault Transfers
-CREATE PROCEDURE grid_create_gang(
+CREATE OR REPLACE PROCEDURE grid_create_gang(
     IN p_gang_name VARCHAR(32),
     IN p_leader_steamid VARCHAR(20),
     IN p_unix_time INT UNSIGNED
@@ -383,7 +383,7 @@ BEGIN
     COMMIT;
 END$$
 
-CREATE PROCEDURE grid_add_gang_member(
+CREATE OR REPLACE PROCEDURE grid_add_gang_member(
     IN p_steamid VARCHAR(20),
     IN p_gang_name VARCHAR(32),
     IN p_rank VARCHAR(16),
@@ -409,7 +409,7 @@ BEGIN
     COMMIT;
 END$$
 
-CREATE PROCEDURE grid_remove_gang_member(
+CREATE OR REPLACE PROCEDURE grid_remove_gang_member(
     IN p_steamid VARCHAR(20)
 )
 BEGIN
@@ -427,7 +427,7 @@ BEGIN
     COMMIT;
 END$$
 
-CREATE PROCEDURE grid_add_gang_bank(
+CREATE OR REPLACE PROCEDURE grid_add_gang_bank(
     IN p_gang_name VARCHAR(32),
     IN p_amount BIGINT
 )
@@ -437,7 +437,7 @@ BEGIN
     WHERE name = p_gang_name;
 END$$
 
-CREATE PROCEDURE grid_transfer_gang_vault(
+CREATE OR REPLACE PROCEDURE grid_transfer_gang_vault(
     IN p_steamid VARCHAR(20),
     IN p_gang_name VARCHAR(32),
     IN p_delta BIGINT,
@@ -473,7 +473,7 @@ BEGIN
     COMMIT;
 END$$
 
-CREATE PROCEDURE grid_disband_gang(
+CREATE OR REPLACE PROCEDURE grid_disband_gang(
     IN p_gang_name VARCHAR(32)
 )
 BEGIN
@@ -493,7 +493,7 @@ BEGIN
 END$$
 
 -- Inventory & Bag Storage Procedures
-CREATE PROCEDURE grid_set_inventory_slot(
+CREATE OR REPLACE PROCEDURE grid_set_inventory_slot(
     IN p_steamid VARCHAR(20),
     IN p_bag_index TINYINT UNSIGNED,
     IN p_slot_index TINYINT UNSIGNED,
@@ -512,7 +512,7 @@ BEGIN
     END IF;
 END$$
 
-CREATE PROCEDURE grid_delete_inventory_slot(
+CREATE OR REPLACE PROCEDURE grid_delete_inventory_slot(
     IN p_steamid VARCHAR(20),
     IN p_bag_index TINYINT UNSIGNED,
     IN p_slot_index TINYINT UNSIGNED
@@ -522,7 +522,7 @@ BEGIN
     WHERE steamid = p_steamid AND bag_index = p_bag_index AND slot_index = p_slot_index;
 END$$
 
-CREATE PROCEDURE grid_move_inventory_slot(
+CREATE OR REPLACE PROCEDURE grid_move_inventory_slot(
     IN p_steamid VARCHAR(20),
     IN p_from_bag TINYINT UNSIGNED,
     IN p_from_slot TINYINT UNSIGNED,
@@ -581,7 +581,7 @@ BEGIN
     COMMIT;
 END$$
 
-CREATE PROCEDURE grid_set_player_bags(
+CREATE OR REPLACE PROCEDURE grid_set_player_bags(
     IN p_steamid VARCHAR(20),
     IN p_bag1 VARCHAR(64),
     IN p_bag2 VARCHAR(64),
@@ -599,7 +599,7 @@ BEGIN
 END$$
 
 -- Turf & Territory Procedures
-CREATE PROCEDURE grid_save_map_turf(
+CREATE OR REPLACE PROCEDURE grid_save_map_turf(
     IN p_map VARCHAR(64),
     IN p_turf_id INT,
     IN p_name VARCHAR(64),
@@ -623,14 +623,14 @@ BEGIN
         tax_rate = p_tax_rate;
 END$$
 
-CREATE PROCEDURE grid_clear_map_turfs(
+CREATE OR REPLACE PROCEDURE grid_clear_map_turfs(
     IN p_map VARCHAR(64)
 )
 BEGIN
     DELETE FROM grid_turfs WHERE map = p_map;
 END$$
 
-CREATE PROCEDURE grid_delete_map_turf(
+CREATE OR REPLACE PROCEDURE grid_delete_map_turf(
     IN p_map VARCHAR(64),
     IN p_turf_id INT
 )
@@ -638,7 +638,7 @@ BEGIN
     DELETE FROM grid_turfs WHERE map = p_map AND turf_id = p_turf_id;
 END$$
 
-CREATE PROCEDURE grid_set_turf_tax(
+CREATE OR REPLACE PROCEDURE grid_set_turf_tax(
     IN p_map VARCHAR(64),
     IN p_turf_id INT,
     IN p_tax_rate TINYINT UNSIGNED
@@ -650,7 +650,7 @@ BEGIN
 END$$
 
 -- Atomic Economy & Protection Tax Collection
-CREATE PROCEDURE grid_collect_printer_taxed(
+CREATE OR REPLACE PROCEDURE grid_collect_printer_taxed(
     IN p_actor_steamid VARCHAR(20),
     IN p_controlling_gang VARCHAR(32),
     IN p_payout_amount BIGINT,
@@ -680,7 +680,7 @@ BEGIN
 END$$
 
 -- Player Buff Procedures
-CREATE PROCEDURE grid_save_player_buff(
+CREATE OR REPLACE PROCEDURE grid_save_player_buff(
     IN p_steamid VARCHAR(20),
     IN p_buff_id VARCHAR(32),
     IN p_duration DECIMAL(10, 2),
@@ -704,7 +704,7 @@ BEGIN
         data = p_data;
 END$$
 
-CREATE PROCEDURE grid_delete_player_buff(
+CREATE OR REPLACE PROCEDURE grid_delete_player_buff(
     IN p_steamid VARCHAR(20),
     IN p_buff_id VARCHAR(32)
 )
@@ -713,7 +713,7 @@ BEGIN
     WHERE steamid = p_steamid AND buff_id = p_buff_id;
 END$$
 
-CREATE PROCEDURE grid_clear_player_buffs(
+CREATE OR REPLACE PROCEDURE grid_clear_player_buffs(
     IN p_steamid VARCHAR(20)
 )
 BEGIN
@@ -722,7 +722,7 @@ BEGIN
 END$$
 
 -- Global Settings Procedure
-CREATE PROCEDURE grid_set_setting(
+CREATE OR REPLACE PROCEDURE grid_set_setting(
     IN p_key VARCHAR(64),
     IN p_val TEXT
 )

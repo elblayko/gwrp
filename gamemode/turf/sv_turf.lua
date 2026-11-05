@@ -43,58 +43,74 @@ function GRID.Turf.LoadMapProfile()
     local mapKey = string.lower(game.GetMap())
     GRID.Turf.Zones = {}
 
-    -- 1. Try loading from MariaDB database first
-    local dbZones = GRID.Database and GRID.Database.LoadTurfZones and GRID.Database.LoadTurfZones(mapKey)
-    if dbZones and table.Count(dbZones) > 0 then
-        GRID.Turf.Zones = dbZones
-        print(string.format("[GRID-Turf] Loaded %d turf zones from MariaDB for map '%s'.", table.Count(dbZones), mapKey))
+    local function applyAndSpawn(zones, sourceLabel)
+        GRID.Turf.Zones = zones
+        GRID.Turf.SpawnPoles()
+        GRID.Turf.SyncToAll()
+        print(string.format("[GRID-Turf] Loaded %d turf zones from %s for map '%s'.", table.Count(zones), sourceLabel, mapKey))
+    end
+
+    local function loadFromFileOrDefault()
+        -- 2. Fallback to existing JSON profile
+        local path = GRID.Turf.GetProfilePath()
+
+        if file.Exists(path, "DATA") then
+            local raw = file.Read(path, "DATA")
+            local tbl = util.JSONToTable(raw) or {}
+            local zones = {}
+
+            for _, item in ipairs(tbl) do
+                local id = tonumber(item.id) or (table.Count(zones) + 1)
+                zones[id] = {
+                    id = id,
+                    name = item.name or ("Turf Zone #" .. id),
+                    pos = Vector(item.pos.x, item.pos.y, item.pos.z),
+                    radius = tonumber(item.radius) or 450,
+                    owner = item.owner or "neutral",
+                    progress = tonumber(item.progress) or 100,
+                    tax_rate = tonumber(item.tax_rate) or 10
+                }
+            end
+            applyAndSpawn(zones, "JSON profile")
+            GRID.Turf.SaveMapProfile()
+            return
+        end
+
+        -- 3. Check built-in template for this map
+        local defaults = GRID.Turf.DefaultTemplates and GRID.Turf.DefaultTemplates[mapKey]
+        if defaults then
+            local zones = {}
+            for id, zone in pairs(defaults) do
+                zones[id] = {
+                    id = id,
+                    name = zone.name,
+                    pos = Vector(zone.pos.x, zone.pos.y, zone.pos.z),
+                    radius = zone.radius,
+                    owner = zone.owner,
+                    progress = zone.progress or 100,
+                    tax_rate = tonumber(zone.tax_rate) or 10
+                }
+            end
+            applyAndSpawn(zones, "default template")
+            GRID.Turf.SaveMapProfile()
+        else
+            print(string.format("[GridRP-Turf] No saved profile for '%s'. Admins can use /turfsetup to create zones.", mapKey))
+        end
+    end
+
+    -- 1. Try loading from MariaDB / SQLite database first (async-safe)
+    if GRID.Database and GRID.Database.LoadTurfZones then
+        GRID.Database.LoadTurfZones(mapKey, function(dbZones)
+            if dbZones and table.Count(dbZones) > 0 then
+                applyAndSpawn(dbZones, "database")
+            else
+                loadFromFileOrDefault()
+            end
+        end)
         return
     end
 
-    -- 2. Fallback to existing JSON profile
-    local path = GRID.Turf.GetProfilePath()
-
-    if file.Exists(path, "DATA") then
-        local raw = file.Read(path, "DATA")
-        local tbl = util.JSONToTable(raw) or {}
-
-        for _, item in ipairs(tbl) do
-            local id = tonumber(item.id) or (#GRID.Turf.Zones + 1)
-            GRID.Turf.Zones[id] = {
-                id = id,
-                name = item.name or ("Turf Zone #" .. id),
-                pos = Vector(item.pos.x, item.pos.y, item.pos.z),
-                radius = tonumber(item.radius) or 450,
-                owner = item.owner or "neutral",
-                progress = tonumber(item.progress) or 100,
-                tax_rate = tonumber(item.tax_rate) or 10
-            }
-        end
-        -- Migrate to SQLite
-        GRID.Turf.SaveMapProfile()
-        print(string.format("[GridRP-Turf] Migrated %d zones from JSON profile into SQLite.", table.Count(GRID.Turf.Zones)))
-        return
-    end
-
-    -- 3. Check built-in template for this map
-    local defaults = GRID.Turf.DefaultTemplates and GRID.Turf.DefaultTemplates[mapKey]
-    if defaults then
-        for id, zone in pairs(defaults) do
-            GRID.Turf.Zones[id] = {
-                id = id,
-                name = zone.name,
-                pos = Vector(zone.pos.x, zone.pos.y, zone.pos.z),
-                radius = zone.radius,
-                owner = zone.owner,
-                progress = zone.progress or 100,
-                tax_rate = tonumber(zone.tax_rate) or 10
-            }
-        end
-        GRID.Turf.SaveMapProfile()
-        print(string.format("[GridRP-Turf] Seeded default template into SQLite for map '%s'.", mapKey))
-    else
-        print(string.format("[GridRP-Turf] No saved profile for '%s'. Admins can use /turfsetup to create zones.", mapKey))
-    end
+    loadFromFileOrDefault()
 end
 
 function GRID.Turf.SpawnPoles()

@@ -77,20 +77,27 @@ function GRID.Database.Connect()
     local db = mysqloo.connect(cfg.Host, cfg.User, cfg.Password, cfg.Database, cfg.Port, cfg.Socket)
 
     function db:onConnected()
-        GRID.Database.Connected = true
-        GRID.Database.Connection = db
-        print("[GRID DB] Successfully connected to MariaDB engine!")
+        print("[GRID DB] Successfully connected to MariaDB engine! Ensuring schema...")
 
-        -- Flush queued queries
-        if #GRID.Database.Queue > 0 then
-            print(string.format("[GRID DB] Flushing %d queued database operations...", #GRID.Database.Queue))
-            for _, item in ipairs(GRID.Database.Queue) do
-                GRID.Database.Execute(item.Query, item.Callback, item.ErrorCallback)
+        GRID.Database.InitMariaDBSchema(db, function()
+            GRID.Database.Connected = true
+            GRID.Database.Connection = db
+
+            -- Preload gangs, members, and settings into RAM cache
+            GRID.Database.PreloadCaches()
+
+            -- Flush queued queries
+            if #GRID.Database.Queue > 0 then
+                print(string.format("[GRID DB] Flushing %d queued database operations...", #GRID.Database.Queue))
+                local queued = GRID.Database.Queue
+                GRID.Database.Queue = {}
+                for _, item in ipairs(queued) do
+                    GRID.Database.Execute(item.Query, item.Callback, item.ErrorCallback)
+                end
             end
-            GRID.Database.Queue = {}
-        end
 
-        hook.Run("GRID_DatabaseConnected")
+            hook.Run("GRID_DatabaseConnected")
+        end)
     end
 
     function db:onConnectionFailed(err)
@@ -136,8 +143,195 @@ function GRID.Database.Execute(queryString, onDone, onError)
 end
 
 -- ========================================================
--- STORED PROCEDURE WRAPPERS (100% Stored Procedures for Writes)
+-- STORED PROCEDURE & VIEW WRAPPERS (WITH DIRECT SQL FALLBACK)
 -- ========================================================
+
+-- Direct MariaDB SQL queries for procedures, used automatically if the DB user lacks
+-- CREATE ROUTINE / EXECUTE privileges on shared hosting panels (e.g. Pterodactyl).
+GRID.Database.MariaDBDirectProcedures = {
+    grid_log_telemetry = function(p, run)
+        run(GRID.Database.FormatQuery(
+            "INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (UNIX_TIMESTAMP(), ?, ?, ?, ?, ?, ?);",
+            p
+        ))
+    end,
+    grid_upsert_player = function(p, run)
+        run(GRID.Database.FormatQuery(
+            "INSERT INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), money = VALUES(money), respect = VALUES(respect), gang = VALUES(gang), job = VALUES(job), level = VALUES(level), xp = VALUES(xp), last_seen = VALUES(last_seen);",
+            p
+        ))
+    end,
+    grid_update_player_money = function(p, run)
+        run(GRID.Database.FormatQuery("UPDATE grid_players SET money = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] }))
+    end,
+    grid_update_player_gang = function(p, run)
+        run(GRID.Database.FormatQuery("UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] }))
+    end,
+    grid_update_player_job = function(p, run)
+        run(GRID.Database.FormatQuery("UPDATE grid_players SET job = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] }))
+    end,
+    grid_update_player_level_xp = function(p, run)
+        run(GRID.Database.FormatQuery("UPDATE grid_players SET level = ?, xp = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[4], p[1] }))
+    end,
+    grid_create_gang = function(p, run)
+        -- p = { gangName, leaderSteamID, unixTime }
+        GRID.Database.Execute(GRID.Database.FormatQuery(
+            "INSERT INTO grid_gangs (name, leader_steamid, bank, respect, created_at) VALUES (?, ?, 0, 0, ?) ON DUPLICATE KEY UPDATE leader_steamid = VALUES(leader_steamid);",
+            { p[1], p[2], p[3] }
+        ), function()
+            GRID.Database.Execute(GRID.Database.FormatQuery(
+                "INSERT INTO grid_gang_members (steamid, gang, rank, joined_at) VALUES (?, ?, 'leader', ?) ON DUPLICATE KEY UPDATE gang = VALUES(gang), rank = 'leader';",
+                { p[2], p[1], p[3] }
+            ))
+            run(GRID.Database.FormatQuery(
+                "UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;",
+                { p[1], p[3], p[2] }
+            ))
+        end)
+    end,
+    grid_add_gang_member = function(p, run)
+        -- p = { steamID, gangName, rank, unixTime }
+        GRID.Database.Execute(GRID.Database.FormatQuery(
+            "INSERT INTO grid_gang_members (steamid, gang, rank, joined_at) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE gang = VALUES(gang), rank = VALUES(rank);",
+            { p[1], p[2], p[3], p[4] }
+        ))
+        run(GRID.Database.FormatQuery("UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[4], p[1] }))
+    end,
+    grid_remove_gang_member = function(p, run)
+        GRID.Database.Execute(GRID.Database.FormatQuery("DELETE FROM grid_gang_members WHERE steamid = ?;", { p[1] }))
+        run(GRID.Database.FormatQuery("UPDATE grid_players SET gang = '' WHERE steamid = ?;", { p[1] }))
+    end,
+    grid_add_gang_bank = function(p, run)
+        run(GRID.Database.FormatQuery("UPDATE grid_gangs SET bank = GREATEST(0, bank + ?) WHERE name = ?;", { p[2], p[1] }))
+    end,
+    grid_transfer_gang_vault = function(p, run)
+        -- p = { steamID, gangName, delta, unixTime }
+        local delta = tonumber(p[3]) or 0
+        if delta > 0 then
+            GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = GREATEST(0, money - ?), last_seen = ? WHERE steamid = ?;", { delta, p[4], p[1] }))
+            run(GRID.Database.FormatQuery("UPDATE grid_gangs SET bank = bank + ? WHERE name = ?;", { delta, p[2] }))
+        elseif delta < 0 then
+            local absDelta = math.abs(delta)
+            GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money + ?, last_seen = ? WHERE steamid = ?;", { absDelta, p[4], p[1] }))
+            run(GRID.Database.FormatQuery("UPDATE grid_gangs SET bank = GREATEST(0, bank - ?) WHERE name = ?;", { absDelta, p[2] }))
+        end
+    end,
+    grid_disband_gang = function(p, run)
+        GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET gang = '' WHERE gang = ?;", { p[1] }))
+        GRID.Database.Execute(GRID.Database.FormatQuery("DELETE FROM grid_gang_members WHERE gang = ?;", { p[1] }))
+        run(GRID.Database.FormatQuery("DELETE FROM grid_gangs WHERE name = ?;", { p[1] }))
+    end,
+    grid_set_inventory_slot = function(p, run)
+        -- p = { steamID, bagIndex, slotIndex, itemId, itemType, amount, itemData }
+        local amt = tonumber(p[6]) or 0
+        GRID.Database.Execute(GRID.Database.FormatQuery(
+            "DELETE FROM grid_inventory WHERE steamid = ? AND bag_index = ? AND slot_index = ?;",
+            { p[1], p[2], p[3] }
+        ), function()
+            if amt > 0 then
+                run(GRID.Database.FormatQuery(
+                    "INSERT INTO grid_inventory (steamid, bag_index, slot_index, item_id, item_type, amount, item_data) VALUES (?, ?, ?, ?, ?, ?, ?);",
+                    p
+                ))
+            else
+                run(nil)
+            end
+        end)
+    end,
+    grid_delete_inventory_slot = function(p, run)
+        run(GRID.Database.FormatQuery("DELETE FROM grid_inventory WHERE steamid = ? AND bag_index = ? AND slot_index = ?;", p))
+    end,
+    grid_move_inventory_slot = function(p, run)
+        -- p = { steamID, fromBag, fromSlot, toBag, toSlot }
+        local steamID = p[1]
+        local inv = GRID.Database.Cache.Inventories[steamID] or {}
+        local fromBag, fromSlot, toBag, toSlot = tonumber(p[2]) or 0, tonumber(p[3]) or 1, tonumber(p[4]) or 0, tonumber(p[5]) or 1
+        local srcItem, dstItem
+        for _, it in ipairs(inv) do
+            if (tonumber(it.bag_index) or 0) == fromBag and (tonumber(it.slot_index) or 1) == fromSlot then
+                srcItem = it
+            elseif (tonumber(it.bag_index) or 0) == toBag and (tonumber(it.slot_index) or 1) == toSlot then
+                dstItem = it
+            end
+        end
+        GRID.Database.Execute(GRID.Database.FormatQuery(
+            "DELETE FROM grid_inventory WHERE steamid = ? AND ((bag_index = ? AND slot_index = ?) OR (bag_index = ? AND slot_index = ?));",
+            { steamID, fromBag, fromSlot, toBag, toSlot }
+        ), function()
+            if srcItem then
+                GRID.Database.Execute(GRID.Database.FormatQuery(
+                    "INSERT INTO grid_inventory (steamid, bag_index, slot_index, item_id, item_type, amount, item_data) VALUES (?, ?, ?, ?, ?, ?, ?);",
+                    { steamID, srcItem.bag_index, srcItem.slot_index, srcItem.item_id, srcItem.item_type, srcItem.amount, srcItem.item_data }
+                ))
+            end
+            if dstItem then
+                run(GRID.Database.FormatQuery(
+                    "INSERT INTO grid_inventory (steamid, bag_index, slot_index, item_id, item_type, amount, item_data) VALUES (?, ?, ?, ?, ?, ?, ?);",
+                    { steamID, dstItem.bag_index, dstItem.slot_index, dstItem.item_id, dstItem.item_type, dstItem.amount, dstItem.item_data }
+                ))
+            else
+                run(nil)
+            end
+        end)
+    end,
+    grid_set_player_bags = function(p, run)
+        run(GRID.Database.FormatQuery(
+            "INSERT INTO grid_player_bags (steamid, bag1, bag2, bag3, bag4) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE bag1 = VALUES(bag1), bag2 = VALUES(bag2), bag3 = VALUES(bag3), bag4 = VALUES(bag4);",
+            p
+        ))
+    end,
+    grid_save_map_turf = function(p, run)
+        run(GRID.Database.FormatQuery(
+            "INSERT INTO grid_turfs (map, turf_id, name, pos_x, pos_y, pos_z, radius, owner, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), pos_x = VALUES(pos_x), pos_y = VALUES(pos_y), pos_z = VALUES(pos_z), radius = VALUES(radius), owner = VALUES(owner), tax_rate = VALUES(tax_rate);",
+            p
+        ))
+    end,
+    grid_clear_map_turfs = function(p, run)
+        run(GRID.Database.FormatQuery("DELETE FROM grid_turfs WHERE map = ?;", p))
+    end,
+    grid_delete_map_turf = function(p, run)
+        run(GRID.Database.FormatQuery("DELETE FROM grid_turfs WHERE map = ? AND turf_id = ?;", p))
+    end,
+    grid_set_turf_tax = function(p, run)
+        run(GRID.Database.FormatQuery("UPDATE grid_turfs SET tax_rate = ? WHERE map = ? AND turf_id = ?;", { p[3], p[1], p[2] }))
+    end,
+    grid_collect_printer_taxed = function(p, run)
+        -- p = { actorSteamID, controllingGang, payoutAmount, taxAmount, unixTime }
+        GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money + ?, last_seen = ? WHERE steamid = ?;", { p[3], p[5], p[1] }))
+        local tax = tonumber(p[4]) or 0
+        local gang = tostring(p[2] or "")
+        if tax > 0 and gang ~= "" and gang ~= "neutral" and gang ~= "Police" then
+            run(GRID.Database.FormatQuery("UPDATE grid_gangs SET bank = bank + ? WHERE name = ?;", { tax, gang }))
+        else
+            run(nil)
+        end
+    end,
+    grid_save_player_buff = function(p, run)
+        run(GRID.Database.FormatQuery(
+            "INSERT INTO grid_player_buffs (steamid, buff_id, duration, remaining, stacks, applied_at, expires_at_unix, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE duration = VALUES(duration), remaining = VALUES(remaining), stacks = VALUES(stacks), applied_at = VALUES(applied_at), expires_at_unix = VALUES(expires_at_unix), data = VALUES(data);",
+            p
+        ))
+    end,
+    grid_delete_player_buff = function(p, run)
+        run(GRID.Database.FormatQuery("DELETE FROM grid_player_buffs WHERE steamid = ? AND buff_id = ?;", p))
+    end,
+    grid_clear_player_buffs = function(p, run)
+        run(GRID.Database.FormatQuery("DELETE FROM grid_player_buffs WHERE steamid = ?;", p))
+    end,
+    grid_set_setting = function(p, run)
+        run(GRID.Database.FormatQuery("INSERT INTO grid_settings (`key`, `val`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `val` = VALUES(`val`);", p))
+    end,
+}
+
+-- Direct MariaDB SQL queries for views, used if the DB user lacks CREATE VIEW privileges or if SQLite is active.
+GRID.Database.DirectViews = {
+    v_player_profile = "(SELECT p.steamid, p.name, p.money, p.respect, p.gang, p.job, p.level, p.xp, p.last_seen, m.rank AS gang_rank FROM grid_players p LEFT JOIN grid_gang_members m ON p.steamid = m.steamid) AS v_player_profile",
+    v_player_inventory = "grid_inventory",
+    v_player_bags = "grid_player_bags",
+    v_player_buffs = "grid_player_buffs",
+    v_map_turfs = "grid_turfs",
+    v_settings = "grid_settings",
+}
 
 -- SQLite has no stored procedures (no CALL). Emulate the ones needed for local dev.
 GRID.Database.SQLiteProcedures = {
@@ -148,6 +342,23 @@ GRID.Database.SQLiteProcedures = {
         return GRID.Database.FormatQuery("UPDATE grid_turfs SET tax_rate = ? WHERE map = ? AND turf_id = ?;", { p[3], p[1], p[2] })
     end,
     grid_set_setting = "INSERT OR REPLACE INTO grid_settings (key, val) VALUES (?, ?);",
+    grid_upsert_player = "INSERT OR REPLACE INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    grid_update_player_money = function(p)
+        return GRID.Database.FormatQuery("UPDATE grid_players SET money = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
+    end,
+    grid_update_player_gang = function(p)
+        return GRID.Database.FormatQuery("UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
+    end,
+    grid_update_player_job = function(p)
+        return GRID.Database.FormatQuery("UPDATE grid_players SET job = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
+    end,
+    grid_update_player_level_xp = function(p)
+        return GRID.Database.FormatQuery("UPDATE grid_players SET level = ?, xp = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[4], p[1] })
+    end,
+    grid_set_player_bags = "INSERT OR REPLACE INTO grid_player_bags (steamid, bag1, bag2, bag3, bag4) VALUES (?, ?, ?, ?, ?);",
+    grid_save_player_buff = "INSERT OR REPLACE INTO grid_player_buffs (steamid, buff_id, duration, remaining, stacks, applied_at, expires_at_unix, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
+    grid_delete_player_buff = "DELETE FROM grid_player_buffs WHERE steamid = ? AND buff_id = ?;",
+    grid_clear_player_buffs = "DELETE FROM grid_player_buffs WHERE steamid = ?;",
 }
 GRID.Database.SQLiteWarned = GRID.Database.SQLiteWarned or {}
 
@@ -168,22 +379,64 @@ function GRID.Database.CallProcedure(procName, params, onDone, onError)
         return
     end
 
+    -- If MariaDB host disallowed stored procedure creation, or as a fallback when CALL fails
+    local function runDirect()
+        local directFn = GRID.Database.MariaDBDirectProcedures[procName]
+        if directFn then
+            directFn(params, function(finalQuery)
+                if finalQuery then
+                    GRID.Database.Execute(finalQuery, onDone, onError)
+                elseif onDone then
+                    onDone({})
+                end
+            end)
+        elseif onError then
+            onError("No direct SQL fallback for procedure " .. tostring(procName))
+        end
+    end
+
+    if GRID.Database.UseDirectMariaDBSQL then
+        runDirect()
+        return
+    end
+
     local placeholders = {}
     for i = 1, #params do
         table.insert(placeholders, "?")
     end
     local sqlStr = string.format("CALL %s(%s);", procName, table.concat(placeholders, ", "))
     local query = GRID.Database.FormatQuery(sqlStr, params)
-    GRID.Database.Execute(query, onDone, onError)
+    GRID.Database.Execute(query, onDone, function(err)
+        local errStr = string.lower(tostring(err or ""))
+        if string.find(errStr, "does not exist", 1, true) or string.find(errStr, "execute command denied", 1, true) then
+            GRID.Database.UseDirectMariaDBSQL = true
+            runDirect()
+        elseif onError then
+            onError(err)
+        end
+    end)
 end
 
 function GRID.Database.QueryView(viewName, whereClause, params, onDone, onError)
-    local q = "SELECT * FROM " .. viewName
+    local source = viewName
+    if GRID.Database.UseSQLiteFallback or GRID.Database.UseDirectViews then
+        source = GRID.Database.DirectViews[viewName] or viewName
+    end
+
+    local q = "SELECT * FROM " .. source
     if whereClause and whereClause ~= "" then
         q = q .. " WHERE " .. whereClause
     end
     local formatted = GRID.Database.FormatQuery(q, params)
-    GRID.Database.Execute(formatted, onDone, onError)
+    GRID.Database.Execute(formatted, onDone, function(err)
+        local errStr = string.lower(tostring(err or ""))
+        if not GRID.Database.UseDirectViews and GRID.Database.DirectViews[viewName] and (string.find(errStr, "doesn't exist", 1, true) or string.find(errStr, "command denied", 1, true)) then
+            GRID.Database.UseDirectViews = true
+            GRID.Database.QueryView(viewName, whereClause, params, onDone, onError)
+        elseif onError then
+            onError(err)
+        end
+    end)
 end
 
 -- ========================================================
@@ -192,6 +445,391 @@ end
 
 function GRID.Database.Init()
     GRID.Database.Connect()
+end
+
+-- Auto-seeds all MariaDB tables, analytical views, and stored procedures on connection.
+-- If the database user lacks CREATE ROUTINE or CREATE VIEW privileges on a shared panel,
+-- it gracefully enables direct SQL fallback so the server runs with zero errors.
+function GRID.Database.InitMariaDBSchema(db, onComplete)
+    local tableDDLs = {
+        [[CREATE TABLE IF NOT EXISTS grid_players (
+            steamid VARCHAR(20) NOT NULL PRIMARY KEY,
+            name VARCHAR(64) NOT NULL,
+            money BIGINT NOT NULL DEFAULT 1000,
+            respect INT NOT NULL DEFAULT 0,
+            gang VARCHAR(32) NOT NULL DEFAULT '',
+            job VARCHAR(32) NOT NULL DEFAULT 'citizen',
+            level INT NOT NULL DEFAULT 1,
+            xp BIGINT NOT NULL DEFAULT 0,
+            last_seen INT UNSIGNED NOT NULL DEFAULT 0,
+            INDEX idx_players_gang (gang),
+            INDEX idx_players_job (job)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_gangs (
+            name VARCHAR(32) NOT NULL PRIMARY KEY,
+            leader_steamid VARCHAR(20) NOT NULL,
+            bank BIGINT NOT NULL DEFAULT 0,
+            respect INT NOT NULL DEFAULT 0,
+            created_at INT UNSIGNED NOT NULL DEFAULT 0,
+            INDEX idx_gangs_leader (leader_steamid),
+            INDEX idx_gangs_respect (respect DESC)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_gang_members (
+            steamid VARCHAR(20) NOT NULL PRIMARY KEY,
+            gang VARCHAR(32) NOT NULL,
+            rank VARCHAR(16) NOT NULL DEFAULT 'member',
+            joined_at INT UNSIGNED NOT NULL DEFAULT 0,
+            INDEX idx_members_gang (gang)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_inventory (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            steamid VARCHAR(20) NOT NULL,
+            bag_index TINYINT UNSIGNED NOT NULL DEFAULT 0,
+            slot_index TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            item_id VARCHAR(64) NOT NULL,
+            item_type VARCHAR(32) NOT NULL DEFAULT 'generic',
+            amount INT NOT NULL DEFAULT 1,
+            item_data JSON NULL,
+            INDEX idx_inventory_steamid (steamid, bag_index, slot_index),
+            INDEX idx_inventory_item (steamid, item_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_player_bags (
+            steamid VARCHAR(20) NOT NULL PRIMARY KEY,
+            bag1 VARCHAR(64) NOT NULL DEFAULT '',
+            bag2 VARCHAR(64) NOT NULL DEFAULT '',
+            bag3 VARCHAR(64) NOT NULL DEFAULT '',
+            bag4 VARCHAR(64) NOT NULL DEFAULT ''
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_turfs (
+            map VARCHAR(64) NOT NULL,
+            turf_id INT NOT NULL,
+            name VARCHAR(64) NOT NULL,
+            pos_x DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            pos_y DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            pos_z DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            radius INT NOT NULL DEFAULT 450,
+            owner VARCHAR(32) NOT NULL DEFAULT 'neutral',
+            tax_rate TINYINT UNSIGNED NOT NULL DEFAULT 10,
+            PRIMARY KEY (map, turf_id),
+            INDEX idx_turfs_owner (owner)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_settings (
+            `key` VARCHAR(64) NOT NULL PRIMARY KEY,
+            `val` TEXT NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_player_buffs (
+            steamid VARCHAR(20) NOT NULL,
+            buff_id VARCHAR(32) NOT NULL,
+            duration DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            remaining DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+            stacks TINYINT UNSIGNED NOT NULL DEFAULT 1,
+            applied_at INT UNSIGNED NOT NULL DEFAULT 0,
+            expires_at_unix INT UNSIGNED NOT NULL DEFAULT 0,
+            data JSON NULL,
+            PRIMARY KEY (steamid, buff_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_telemetry (
+            log_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            unix_ts INT UNSIGNED NOT NULL DEFAULT 0,
+            category VARCHAR(24) NOT NULL,
+            action_type VARCHAR(48) NOT NULL,
+            actor_steamid VARCHAR(20) NOT NULL,
+            target_steamid VARCHAR(20) NULL,
+            numeric_value DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+            metadata JSON NULL,
+            INDEX idx_actor_time (actor_steamid, created_at),
+            INDEX idx_category_action_time (category, action_type, created_at),
+            INDEX idx_target_time (target_steamid, created_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]]
+    }
+
+    local viewDDLs = {
+        [[CREATE OR REPLACE VIEW v_player_profile AS
+            SELECT p.steamid, p.name, p.money, p.respect, p.gang, p.job, p.level, p.xp, p.last_seen, m.rank AS gang_rank
+            FROM grid_players p LEFT JOIN grid_gang_members m ON p.steamid = m.steamid;]],
+        [[CREATE OR REPLACE VIEW v_player_inventory AS
+            SELECT id, steamid, bag_index, slot_index, item_id, item_type, amount, item_data FROM grid_inventory;]],
+        [[CREATE OR REPLACE VIEW v_player_bags AS
+            SELECT steamid, bag1, bag2, bag3, bag4 FROM grid_player_bags;]],
+        [[CREATE OR REPLACE VIEW v_player_buffs AS
+            SELECT steamid, buff_id, duration, remaining, stacks, applied_at, expires_at_unix, data FROM grid_player_buffs;]],
+        [[CREATE OR REPLACE VIEW v_gang_leaderboard AS
+            SELECT g.name, g.leader_steamid, p.name AS leader_name, g.bank, g.respect, g.created_at,
+                COUNT(DISTINCT m.steamid) AS member_count, COUNT(DISTINCT t.turf_id) AS turf_count
+            FROM grid_gangs g
+            LEFT JOIN grid_players p ON g.leader_steamid = p.steamid
+            LEFT JOIN grid_gang_members m ON g.name = m.gang
+            LEFT JOIN grid_turfs t ON g.name = t.owner
+            GROUP BY g.name, g.leader_steamid, p.name, g.bank, g.respect, g.created_at
+            ORDER BY g.respect DESC, g.bank DESC;]],
+        [[CREATE OR REPLACE VIEW v_gang_roster AS
+            SELECT m.gang, m.steamid, m.rank, m.joined_at, p.name, p.money, p.job, p.level, p.last_seen
+            FROM grid_gang_members m LEFT JOIN grid_players p ON m.steamid = p.steamid
+            ORDER BY CASE m.rank WHEN 'leader' THEN 1 WHEN 'officer' THEN 2 ELSE 3 END, m.joined_at ASC;]],
+        [[CREATE OR REPLACE VIEW v_map_turfs AS
+            SELECT map, turf_id, name, pos_x, pos_y, pos_z, radius, owner, tax_rate FROM grid_turfs ORDER BY turf_id ASC;]],
+        [[CREATE OR REPLACE VIEW v_settings AS SELECT `key`, `val` FROM grid_settings;]],
+        [[CREATE OR REPLACE VIEW v_economy_metrics AS
+            SELECT category, action_type, COUNT(*) AS event_count, SUM(numeric_value) AS total_volume,
+                AVG(numeric_value) AS average_volume, MIN(created_at) AS earliest_record, MAX(created_at) AS latest_record
+            FROM grid_telemetry WHERE category IN ('ECONOMY', 'TRADE') GROUP BY category, action_type;]],
+        [[CREATE OR REPLACE VIEW v_player_audit_history AS
+            SELECT log_id, created_at, category, action_type, actor_steamid, target_steamid, numeric_value, metadata
+            FROM grid_telemetry ORDER BY created_at DESC;]],
+        [[CREATE OR REPLACE VIEW v_combat_telemetry AS
+            SELECT action_type AS weapon_class, COUNT(*) AS total_skirmishes, SUM(numeric_value) AS total_damage_dealt,
+                AVG(numeric_value) AS avg_damage_per_engagement
+            FROM grid_telemetry WHERE category = 'COMBAT' GROUP BY action_type;]]
+    }
+
+    local procDDLs = {
+        [[CREATE OR REPLACE PROCEDURE grid_log_telemetry(
+            IN p_category VARCHAR(20), IN p_action_type VARCHAR(48), IN p_actor_steamid VARCHAR(20),
+            IN p_target_steamid VARCHAR(20), IN p_numeric_value DECIMAL(12, 2), IN p_metadata JSON
+        ) BEGIN
+            INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
+            VALUES (UNIX_TIMESTAMP(), p_category, p_action_type, p_actor_steamid, p_target_steamid, p_numeric_value, p_metadata);
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_upsert_player(
+            IN p_steamid VARCHAR(20), IN p_name VARCHAR(64), IN p_money BIGINT, IN p_respect INT,
+            IN p_gang VARCHAR(32), IN p_job VARCHAR(32), IN p_level INT, IN p_xp BIGINT, IN p_last_seen INT UNSIGNED
+        ) BEGIN
+            INSERT INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen)
+            VALUES (p_steamid, p_name, p_money, p_respect, p_gang, p_job, p_level, p_xp, p_last_seen)
+            ON DUPLICATE KEY UPDATE name = p_name, money = p_money, respect = p_respect, gang = p_gang,
+                job = p_job, level = p_level, xp = p_xp, last_seen = p_last_seen;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_update_player_money(
+            IN p_steamid VARCHAR(20), IN p_money BIGINT, IN p_last_seen INT UNSIGNED
+        ) BEGIN
+            UPDATE grid_players SET money = p_money, last_seen = p_last_seen WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_update_player_gang(
+            IN p_steamid VARCHAR(20), IN p_gang VARCHAR(32), IN p_last_seen INT UNSIGNED
+        ) BEGIN
+            UPDATE grid_players SET gang = p_gang, last_seen = p_last_seen WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_update_player_job(
+            IN p_steamid VARCHAR(20), IN p_job VARCHAR(32), IN p_last_seen INT UNSIGNED
+        ) BEGIN
+            UPDATE grid_players SET job = p_job, last_seen = p_last_seen WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_update_player_level_xp(
+            IN p_steamid VARCHAR(20), IN p_level INT, IN p_xp BIGINT, IN p_last_seen INT UNSIGNED
+        ) BEGIN
+            UPDATE grid_players SET level = p_level, xp = p_xp, last_seen = p_last_seen WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_create_gang(
+            IN p_gang_name VARCHAR(32), IN p_leader_steamid VARCHAR(20), IN p_unix_time INT UNSIGNED
+        ) BEGIN
+            INSERT INTO grid_gangs (name, leader_steamid, bank, respect, created_at)
+            VALUES (p_gang_name, p_leader_steamid, 0, 0, p_unix_time)
+            ON DUPLICATE KEY UPDATE leader_steamid = p_leader_steamid;
+            INSERT INTO grid_gang_members (steamid, gang, rank, joined_at)
+            VALUES (p_leader_steamid, p_gang_name, 'leader', p_unix_time)
+            ON DUPLICATE KEY UPDATE gang = p_gang_name, rank = 'leader';
+            UPDATE grid_players SET gang = p_gang_name, last_seen = p_unix_time WHERE steamid = p_leader_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_add_gang_member(
+            IN p_steamid VARCHAR(20), IN p_gang_name VARCHAR(32), IN p_rank VARCHAR(16), IN p_unix_time INT UNSIGNED
+        ) BEGIN
+            INSERT INTO grid_gang_members (steamid, gang, rank, joined_at)
+            VALUES (p_steamid, p_gang_name, p_rank, p_unix_time)
+            ON DUPLICATE KEY UPDATE gang = p_gang_name, rank = p_rank;
+            UPDATE grid_players SET gang = p_gang_name, last_seen = p_unix_time WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_remove_gang_member(IN p_steamid VARCHAR(20)) BEGIN
+            DELETE FROM grid_gang_members WHERE steamid = p_steamid;
+            UPDATE grid_players SET gang = '' WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_add_gang_bank(IN p_gang_name VARCHAR(32), IN p_amount BIGINT) BEGIN
+            UPDATE grid_gangs SET bank = GREATEST(0, bank + p_amount) WHERE name = p_gang_name;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_transfer_gang_vault(
+            IN p_steamid VARCHAR(20), IN p_gang_name VARCHAR(32), IN p_delta BIGINT, IN p_unix_time INT UNSIGNED
+        ) BEGIN
+            DECLARE v_player_money BIGINT DEFAULT 0;
+            DECLARE v_gang_bank BIGINT DEFAULT 0;
+            SELECT money INTO v_player_money FROM grid_players WHERE steamid = p_steamid FOR UPDATE;
+            SELECT bank INTO v_gang_bank FROM grid_gangs WHERE name = p_gang_name FOR UPDATE;
+            IF (p_delta > 0 AND v_player_money >= p_delta) THEN
+                UPDATE grid_players SET money = money - p_delta, last_seen = p_unix_time WHERE steamid = p_steamid;
+                UPDATE grid_gangs SET bank = bank + p_delta WHERE name = p_gang_name;
+            ELSEIF (p_delta < 0 AND v_gang_bank >= ABS(p_delta)) THEN
+                UPDATE grid_players SET money = money + ABS(p_delta), last_seen = p_unix_time WHERE steamid = p_steamid;
+                UPDATE grid_gangs SET bank = bank - ABS(p_delta) WHERE name = p_gang_name;
+            END IF;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_disband_gang(IN p_gang_name VARCHAR(32)) BEGIN
+            UPDATE grid_players SET gang = '' WHERE gang = p_gang_name;
+            DELETE FROM grid_gang_members WHERE gang = p_gang_name;
+            DELETE FROM grid_gangs WHERE name = p_gang_name;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_set_inventory_slot(
+            IN p_steamid VARCHAR(20), IN p_bag_index TINYINT UNSIGNED, IN p_slot_index TINYINT UNSIGNED,
+            IN p_item_id VARCHAR(64), IN p_item_type VARCHAR(32), IN p_amount INT, IN p_item_data JSON
+        ) BEGIN
+            DELETE FROM grid_inventory WHERE steamid = p_steamid AND bag_index = p_bag_index AND slot_index = p_slot_index;
+            IF p_amount > 0 THEN
+                INSERT INTO grid_inventory (steamid, bag_index, slot_index, item_id, item_type, amount, item_data)
+                VALUES (p_steamid, p_bag_index, p_slot_index, p_item_id, p_item_type, p_amount, p_item_data);
+            END IF;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_delete_inventory_slot(
+            IN p_steamid VARCHAR(20), IN p_bag_index TINYINT UNSIGNED, IN p_slot_index TINYINT UNSIGNED
+        ) BEGIN
+            DELETE FROM grid_inventory WHERE steamid = p_steamid AND bag_index = p_bag_index AND slot_index = p_slot_index;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_move_inventory_slot(
+            IN p_steamid VARCHAR(20), IN p_from_bag TINYINT UNSIGNED, IN p_from_slot TINYINT UNSIGNED,
+            IN p_to_bag TINYINT UNSIGNED, IN p_to_slot TINYINT UNSIGNED
+        ) BEGIN
+            DECLARE v_src_id BIGINT UNSIGNED;
+            DECLARE v_src_item VARCHAR(64);
+            DECLARE v_src_amt INT;
+            DECLARE v_dst_id BIGINT UNSIGNED;
+            DECLARE v_dst_item VARCHAR(64);
+            SELECT id, item_id, amount INTO v_src_id, v_src_item, v_src_amt FROM grid_inventory
+                WHERE steamid = p_steamid AND bag_index = p_from_bag AND slot_index = p_from_slot LIMIT 1;
+            IF v_src_id IS NOT NULL THEN
+                SELECT id, item_id INTO v_dst_id, v_dst_item FROM grid_inventory
+                    WHERE steamid = p_steamid AND bag_index = p_to_bag AND slot_index = p_to_slot LIMIT 1;
+                IF v_dst_id IS NULL THEN
+                    UPDATE grid_inventory SET bag_index = p_to_bag, slot_index = p_to_slot WHERE id = v_src_id;
+                ELSEIF v_src_item = v_dst_item THEN
+                    UPDATE grid_inventory SET amount = amount + v_src_amt WHERE id = v_dst_id;
+                    DELETE FROM grid_inventory WHERE id = v_src_id;
+                ELSE
+                    UPDATE grid_inventory SET bag_index = p_to_bag, slot_index = p_to_slot WHERE id = v_src_id;
+                    UPDATE grid_inventory SET bag_index = p_from_bag, slot_index = p_from_slot WHERE id = v_dst_id;
+                END IF;
+            END IF;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_set_player_bags(
+            IN p_steamid VARCHAR(20), IN p_bag1 VARCHAR(64), IN p_bag2 VARCHAR(64), IN p_bag3 VARCHAR(64), IN p_bag4 VARCHAR(64)
+        ) BEGIN
+            INSERT INTO grid_player_bags (steamid, bag1, bag2, bag3, bag4)
+            VALUES (p_steamid, p_bag1, p_bag2, p_bag3, p_bag4)
+            ON DUPLICATE KEY UPDATE bag1 = p_bag1, bag2 = p_bag2, bag3 = p_bag3, bag4 = p_bag4;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_save_map_turf(
+            IN p_map VARCHAR(64), IN p_turf_id INT, IN p_name VARCHAR(64),
+            IN p_pos_x DECIMAL(10, 2), IN p_pos_y DECIMAL(10, 2), IN p_pos_z DECIMAL(10, 2),
+            IN p_radius INT, IN p_owner VARCHAR(32), IN p_tax_rate TINYINT UNSIGNED
+        ) BEGIN
+            INSERT INTO grid_turfs (map, turf_id, name, pos_x, pos_y, pos_z, radius, owner, tax_rate)
+            VALUES (p_map, p_turf_id, p_name, p_pos_x, p_pos_y, p_pos_z, p_radius, p_owner, p_tax_rate)
+            ON DUPLICATE KEY UPDATE name = p_name, pos_x = p_pos_x, pos_y = p_pos_y, pos_z = p_pos_z,
+                radius = p_radius, owner = p_owner, tax_rate = p_tax_rate;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_clear_map_turfs(IN p_map VARCHAR(64)) BEGIN
+            DELETE FROM grid_turfs WHERE map = p_map;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_delete_map_turf(IN p_map VARCHAR(64), IN p_turf_id INT) BEGIN
+            DELETE FROM grid_turfs WHERE map = p_map AND turf_id = p_turf_id;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_set_turf_tax(IN p_map VARCHAR(64), IN p_turf_id INT, IN p_tax_rate TINYINT UNSIGNED) BEGIN
+            UPDATE grid_turfs SET tax_rate = p_tax_rate WHERE map = p_map AND turf_id = p_turf_id;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_collect_printer_taxed(
+            IN p_actor_steamid VARCHAR(20), IN p_controlling_gang VARCHAR(32),
+            IN p_payout_amount BIGINT, IN p_tax_amount BIGINT, IN p_unix_time INT UNSIGNED
+        ) BEGIN
+            UPDATE grid_players SET money = money + p_payout_amount, last_seen = p_unix_time WHERE steamid = p_actor_steamid;
+            IF p_tax_amount > 0 AND p_controlling_gang != '' AND p_controlling_gang != 'neutral' AND p_controlling_gang != 'Police' THEN
+                UPDATE grid_gangs SET bank = bank + p_tax_amount WHERE name = p_controlling_gang;
+            END IF;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_save_player_buff(
+            IN p_steamid VARCHAR(20), IN p_buff_id VARCHAR(32), IN p_duration DECIMAL(10, 2),
+            IN p_remaining DECIMAL(10, 2), IN p_stacks TINYINT UNSIGNED,
+            IN p_applied_at INT UNSIGNED, IN p_expires_at_unix INT UNSIGNED, IN p_data JSON
+        ) BEGIN
+            INSERT INTO grid_player_buffs (steamid, buff_id, duration, remaining, stacks, applied_at, expires_at_unix, data)
+            VALUES (p_steamid, p_buff_id, p_duration, p_remaining, p_stacks, p_applied_at, p_expires_at_unix, p_data)
+            ON DUPLICATE KEY UPDATE duration = p_duration, remaining = p_remaining, stacks = p_stacks,
+                applied_at = p_applied_at, expires_at_unix = p_expires_at_unix, data = p_data;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_delete_player_buff(IN p_steamid VARCHAR(20), IN p_buff_id VARCHAR(32)) BEGIN
+            DELETE FROM grid_player_buffs WHERE steamid = p_steamid AND buff_id = p_buff_id;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_clear_player_buffs(IN p_steamid VARCHAR(20)) BEGIN
+            DELETE FROM grid_player_buffs WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_set_setting(IN p_key VARCHAR(64), IN p_val TEXT) BEGIN
+            INSERT INTO grid_settings (`key`, `val`) VALUES (p_key, p_val) ON DUPLICATE KEY UPDATE `val` = p_val;
+        END]]
+    }
+
+    local function runBatch(list, idx, onBatchDone, onItemError)
+        if idx > #list then
+            if onBatchDone then onBatchDone() end
+            return
+        end
+        local q = db:query(list[idx])
+        function q:onSuccess()
+            runBatch(list, idx + 1, onBatchDone, onItemError)
+        end
+        function q:onError(err)
+            if onItemError then onItemError(err, list[idx]) end
+            runBatch(list, idx + 1, onBatchDone, onItemError)
+        end
+        q:start()
+    end
+
+    runBatch(tableDDLs, 1, function()
+        local viewsFailed = false
+        runBatch(viewDDLs, 1, function()
+            if viewsFailed then
+                GRID.Database.UseDirectViews = true
+                print("[GRID DB] MariaDB user lacks CREATE VIEW privilege; using direct table SELECT fallback.")
+            end
+            local procsFailed = false
+            runBatch(procDDLs, 1, function()
+                if procsFailed then
+                    GRID.Database.UseDirectMariaDBSQL = true
+                    print("[GRID DB] MariaDB user lacks CREATE ROUTINE privilege; using direct SQL query fallback.")
+                else
+                    print("[GRID DB] MariaDB tables, views, and stored procedures verified & seeded!")
+                end
+                if onComplete then onComplete() end
+            end, function()
+                procsFailed = true
+            end)
+        end, function()
+            viewsFailed = true
+        end)
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID DB ERROR] Failed creating MariaDB table: %s\n", tostring(err)))
+    end)
+end
+
+-- Preload gangs, gang members, and settings into RAM cache on connection
+function GRID.Database.PreloadCaches()
+    GRID.Database.Execute("SELECT * FROM grid_gangs;", function(rows)
+        for _, r in ipairs(rows or {}) do
+            GRID.Database.Cache.Gangs[r.name] = r
+        end
+    end)
+    GRID.Database.Execute("SELECT * FROM grid_gang_members;", function(rows)
+        for _, r in ipairs(rows or {}) do
+            GRID.Database.Cache.GangMembers[r.steamid] = r
+        end
+    end)
+    GRID.Database.Execute("SELECT `key`, `val` FROM grid_settings;", function(rows)
+        for _, r in ipairs(rows or {}) do
+            GRID.Database.Cache.Settings[r.key] = r.val
+        end
+    end)
 end
 
 -- SQLite Dev Fallback table creation (only invoked if mysqloo binary module is not present on developer's local PC)
@@ -369,7 +1007,12 @@ function GRID.Database.RefreshPlayerCache(steamID, callback)
         -- Load inventory
         GRID.Database.QueryView("v_player_inventory", "steamid = ? ORDER BY bag_index ASC, slot_index ASC", { steamID }, function(invRows)
             GRID.Database.Cache.Inventories[steamID] = invRows or {}
-            if callback then callback() end
+
+            -- Load buffs
+            GRID.Database.QueryView("v_player_buffs", "steamid = ?", { steamID }, function(buffRows)
+                GRID.Database.Cache.Buffs[steamID] = buffRows or {}
+                if callback then callback() end
+            end)
         end)
     end)
 end
@@ -977,6 +1620,7 @@ function GRID.Database.LoadTurfZones(mapName, callback)
             if callback then callback(zones) end
             return zones
         end
+        if callback then callback(nil) end
         return nil
     end
 
@@ -1049,15 +1693,19 @@ end
 -- ========================================================
 
 function GRID.Database.GetPlayerBuffs(steamID)
-    if GRID.Database.Cache.Buffs[steamID] then
-        return GRID.Database.Cache.Buffs[steamID]
+    local cached = GRID.Database.Cache.Buffs[steamID]
+    if not cached then return {} end
+    if cached[1] ~= nil then return cached end
+    local list = {}
+    for _, b in pairs(cached) do
+        table.insert(list, b)
     end
-    return {}
+    return list
 end
 
 function GRID.Database.SavePlayerBuff(steamID, buffId, duration, remaining, stacks, appliedAt, expiresAtUnix, dataStr)
     GRID.Database.Cache.Buffs[steamID] = GRID.Database.Cache.Buffs[steamID] or {}
-    GRID.Database.Cache.Buffs[steamID][buffId] = {
+    local entry = {
         buff_id = buffId,
         duration = tonumber(duration) or 0,
         remaining = tonumber(remaining) or 0,
@@ -1066,6 +1714,21 @@ function GRID.Database.SavePlayerBuff(steamID, buffId, duration, remaining, stac
         expires_at_unix = tonumber(expiresAtUnix) or 0,
         data = tostring(dataStr or "{}")
     }
+    if GRID.Database.Cache.Buffs[steamID][1] ~= nil then
+        local found = false
+        for i, b in ipairs(GRID.Database.Cache.Buffs[steamID]) do
+            if b.buff_id == buffId then
+                GRID.Database.Cache.Buffs[steamID][i] = entry
+                found = true
+                break
+            end
+        end
+        if not found then
+            table.insert(GRID.Database.Cache.Buffs[steamID], entry)
+        end
+    else
+        GRID.Database.Cache.Buffs[steamID][buffId] = entry
+    end
 
     GRID.Database.CallProcedure("grid_save_player_buff", {
         steamID,
@@ -1081,8 +1744,17 @@ function GRID.Database.SavePlayerBuff(steamID, buffId, duration, remaining, stac
 end
 
 function GRID.Database.DeletePlayerBuff(steamID, buffId)
-    if GRID.Database.Cache.Buffs[steamID] then
-        GRID.Database.Cache.Buffs[steamID][buffId] = nil
+    local cached = GRID.Database.Cache.Buffs[steamID]
+    if cached then
+        if cached[1] ~= nil then
+            for i = #cached, 1, -1 do
+                if cached[i].buff_id == buffId then
+                    table.remove(cached, i)
+                end
+            end
+        else
+            cached[buffId] = nil
+        end
     end
     GRID.Database.CallProcedure("grid_delete_player_buff", { steamID, buffId })
 end
@@ -1105,8 +1777,3 @@ function GRID.Database.CollectPrinterTaxed(steamID, gangName, payout, tax)
         os.time()
     })
 end
-
--- Auto-initialize database on server startup
-hook.Add("Initialize", "GRID_DatabaseInit", function()
-    GRID.Database.Init()
-end)
