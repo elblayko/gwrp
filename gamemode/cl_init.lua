@@ -1,5 +1,5 @@
 --[[
-    GangWars RP (GWRP) by Toxic
+    GridRP (GRID) by Toxic
     gamemode/cl_init.lua - Client Gamemode Entry Point
 --]]
 
@@ -27,49 +27,49 @@ include("ui/cl_scoreboard.lua")
 include("ui/cl_deathscreen.lua")
 
 function GM:Initialize()
-    print("[GWRP-Client] Initializing client interface & Source fonts...")
-    GW.UI.CreateFonts()
+    print("[GRID-Client] Initializing client interface & Source fonts...")
+    GRID.UI.CreateFonts()
 end
 
 -- Server Net Receivers for F4 and F2
-net.Receive("GW_ToggleF4Menu", function()
-    GW.UI.ToggleF4Menu()
+net.Receive("GRID_ToggleF4Menu", function()
+    GRID.UI.ToggleF4Menu()
 end)
 
-net.Receive("GW_ToggleF2Menu", function()
-    GW.Doors.OpenDoorMenu()
+net.Receive("GRID_ToggleF2Menu", function()
+    GRID.Doors.OpenDoorMenu()
 end)
 
-net.Receive("GW_OpenAdminMenu", function()
-    if GW.Turf and GW.Turf.OpenSetupMenu then
-        GW.Turf.OpenSetupMenu()
+net.Receive("GRID_OpenAdminMenu", function()
+    if GRID.Turf and GRID.Turf.OpenSetupMenu then
+        GRID.Turf.OpenSetupMenu()
     end
 end)
 
-net.Receive("GW_OpenTurfSetup", function()
-    if GW.Turf and GW.Turf.OpenSetupMenu then
-        GW.Turf.OpenSetupMenu()
+net.Receive("GRID_OpenTurfSetup", function()
+    if GRID.Turf and GRID.Turf.OpenSetupMenu then
+        GRID.Turf.OpenSetupMenu()
     end
 end)
 
 -- Direct Physical Key Listener (Hooks KEY_F4, KEY_F2, and KEY_B directly on client)
-hook.Add("PlayerButtonDown", "GW_FKeyBindings", function(ply, button)
+hook.Add("PlayerButtonDown", "GRID_FKeyBindings", function(ply, button)
     if button == KEY_F4 then
-        GW.UI.ToggleF4Menu()
+        GRID.UI.ToggleF4Menu()
     elseif button == KEY_F2 then
-        GW.Doors.OpenDoorMenu()
+        GRID.Doors.OpenDoorMenu()
     elseif button == KEY_B then
-        GW.UI.ToggleBag()
+        GRID.UI.ToggleBag()
     end
 end)
 
 -- Console commands for menu
-concommand.Add("gw_f4", function() GW.UI.ToggleF4Menu() end)
-concommand.Add("f4menu", function() GW.UI.ToggleF4Menu() end)
-concommand.Add("gw_menu", function() GW.UI.ToggleF4Menu() end)
-concommand.Add("gw_admin", function() if GW.Turf and GW.Turf.OpenSetupMenu then GW.Turf.OpenSetupMenu() end end)
-concommand.Add("admin", function() if GW.Turf and GW.Turf.OpenSetupMenu then GW.Turf.OpenSetupMenu() end end)
-concommand.Add("debug", function() if GW.Turf and GW.Turf.OpenSetupMenu then GW.Turf.OpenSetupMenu() end end)
+concommand.Add("grid_f4", function() GRID.UI.ToggleF4Menu() end)
+concommand.Add("f4menu", function() GRID.UI.ToggleF4Menu() end)
+concommand.Add("grid_menu", function() GRID.UI.ToggleF4Menu() end)
+concommand.Add("grid_admin", function() if GRID.Turf and GRID.Turf.OpenSetupMenu then GRID.Turf.OpenSetupMenu() end end)
+concommand.Add("admin", function() if GRID.Turf and GRID.Turf.OpenSetupMenu then GRID.Turf.OpenSetupMenu() end end)
+concommand.Add("debug", function() if GRID.Turf and GRID.Turf.OpenSetupMenu then GRID.Turf.OpenSetupMenu() end end)
 
 -- Explicitly ensure client viewmodel hands render for SWEP.UseHands weapons
 function GM:PostDrawViewModel(vm, ply, wep, flags)

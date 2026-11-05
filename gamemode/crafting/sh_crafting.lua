@@ -3,14 +3,14 @@
     Author: Toxic & Antigravity
 --]]
 
-GW = GW or {}
-GW.Crafting = GW.Crafting or {}
+GRID = GRID or {}
+GRID.Crafting = GRID.Crafting or {}
 
 -- ========================================================
 -- 1. MATERIAL DEFINITIONS & VISUAL COLOR PALETTES
 -- ========================================================
 
-GW.Crafting.Materials = {
+GRID.Crafting.Materials = {
     ["crafting_ingot_zinc"] = {
         name = "Zinc Ingot",
         type = "material",
@@ -65,7 +65,7 @@ GW.Crafting.Materials = {
         model = "models/gangwars/crafting/blup.mdl",
         color = Color(255, 255, 255),
         hasTint = false,
-        weapon = "weapon_gw_glock",
+        weapon = "weapon_grid_glock",
         desc = "Technical engineering schematic detailing the Glock-18 firearm assembly.",
         stats = "Schematic: Glock-18"
     },
@@ -77,7 +77,7 @@ GW.Crafting.Materials = {
         model = "models/gangwars/crafting/blup.mdl",
         color = Color(255, 255, 255),
         hasTint = false,
-        weapon = "weapon_gw_deagle",
+        weapon = "weapon_grid_deagle",
         desc = "Technical schematic for calibrating .50 Action Express magnum components.",
         stats = "Schematic: Desert Eagle"
     },
@@ -89,7 +89,7 @@ GW.Crafting.Materials = {
         model = "models/gangwars/crafting/blup.mdl",
         color = Color(255, 255, 255),
         hasTint = false,
-        weapon = "weapon_gw_shotgun",
+        weapon = "weapon_grid_shotgun",
         desc = "Technical schematic detailing the combat pump shotgun action assembly.",
         stats = "Schematic: SPAS-12"
     },
@@ -101,15 +101,15 @@ GW.Crafting.Materials = {
         model = "models/gangwars/crafting/blup.mdl",
         color = Color(255, 255, 255),
         hasTint = false,
-        weapon = "weapon_gw_ak47",
+        weapon = "weapon_grid_ak47",
         desc = "Military schematic detailing gas-piston assembly for the Kalashnikov rifle.",
         stats = "Schematic: AK-47 Kalashnikov"
     }
 }
 
 -- Helper: Retrieve color tint for a material entity or item icon
-function GW.Crafting.GetMaterialColor(matId)
-    local def = GW.Crafting.Materials[matId]
+function GRID.Crafting.GetMaterialColor(matId)
+    local def = GRID.Crafting.Materials[matId]
     if def and def.hasTint and def.color then
         return def.color
     end
@@ -117,14 +117,14 @@ function GW.Crafting.GetMaterialColor(matId)
 end
 
 -- Merge into the central inventory item definitions
-GW.Inventory = GW.Inventory or {}
-GW.Inventory.Items = GW.Inventory.Items or {}
-for id, data in pairs(GW.Crafting.Materials) do
-    GW.Inventory.Items[id] = data
+GRID.Inventory = GRID.Inventory or {}
+GRID.Inventory.Items = GRID.Inventory.Items or {}
+for id, data in pairs(GRID.Crafting.Materials) do
+    GRID.Inventory.Items[id] = data
 end
 
 -- Add the machine itself to inventory items
-GW.Inventory.Items["gw_resource_machine"] = {
+local machineItemDef = {
     name = "Resource Fabricator",
     type = "entity",
     subType = "Automated Extractor",
@@ -133,6 +133,7 @@ GW.Inventory.Items["gw_resource_machine"] = {
     desc = "Legal industrial extractor and crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput.",
     stats = "Legal Extractor & Workbench | Network Capable"
 }
+GRID.Inventory.Items["grid_resource_machine"] = machineItemDef
 
 -- ========================================================
 -- 2. RESOURCE FABRICATOR EXTRACTION LOOT TABLE
@@ -140,7 +141,7 @@ GW.Inventory.Items["gw_resource_machine"] = {
 
 -- Extraction weights (Total = 100)
 -- Zinc: 48% (Common Base) | Iron: 24% (Structural) | Steel: 12% (Military Alloy) | Blueprints: 10% | Carbon Rod: 6% (Exotic)
-GW.Crafting.DropTable = {
+GRID.Crafting.DropTable = {
     { id = "crafting_ingot_zinc",  weight = 48 },
     { id = "crafting_ingot_iron",  weight = 24 },
     { id = "crafting_ingot_steel", weight = 12 },
@@ -157,9 +158,9 @@ GW.Crafting.DropTable = {
     { id = "crafting_carbon_rod",  weight = 6 }
 }
 
-function GW.Crafting.RollRandomResource()
+function GRID.Crafting.RollRandomResource()
     local totalWeight = 0
-    for _, entry in ipairs(GW.Crafting.DropTable) do
+    for _, entry in ipairs(GRID.Crafting.DropTable) do
         totalWeight = totalWeight + (entry.weight or 0)
     end
     if totalWeight <= 0 then return "crafting_ingot_zinc" end
@@ -168,7 +169,7 @@ function GW.Crafting.RollRandomResource()
     local roll = math.Rand(0, totalWeight)
     local cumulative = 0
 
-    for _, entry in ipairs(GW.Crafting.DropTable) do
+    for _, entry in ipairs(GRID.Crafting.DropTable) do
         cumulative = cumulative + entry.weight
         if roll <= cumulative then
             if entry.isBlueprintPool then
@@ -188,14 +189,14 @@ end
 -- 3. CRAFTING RECIPES CATALOG
 -- ========================================================
 
-GW.Crafting.Recipes = {
+GRID.Crafting.Recipes = {
     -- 1. FIREARMS (Requires weapon schematic blueprint + ingots)
     {
         id = "craft_glock",
         name = "Glock-18 Sidearm",
         category = "Weapons",
         resultType = "weapon",
-        resultId = "weapon_gw_glock",
+        resultId = "weapon_grid_glock",
         quality = 1,
         model = "models/weapons/w_pist_glock18.mdl",
         desc = "Standard semi-automatic sidearm. Reliable 17-round capacity.",
@@ -209,7 +210,7 @@ GW.Crafting.Recipes = {
         name = "Desert Eagle .50 AE",
         category = "Weapons",
         resultType = "weapon",
-        resultId = "weapon_gw_deagle",
+        resultId = "weapon_grid_deagle",
         quality = 2,
         model = "models/weapons/w_pist_deagle.mdl",
         desc = "Heavy caliber .50 magnum sidearm with heavy armor-piercing kinetic impact.",
@@ -224,7 +225,7 @@ GW.Crafting.Recipes = {
         name = "SPAS-12 Combat Shotgun",
         category = "Weapons",
         resultType = "weapon",
-        resultId = "weapon_gw_shotgun",
+        resultId = "weapon_grid_shotgun",
         quality = 3,
         model = "models/weapons/w_shot_m3super90.mdl",
         desc = "Close-quarters combat pump shotgun delivering devastating buckshot spread.",
@@ -239,7 +240,7 @@ GW.Crafting.Recipes = {
         name = "AK-47 Kalashnikov",
         category = "Weapons",
         resultType = "weapon",
-        resultId = "weapon_gw_ak47",
+        resultId = "weapon_grid_ak47",
         quality = 4,
         model = "models/weapons/w_rif_ak47.mdl",
         desc = "Full-auto gas-operated military assault rifle with high armor penetration.",
@@ -256,7 +257,7 @@ GW.Crafting.Recipes = {
         name = "Courier Satchel",
         category = "Bags",
         resultType = "bag",
-        resultId = "gw_bag_small",
+        resultId = "grid_bag_small",
         quality = 2,
         model = "models/props_c17/BriefCase001a.mdl",
         desc = "Compact leather satchel expanding personal inventory by +6 slots.",
@@ -269,7 +270,7 @@ GW.Crafting.Recipes = {
         name = "Tactical Duffel Bag",
         category = "Bags",
         resultType = "bag",
-        resultId = "gw_bag_medium",
+        resultId = "grid_bag_medium",
         quality = 3,
         model = "models/props_c17/Suitcase001a.mdl",
         desc = "Reinforced tactical duffel expanding personal inventory by +10 slots.",
@@ -282,7 +283,7 @@ GW.Crafting.Recipes = {
         name = "Military Rucksack",
         category = "Bags",
         resultType = "bag",
-        resultId = "gw_bag_large",
+        resultId = "grid_bag_large",
         quality = 4,
         model = "models/props_c17/Suitcase_Passenger_Physics.mdl",
         desc = "Heavy-duty tactical rucksack expanding personal inventory by +16 slots.",
@@ -298,7 +299,7 @@ GW.Crafting.Recipes = {
         name = "Tactical Lockpick",
         category = "Gear",
         resultType = "weapon",
-        resultId = "weapon_gw_lockpick",
+        resultId = "weapon_grid_lockpick",
         quality = 2,
         model = "models/weapons/w_crowbar.mdl",
         desc = "Mechanical lock bypass tool used to breach locked doors and security pins.",
@@ -311,7 +312,7 @@ GW.Crafting.Recipes = {
         name = "Field Medical Kit",
         category = "Gear",
         resultType = "weapon",
-        resultId = "weapon_gw_medkit",
+        resultId = "weapon_grid_medkit",
         quality = 1,
         model = "models/weapons/w_medkit.mdl",
         desc = "Reusable clinical field pack restoring up to +25 Health per treatment.",
@@ -347,8 +348,8 @@ GW.Crafting.Recipes = {
     }
 }
 
-function GW.Crafting.GetRecipe(recipeId)
-    for _, recipe in ipairs(GW.Crafting.Recipes) do
+function GRID.Crafting.GetRecipe(recipeId)
+    for _, recipe in ipairs(GRID.Crafting.Recipes) do
         if recipe.id == recipeId then
             return recipe
         end

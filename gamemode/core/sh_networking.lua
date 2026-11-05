@@ -1,13 +1,13 @@
 --[[
     gamemode/core/sh_networking.lua
-    GWRP Layer 2 / Layer 3 Networking, IP Addressing & Broadcast Domain System
+    GridRP Layer 2 / Layer 3 Networking, IP Addressing & Broadcast Domain System
     Author: Toxic
 --]]
 
-GW.Network = GW.Network or {}
+GRID.Network = GRID.Network or {}
 
 -- Generates a deterministic subnet identifier (1..254) for a given network switch
-function GW.Network.GetSubnetID(switchEnt)
+function GRID.Network.GetSubnetID(switchEnt)
     if not IsValid(switchEnt) then return 1 end
     if switchEnt.GetSubnetID and switchEnt:GetSubnetID() > 0 then
         return switchEnt:GetSubnetID()
@@ -18,27 +18,34 @@ function GW.Network.GetSubnetID(switchEnt)
 end
 
 -- Formats IPv4 address string given a subnet and host offset
-function GW.Network.FormatIP(subnetId, hostId)
+function GRID.Network.FormatIP(subnetId, hostId)
     return string.format("192.168.%d.%d", subnetId, hostId)
 end
 
 -- Gateway IP for a switch
-function GW.Network.GetGatewayIP(switchEnt)
-    local subnet = GW.Network.GetSubnetID(switchEnt)
+function GRID.Network.GetGatewayIP(switchEnt)
+    local subnet = GRID.Network.GetSubnetID(switchEnt)
     return string.format("192.168.%d.1", subnet)
 end
 
 -- Generates a simulated MAC address for realism in network tools (nmap, ifconfig)
-function GW.Network.FormatMAC(ent, subnetId, hostId)
+function GRID.Network.FormatMAC(ent, subnetId, hostId)
     local idx = IsValid(ent) and ent:EntIndex() or 1
     local sub = subnetId or 1
     local hst = hostId or 10
     return string.format("02:42:C0:%02X:%02X:%02X", sub % 256, hst % 256, idx % 256)
 end
 
+-- Helper to check if entity is a network switch
+local function isSwitch(dev)
+    if not IsValid(dev) then return false end
+    local c = dev:GetClass()
+    return c == "grid_network_switch"
+end
+
 -- Traverses and retrieves all active devices within the broadcast domain of a switch (including SFP-uplinked switches)
-function GW.Network.GetBroadcastDomain(switchEnt, visited)
-    if not IsValid(switchEnt) or switchEnt:GetClass() ~= "gw_network_switch" then
+function GRID.Network.GetBroadcastDomain(switchEnt, visited)
+    if not isSwitch(switchEnt) then
         return {}
     end
 
@@ -46,7 +53,7 @@ function GW.Network.GetBroadcastDomain(switchEnt, visited)
     if visited[switchEnt] then return {} end
     visited[switchEnt] = true
 
-    local subnet = GW.Network.GetSubnetID(switchEnt)
+    local subnet = GRID.Network.GetSubnetID(switchEnt)
     local devices = {}
 
     -- 1. The Switch itself (Default Gateway)
@@ -54,12 +61,12 @@ function GW.Network.GetBroadcastDomain(switchEnt, visited)
         entity = switchEnt,
         name = switchEnt.PrintName or "L3 Network Switch (2-Cu + 2-SFP)",
         type = "switch",
-        ip = GW.Network.GetGatewayIP(switchEnt),
-        mac = GW.Network.FormatMAC(switchEnt, subnet, 1),
+        ip = GRID.Network.GetGatewayIP(switchEnt),
+        mac = GRID.Network.FormatMAC(switchEnt, subnet, 1),
         port = 0,
         status = "ONLINE",
         services = {
-            { port = 22, proto = "tcp", service = "ssh", version = "GWRP-Switch-OS L3.1" },
+            { port = 22, proto = "tcp", service = "ssh", version = "GRID-Switch-OS L3.1" },
             { port = 80, proto = "tcp", service = "http", version = "Switch Web Console" }
         }
     })
@@ -71,24 +78,24 @@ function GW.Network.GetBroadcastDomain(switchEnt, visited)
             local dev = portData.device or portData.printer
             if IsValid(dev) then
                 local devClass = dev:GetClass()
-                if devClass == "gw_network_switch" then
+                if isSwitch(dev) then
                     -- Interconnected switch trunk on SFP Combo Port 3
                     if not visited[dev] then
-                        local trunkedDevices = GW.Network.GetBroadcastDomain(dev, visited)
+                        local trunkedDevices = GRID.Network.GetBroadcastDomain(dev, visited)
                         for _, devData in ipairs(trunkedDevices) do
                             table.insert(devices, devData)
                         end
                     end
                 else
                     local isPrinter = dev.PrintAmount ~= nil or string.find(devClass, "printer")
-                    local isComputer = devClass == "gw_computer" or dev.IsComputer
-                    local isSynthesizer = devClass == "gw_resource_machine" or string.find(devClass, "resource_machine")
-                    local isUplink = devClass == "gw_wan_uplink" or dev.IsWANUplink
+                    local isComputer = devClass == "grid_computer" or dev.IsComputer
+                    local isSynthesizer = devClass == "grid_resource_machine" or string.find(devClass, "resource_machine")
+                    local isUplink = devClass == "grid_wan_uplink" or dev.IsWANUplink
                     local devType = isPrinter and "printer" or (isComputer and "computer" or (isSynthesizer and "synthesizer" or (isUplink and "wan_uplink" or "device")))
 
                     local hostId = 10 + portNum
-                    local devIP = (dev.GetIPAddress and dev:GetIPAddress() ~= "") and dev:GetIPAddress() or GW.Network.FormatIP(subnet, hostId)
-                    local devMAC = GW.Network.FormatMAC(dev, subnet, hostId)
+                    local devIP = (dev.GetIPAddress and dev:GetIPAddress() ~= "") and dev:GetIPAddress() or GRID.Network.FormatIP(subnet, hostId)
+                    local devMAC = GRID.Network.FormatMAC(dev, subnet, hostId)
 
                     local services = {}
                     if isPrinter then
@@ -161,8 +168,8 @@ function GW.Network.GetBroadcastDomain(switchEnt, visited)
     local sfpData = switchEnt.Ports and switchEnt.Ports[4]
     if sfpData then
         local uplink = sfpData.device or sfpData.switch
-        if IsValid(uplink) and uplink:GetClass() == "gw_network_switch" and not visited[uplink] then
-            local trunkedDevices = GW.Network.GetBroadcastDomain(uplink, visited)
+        if isSwitch(uplink) and not visited[uplink] then
+            local trunkedDevices = GRID.Network.GetBroadcastDomain(uplink, visited)
             for _, devData in ipairs(trunkedDevices) do
                 table.insert(devices, devData)
             end
@@ -176,15 +183,15 @@ end
 -- 4. WAN SATELLITE MESH & INTER-SUBNET ROUTING
 -- ========================================================
 
-GW.Network.WANUplinks = GW.Network.WANUplinks or {}
+GRID.Network.WANUplinks = GRID.Network.WANUplinks or {}
 
 -- Recalculates all active wireless WAN mesh groups
-function GW.Network.RecalculateWANMesh()
+function GRID.Network.RecalculateWANMesh()
     local cleanList = {}
     local keyGroups = {}
 
-    for _, uplink in ipairs(GW.Network.WANUplinks) do
-        if IsValid(uplink) and uplink:GetClass() == "gw_wan_uplink" then
+    for _, uplink in ipairs(GRID.Network.WANUplinks) do
+        if IsValid(uplink) and uplink:GetClass() == "grid_wan_uplink" then
             table.insert(cleanList, uplink)
             local key = uplink:GetEncryptionKey()
             if key and key ~= "" then
@@ -195,7 +202,7 @@ function GW.Network.RecalculateWANMesh()
         end
     end
 
-    GW.Network.WANUplinks = cleanList
+    GRID.Network.WANUplinks = cleanList
 
     for _, group in pairs(keyGroups) do
         local totalInGroup = #group
@@ -226,8 +233,8 @@ function GW.Network.RecalculateWANMesh()
 end
 
 -- Finds the active WAN uplink connected to a switch or its SFP-trunked broadcast domain (if any)
-function GW.Network.GetUplinkForSwitch(switchEnt, visited)
-    if not IsValid(switchEnt) or switchEnt:GetClass() ~= "gw_network_switch" then return nil end
+function GRID.Network.GetUplinkForSwitch(switchEnt, visited)
+    if not isSwitch(switchEnt) then return nil end
     if not switchEnt.Ports then return nil end
 
     visited = visited or {}
@@ -239,7 +246,7 @@ function GW.Network.GetUplinkForSwitch(switchEnt, visited)
         local pData = switchEnt.Ports[portNum]
         if pData then
             local dev = pData.device
-            if IsValid(dev) and (dev:GetClass() == "gw_wan_uplink" or dev.IsWANUplink) then
+            if IsValid(dev) and (dev:GetClass() == "grid_wan_uplink" or dev.IsWANUplink) then
                 return dev
             end
         end
@@ -250,8 +257,8 @@ function GW.Network.GetUplinkForSwitch(switchEnt, visited)
         local pData = switchEnt.Ports[portNum]
         if pData then
             local otherSw = pData.device or pData.switch
-            if IsValid(otherSw) and otherSw:GetClass() == "gw_network_switch" and not visited[otherSw] then
-                local found = GW.Network.GetUplinkForSwitch(otherSw, visited)
+            if isSwitch(otherSw) and not visited[otherSw] then
+                local found = GRID.Network.GetUplinkForSwitch(otherSw, visited)
                 if IsValid(found) then
                     return found
                 end
@@ -263,9 +270,9 @@ function GW.Network.GetUplinkForSwitch(switchEnt, visited)
 end
 
 -- Finds any Personal Computer actively running the Cloud Botnet C2 daemon in the switch's broadcast domain
-function GW.Network.GetActiveBotnetForSwitch(switchEnt)
+function GRID.Network.GetActiveBotnetForSwitch(switchEnt)
     if not IsValid(switchEnt) then return nil end
-    local devices = GW.Network.GetBroadcastDomain(switchEnt)
+    local devices = GRID.Network.GetBroadcastDomain(switchEnt)
     for _, dev in ipairs(devices) do
         if dev.type == "computer" and IsValid(dev.entity) then
             if dev.entity.GetBotnetActive and dev.entity:GetBotnetActive() then
@@ -277,8 +284,8 @@ function GW.Network.GetActiveBotnetForSwitch(switchEnt)
 end
 
 -- Retrieves devices in peer subnets reachable across an active WAN mesh
-function GW.Network.GetWANMeshDevices(switchEnt)
-    local uplink = GW.Network.GetUplinkForSwitch(switchEnt)
+function GRID.Network.GetWANMeshDevices(switchEnt)
+    local uplink = GRID.Network.GetUplinkForSwitch(switchEnt)
     if not IsValid(uplink) or not uplink:GetIsOnline() then
         return {}
     end
@@ -289,14 +296,14 @@ function GW.Network.GetWANMeshDevices(switchEnt)
     local remoteDevices = {}
     local visitedSwitches = { [switchEnt] = true }
 
-    for _, otherUplink in ipairs(GW.Network.WANUplinks or {}) do
+    for _, otherUplink in ipairs(GRID.Network.WANUplinks or {}) do
         if IsValid(otherUplink) and otherUplink ~= uplink then
             local otherKey = string.Trim(string.upper(otherUplink:GetEncryptionKey() or ""))
             if otherKey == myKey then
                 local peerSwitch = otherUplink:GetConnectedSwitch()
                 if IsValid(peerSwitch) and not visitedSwitches[peerSwitch] then
                     visitedSwitches[peerSwitch] = true
-                    local peerDevices = GW.Network.GetBroadcastDomain(peerSwitch)
+                    local peerDevices = GRID.Network.GetBroadcastDomain(peerSwitch)
                     for _, devData in ipairs(peerDevices) do
                         devData.isRemoteWAN = true
                         devData.viaWAN = otherUplink
@@ -311,10 +318,10 @@ function GW.Network.GetWANMeshDevices(switchEnt)
 end
 
 -- Retrieves all reachable devices (Local Broadcast Domain + Remote WAN Mesh Subnets)
-function GW.Network.GetAllReachableDevices(switchEnt)
+function GRID.Network.GetAllReachableDevices(switchEnt)
     if not IsValid(switchEnt) then return {} end
-    local localDevs = GW.Network.GetBroadcastDomain(switchEnt)
-    local wanDevs = GW.Network.GetWANMeshDevices(switchEnt)
+    local localDevs = GRID.Network.GetBroadcastDomain(switchEnt)
+    local wanDevs = GRID.Network.GetWANMeshDevices(switchEnt)
 
     local all = {}
     for _, d in ipairs(localDevs) do table.insert(all, d) end
@@ -323,9 +330,9 @@ function GW.Network.GetAllReachableDevices(switchEnt)
 end
 
 -- Searches for any host by IP address reachable from a switch
-function GW.Network.FindReachableDeviceByIP(switchEnt, targetIP)
+function GRID.Network.FindReachableDeviceByIP(switchEnt, targetIP)
     if not targetIP or targetIP == "" then return nil end
-    local devices = GW.Network.GetAllReachableDevices(switchEnt)
+    local devices = GRID.Network.GetAllReachableDevices(switchEnt)
     for _, dev in ipairs(devices) do
         if dev.ip == targetIP then
             return dev
@@ -335,8 +342,8 @@ function GW.Network.FindReachableDeviceByIP(switchEnt, targetIP)
 end
 
 -- Scans wireless spectrum for active WAN transmitters within maximum sniffing distance (for airmon / wan scan)
-function GW.Network.GetActiveWANSpectrum(origin, maxDist)
-    maxDist = maxDist or (GW.Config and GW.Config.WLANSniffMaxDistance) or 2500
+function GRID.Network.GetActiveWANSpectrum(origin, maxDist)
+    maxDist = maxDist or (GRID.Config and GRID.Config.WLANSniffMaxDistance) or 2500
 
     local originPos = nil
     local localUplink = nil
@@ -346,14 +353,14 @@ function GW.Network.GetActiveWANSpectrum(origin, maxDist)
     elseif isentity(origin) and IsValid(origin) then
         if origin:IsPlayer() then
             originPos = origin:GetPos()
-        elseif origin:GetClass() == "weapon_gw_cyberphone" then
+        elseif origin:GetClass() == "weapon_grid_cyberphone" then
             local owner = origin:GetOwner()
             originPos = (IsValid(owner) and owner:GetPos()) or origin:GetPos()
-        elseif origin:GetClass() == "gw_computer" then
+        elseif origin:GetClass() == "grid_computer" then
             originPos = origin:GetPos()
             local sw = origin:GetConnectedSwitch()
-            if IsValid(sw) and GW.Network.GetUplinkForSwitch then
-                localUplink = GW.Network.GetUplinkForSwitch(sw)
+            if IsValid(sw) and GRID.Network.GetUplinkForSwitch then
+                localUplink = GRID.Network.GetUplinkForSwitch(sw)
             end
         else
             originPos = origin:GetPos()
@@ -361,7 +368,7 @@ function GW.Network.GetActiveWANSpectrum(origin, maxDist)
     end
 
     local spectrum = {}
-    for _, uplink in ipairs(GW.Network.WANUplinks or {}) do
+    for _, uplink in ipairs(GRID.Network.WANUplinks or {}) do
         if IsValid(uplink) then
             local upPos = uplink:GetPos()
             local dist = originPos and originPos:Distance(upPos) or nil
@@ -388,13 +395,13 @@ function GW.Network.GetActiveWANSpectrum(origin, maxDist)
                     rssi = -1 * math.random(35, 65)
                 end
 
-                local botnetPC = IsValid(sw) and GW.Network.GetActiveBotnetForSwitch and GW.Network.GetActiveBotnetForSwitch(sw) or nil
+                local botnetPC = IsValid(sw) and GRID.Network.GetActiveBotnetForSwitch and GRID.Network.GetActiveBotnetForSwitch(sw) or nil
                 local hasBotnet = IsValid(botnetPC)
 
                 table.insert(spectrum, {
                     entity = uplink,
                     bssid = bssid,
-                    ssid = "GWRP-SAT-WAN-" .. string.sub(key, 1, 4) .. "***",
+                    ssid = "GRID-SAT-WAN-" .. string.sub(key, 1, 4) .. "***",
                     fullKey = key,
                     channel = channel,
                     rssi = rssi,

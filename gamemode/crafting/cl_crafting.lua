@@ -3,13 +3,13 @@
     Author: Toxic & Antigravity
 --]]
 
-GW = GW or {}
-GW.Crafting = GW.Crafting or {}
-GW.Crafting.ActiveFrame = nil
-GW.Crafting.CurrentMachine = nil
-GW.Crafting.ActiveCategory = "All"
+GRID = GRID or {}
+GRID.Crafting = GRID.Crafting or {}
+GRID.Crafting.ActiveFrame = nil
+GRID.Crafting.CurrentMachine = nil
+GRID.Crafting.ActiveCategory = "All"
 
-surface.CreateFont("GW_UI_BodyBold", {
+surface.CreateFont("GRID_UI_BodyBold", {
     font = "Roboto",
     size = 19,
     weight = 700,
@@ -17,9 +17,10 @@ surface.CreateFont("GW_UI_BodyBold", {
     extended = true
 })
 
-function GW.Crafting.GetClientMaterialCount(itemId)
+function GRID.Crafting.GetClientMaterialCount(itemId)
     local count = 0
-    for _, item in ipairs(GW.Inventory.ClientItems or {}) do
+    local items = (GRID.Inventory and GRID.Inventory.ClientItems) or {}
+    for _, item in ipairs(items) do
         local id = item.itemId or item.item_id
         if id == itemId then
             count = count + (tonumber(item.amount) or 1)
@@ -28,14 +29,14 @@ function GW.Crafting.GetClientMaterialCount(itemId)
     return count
 end
 
-function GW.Crafting.OpenCraftingMenu(machine)
-    if IsValid(GW.Crafting.ActiveFrame) then
-        GW.Crafting.ActiveFrame:Close()
-        GW.Crafting.ActiveFrame = nil
+function GRID.Crafting.OpenCraftingMenu(machine)
+    if IsValid(GRID.Crafting.ActiveFrame) then
+        GRID.Crafting.ActiveFrame:Close()
+        GRID.Crafting.ActiveFrame = nil
     end
 
     if not IsValid(machine) then return end
-    GW.Crafting.CurrentMachine = machine
+    GRID.Crafting.CurrentMachine = machine
 
     local scrW, scrH = ScrW(), ScrH()
     local frameW = math.Clamp(scrW * 0.78, 980, 1360)
@@ -48,11 +49,11 @@ function GW.Crafting.OpenCraftingMenu(machine)
     frame:ShowCloseButton(false)
     frame:SetDraggable(true)
     frame:MakePopup()
-    GW.Crafting.ActiveFrame = frame
+    GRID.Crafting.ActiveFrame = frame
 
     frame.OnClose = function()
-        GW.Crafting.ActiveFrame = nil
-        GW.Crafting.CurrentMachine = nil
+        GRID.Crafting.ActiveFrame = nil
+        GRID.Crafting.CurrentMachine = nil
     end
 
     -- Paint main frame background (Obsidian Palette)
@@ -70,19 +71,19 @@ function GW.Crafting.OpenCraftingMenu(machine)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
         -- Title & Dynamic Badge Placement (No Overlap)
-        surface.SetFont("GW_UI_Title")
+        surface.SetFont("GRID_UI_Title")
         local titleText = "Resource Fabricator"
         local titleW = surface.GetTextSize(titleText)
-        draw.SimpleText(titleText, "GW_UI_Title", 24, 18, Color(248, 250, 252), TEXT_ALIGN_LEFT)
+        draw.SimpleText(titleText, "GRID_UI_Title", 24, 18, Color(248, 250, 252), TEXT_ALIGN_LEFT)
 
         local badgeX = 24 + titleW + 16
         local badgeW = 130
         draw.RoundedBox(4, badgeX, 23, badgeW, 24, Color(6, 182, 212, 35))
         surface.SetDrawColor(6, 182, 212, 120)
         surface.DrawOutlinedRect(badgeX, 23, badgeW, 24, 1)
-        draw.SimpleText("CRAFTING STATION", "GW_UI_Badge", badgeX + badgeW / 2, 35, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("CRAFTING STATION", "GRID_UI_Badge", badgeX + badgeW / 2, 35, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        draw.SimpleText("Assemble firearms, tactical gear, and utility containers from extracted ingots and blueprints.", "GW_UI_Caption", 25, 49, Color(148, 163, 184), TEXT_ALIGN_LEFT)
+        draw.SimpleText("Assemble firearms, tactical gear, and utility containers from extracted ingots and blueprints.", "GRID_UI_Caption", 25, 49, Color(148, 163, 184), TEXT_ALIGN_LEFT)
     end
 
     -- Close Button
@@ -93,7 +94,7 @@ function GW.Crafting.OpenCraftingMenu(machine)
     closeBtn.Paint = function(s, w, h)
         local bg = s:IsHovered() and Color(239, 68, 68, 200) or Color(30, 41, 59, 150)
         draw.RoundedBox(6, 0, 0, w, h, bg)
-        draw.SimpleText("✕", "GW_UI_BodyBold", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("✕", "GRID_UI_BodyBold", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     closeBtn.DoClick = function()
         frame:Close()
@@ -121,23 +122,23 @@ function GW.Crafting.OpenCraftingMenu(machine)
         local port = machine.GetAssignedPort and machine:GetAssignedPort() or 0
 
         -- 1. Machine Health indicator
-        draw.SimpleText("FABRICATOR STATUS", "GW_UI_Badge", 16, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(string.format("Integrity: %d / %d HP", curHP, maxHP), "GW_UI_BodyBold", 16, 36, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("FABRICATOR STATUS", "GRID_UI_Badge", 16, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(string.format("Integrity: %d / %d HP", curHP, maxHP), "GRID_UI_BodyBold", 16, 36, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
         -- 2. Core Thermal indicator
         local tempCol = (curTemp >= 75) and Color(239, 68, 68) or ((curTemp >= 50) and Color(245, 158, 11) or Color(52, 211, 153))
         local tempStatus = (curTemp >= 75) and "CRITICAL" or ((curTemp >= 50) and "ELEVATED" or "OPTIMAL")
-        draw.SimpleText("CORE THERMAL", "GW_UI_Badge", 220, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(string.format("%d°C / 100°C [%s]", curTemp, tempStatus), "GW_UI_BodyBold", 220, 36, tempCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("CORE THERMAL", "GRID_UI_Badge", 220, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(string.format("%d°C / 100°C [%s]", curTemp, tempStatus), "GRID_UI_BodyBold", 220, 36, tempCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
         -- 3. Network line
         local netX = 430
-        draw.SimpleText("NETWORK CONNECTION", "GW_UI_Badge", netX, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("NETWORK CONNECTION", "GRID_UI_Badge", netX, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         if isNet then
             local netMsg = string.format("L3 Switch Port %d  |  %s  |  %d%% Speed", port, ip ~= "" and ip or "DHCP", eff)
-            draw.SimpleText(netMsg, "GW_UI_BodyBold", netX, 36, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(netMsg, "GRID_UI_BodyBold", netX, 36, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         else
-            draw.SimpleText("Standalone (60% Speed) - Link to Switch via Wire Tool", "GW_UI_BodyBold", netX, 36, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Standalone (60% Speed) - Link to Switch via Wire Tool", "GRID_UI_BodyBold", netX, 36, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         end
     end
 
@@ -158,11 +159,11 @@ function GW.Crafting.OpenCraftingMenu(machine)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
         local rName = IsValid(machine) and machine:GetReadyItemName() or "Resource"
-        draw.SimpleText("COLLECT " .. string.upper(rName), "GW_UI_Badge", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("COLLECT " .. string.upper(rName), "GRID_UI_Badge", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     collectBtn.DoClick = function()
         if IsValid(machine) then
-            net.Start("GW_CollectMachineResource")
+            net.Start("GRID_CollectMachineResource")
                 net.WriteEntity(machine)
             net.SendToServer()
         end
@@ -187,8 +188,8 @@ function GW.Crafting.OpenCraftingMenu(machine)
         if not IsValid(contentScroll) then return end
         contentScroll:Clear()
 
-        local recipes = GW.Crafting.Recipes or {}
-        local filter = GW.Crafting.ActiveCategory
+        local recipes = GRID.Crafting.Recipes or {}
+        local filter = GRID.Crafting.ActiveCategory
 
         local list = vgui.Create("DIconLayout", contentScroll)
         list:Dock(TOP)
@@ -205,7 +206,7 @@ function GW.Crafting.OpenCraftingMenu(machine)
             -- Evaluate can craft
             local canCraft = true
             for _, ing in ipairs(recipe.ingredients) do
-                local have = GW.Crafting.GetClientMaterialCount(ing.id)
+                local have = GRID.Crafting.GetClientMaterialCount(ing.id)
                 if have < ing.amount then
                     canCraft = false
                     break
@@ -215,7 +216,7 @@ function GW.Crafting.OpenCraftingMenu(machine)
             local card = list:Add("DPanel")
             card:SetSize(cardW, cardH)
 
-            local qColor = GW.Inventory.GetQualityColor(recipe.quality or 1)
+            local qColor = (GRID.Inventory and GRID.Inventory.GetQualityColor and GRID.Inventory.GetQualityColor(recipe.quality or 1)) or Color(248, 250, 252)
 
             card.Paint = function(s, w, h)
                 -- Card container
@@ -227,29 +228,29 @@ function GW.Crafting.OpenCraftingMenu(machine)
                 draw.RoundedBox(2, 4, 4, 3, h - 8, qColor)
 
                 -- Title & Category
-                draw.SimpleText(recipe.name, "GW_UI_BodyBold", 16, 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText(recipe.category, "GW_UI_Badge", 16, 33, qColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(recipe.name, "GRID_UI_BodyBold", 16, 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(recipe.category, "GRID_UI_Badge", 16, 33, qColor, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 -- Description (generous width avoiding model preview)
                 if recipe.desc then
-                    local fitDesc = GW.UI.FitText and GW.UI.FitText(recipe.desc, "GW_UI_Caption", w - 105) or recipe.desc
-                    draw.SimpleText(fitDesc, "GW_UI_Caption", 16, 52, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    local fitDesc = (GRID.UI and GRID.UI.FitText and GRID.UI.FitText(recipe.desc, "GRID_UI_Caption", w - 105)) or recipe.desc
+                    draw.SimpleText(fitDesc, "GRID_UI_Caption", 16, 52, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
                 end
 
                 -- Ingredient Header
-                draw.SimpleText("Required Materials:", "GW_UI_Badge", 16, 73, Color(100, 116, 139), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("Required Materials:", "GRID_UI_Badge", 16, 73, Color(100, 116, 139), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 -- Ingredients Pills (clean row wrapping with ample clearance from the Craft button)
                 local curX = 16
                 local curY = 92
                 for _, ing in ipairs(recipe.ingredients) do
-                    local have = GW.Crafting.GetClientMaterialCount(ing.id)
+                    local have = GRID.Crafting.GetClientMaterialCount(ing.id)
                     local met = have >= ing.amount
                     local col = met and Color(52, 211, 153) or Color(239, 68, 68)
                     local bg = met and Color(16, 185, 129, 25) or Color(239, 68, 68, 25)
 
                     local txt = string.format("%d/%d %s", have, ing.amount, ing.name)
-                    surface.SetFont("GW_UI_Badge")
+                    surface.SetFont("GRID_UI_Badge")
                     local tw = surface.GetTextSize(txt) + 16
 
                     if curX + tw > w - 118 then
@@ -260,7 +261,7 @@ function GW.Crafting.OpenCraftingMenu(machine)
                     draw.RoundedBox(4, curX, curY, tw, 20, bg)
                     surface.SetDrawColor(col.r, col.g, col.b, 100)
                     surface.DrawOutlinedRect(curX, curY, tw, 20, 1)
-                    draw.SimpleText(txt, "GW_UI_Badge", curX + tw / 2, curY + 10, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText(txt, "GRID_UI_Badge", curX + tw / 2, curY + 10, col, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
                     curX = curX + tw + 6
                 end
@@ -296,10 +297,10 @@ function GW.Crafting.OpenCraftingMenu(machine)
                 if canCraft then
                     local bg = s:IsHovered() and Color(6, 182, 212, 220) or Color(6, 182, 212, 170)
                     draw.RoundedBox(4, 0, 0, w, h, bg)
-                    draw.SimpleText("CRAFT", "GW_UI_BodyBold", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("CRAFT", "GRID_UI_BodyBold", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 else
                     draw.RoundedBox(4, 0, 0, w, h, Color(30, 41, 59, 120))
-                    draw.SimpleText("MISSING", "GW_UI_Badge", w / 2, h / 2, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("MISSING", "GRID_UI_Badge", w / 2, h / 2, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 end
             end
             craftBtn.DoClick = function()
@@ -312,7 +313,7 @@ function GW.Crafting.OpenCraftingMenu(machine)
                     return
                 end
 
-                net.Start("GW_CraftItem")
+                net.Start("GRID_CraftItem")
                     net.WriteEntity(machine)
                     net.WriteString(recipe.id)
                 net.SendToServer()
@@ -330,21 +331,21 @@ function GW.Crafting.OpenCraftingMenu(machine)
         btn:SetText("")
 
         btn.Paint = function(s, w, h)
-            local active = (GW.Crafting.ActiveCategory == cat)
+            local active = (GRID.Crafting.ActiveCategory == cat)
             if active then
                 draw.RoundedBox(4, 0, 0, w, h, Color(6, 182, 212, 35))
                 surface.SetDrawColor(6, 182, 212, 180)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
-                draw.SimpleText(cat, "GW_UI_BodyBold", w / 2, h / 2, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(cat, "GRID_UI_BodyBold", w / 2, h / 2, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             else
                 local bg = s:IsHovered() and Color(30, 41, 59, 120) or Color(0, 0, 0, 0)
                 draw.RoundedBox(4, 0, 0, w, h, bg)
-                draw.SimpleText(cat, "GW_UI_Sub", w / 2, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(cat, "GRID_UI_Sub", w / 2, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
         end
 
         btn.DoClick = function()
-            GW.Crafting.ActiveCategory = cat
+            GRID.Crafting.ActiveCategory = cat
             RefreshRecipes()
         end
 
@@ -372,14 +373,16 @@ function GW.Crafting.OpenCraftingMenu(machine)
 end
 
 -- Server Net Receiver: Open UI
-net.Receive("GW_OpenCraftingUI", function()
+local function HandleOpenCraftingUI()
     local machine = net.ReadEntity()
-    GW.Crafting.OpenCraftingMenu(machine)
-end)
+    GRID.Crafting.OpenCraftingMenu(machine)
+end
+
+net.Receive("GRID_OpenCraftingUI", HandleOpenCraftingUI)
 
 -- Auto-refresh recipe card states when inventory syncs
-hook.Add("GW_InventorySynced", "GW_Crafting_RefreshOnSync", function()
-    if IsValid(GW.Crafting.ActiveFrame) and IsValid(GW.Crafting.CurrentMachine) then
-        GW.Crafting.OpenCraftingMenu(GW.Crafting.CurrentMachine)
+hook.Add("GRID_InventorySynced", "GRID_Crafting_RefreshOnSync", function()
+    if IsValid(GRID.Crafting.ActiveFrame) and IsValid(GRID.Crafting.CurrentMachine) then
+        GRID.Crafting.OpenCraftingMenu(GRID.Crafting.CurrentMachine)
     end
 end)

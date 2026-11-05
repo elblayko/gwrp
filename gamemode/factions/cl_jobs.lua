@@ -2,10 +2,10 @@
     cl_jobs.lua - Client Job Cache & Team Color Helpers
 --]]
 
-GW.JobsClient = GW.JobsClient or {}
+GRID.JobsClient = GRID.JobsClient or {}
 
-function GW.GetTeamColor(ply)
-    if not IsValid(ply) then return GW.Colors.White end
+function GRID.GetTeamColor(ply)
+    if not IsValid(ply) then return (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252) end
     local job = ply:GetJobData()
-    return job and job.faction and job.faction.color or GW.Colors.White
+    return job and job.faction and job.faction.color or (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252)
 end

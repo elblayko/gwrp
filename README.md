@@ -1,8 +1,8 @@
-# GangWars RP (GWRP)
+# GridRP (GRID)
 
 **Version:** 2.0.0 (2026) · **Author:** Toxic · **Base gamemode:** `sandbox` · **Maps:** `^rp_*`
 
-GangWars RP is a Garry's Mod roleplay gamemode built around three competing groups: **Citizens** (and specialist service jobs), **Street Gangs** and **Police/SWAT**. Players earn money from salaries, money printers, crafting and territory, then spend it on gear, doors, networking hardware and weapons. Gangs fight over **turf**, police raid **contraband printers**, and Cyber Engineers **hack** networks.
+GridRP is a Garry's Mod roleplay gamemode built around three competing groups: **Citizens** (and specialist service jobs), **Street Gangs** and **Police/SWAT**. Players earn money from salaries, money printers, crafting and territory, then spend it on gear, doors, networking hardware and weapons. Gangs fight over **turf**, police raid **contraband printers**, and Cyber Engineers **hack** networks.
 
 ---
 
@@ -48,13 +48,13 @@ GangWars RP is a Garry's Mod roleplay gamemode built around three competing grou
 - *Optional:* Wiremod (enables wire outputs and inputs on entities).
 
 **Install**
-1. Copy this folder to `garrysmod/gamemodes/gangwarsrp/`. The folder name must match [gangwarsrp.txt](gangwarsrp.txt).
+1. Copy this folder to `garrysmod/gamemodes/gridrp/`. The folder name must match [gridrp.txt](gridrp.txt).
 2. Start the server with:
    ```
-   +gamemode gangwarsrp +map rp_downtown_v4c_v2
+   +gamemode gridrp +map rp_downtown_v4c_v2
    ```
-3. Import the MariaDB schema from `sql/gw_mariadb_schema.sql` into your database (`mysql -u root -p gw < sql/gw_mariadb_schema.sql`).
-   Configure database credentials in `garrysmod/data/gw/database.json` or startup ConVars (`+gw_db_host 127.0.0.1 +gw_db_user root +gw_db_password secret +gw_db_database gw`).
+3. Import the MariaDB schema from `sql/grid_mariadb_schema.sql` into your database (`mysql -u root -p grid < sql/grid_mariadb_schema.sql`).
+   Configure database credentials in `garrysmod/data/grid/database.json` or startup ConVars (`+grid_db_host 127.0.0.1 +grid_db_user root +grid_db_password secret +grid_db_database grid`).
    If running locally without the `mysqloo` binary module, the gamemode will automatically fallback to SQLite emulation for development.
 4. Grant yourself admin (`admin` or `superadmin` user group) to use setup tools.
 
@@ -261,27 +261,27 @@ On shutdown, every player plus the turf map profile is committed.
 | Buff ticks | per buff | HoT, poison and so on, persisted so offline time is handled correctly (`tickOffline`). |
 
 ### State and networking
-- Player state (money, job, gang, level, XP) is held in **networked vars** (`GW_Money`, `GW_Job`, `GW_Gang`, `GW_Level`, `GW_XP`) and saved to SQLite.
-- Client actions (buy, change job, door actions, admin actions) use **net messages** with **per-action rate limiting** (`GW.CheckRateLimit`) and server-side validation (level, job, distance, affordability).
+- Player state (money, job, gang, level, XP) is held in **networked vars** (`GRID_Money`, `GRID_Job`, `GRID_Gang`, `GRID_Level`, `GRID_XP`) and saved to SQLite.
+- Client actions (buy, change job, door actions, admin actions) use **net messages** with **per-action rate limiting** (`GRID.CheckRateLimit`) and server-side validation (level, job, distance, affordability).
 - Admin net actions require `IsAdmin()`/`IsSuperAdmin()`.
 
 ### Persistence
 
 [core/sv_database.lua](gamemode/core/sv_database.lua) provides:
-- `?`-placeholder **prepared statements** with sanitization, plus a **catalog of named procedures** (`GW.Database.Call("GET_PLAYER", {steamid})`).
+- `?`-placeholder **prepared statements** with sanitization, plus a **catalog of named procedures** (`GRID.Database.Call("GET_PLAYER", {steamid})`).
 - **Nested transactions** (`WithTransaction`) with automatic rollback.
 - **Migrations** for added columns.
 
 | Table | Purpose |
 |---|---|
-| `gw_players` | money, respect, gang, job, level, xp, last_seen |
-| `gw_gangs` / `gw_gang_members` | gang registry, bank, leader, member ranks |
-| `gw_inventory` / `gw_player_bags` | slot-grid items and equipped bags |
-| `gw_turfs` | per-map turf zones and owners |
-| `gw_player_buffs` | persistent buffs and debuffs |
-| `gw_settings` | key/value settings |
+| `grid_players` | money, respect, gang, job, level, xp, last_seen |
+| `grid_gangs` / `grid_gang_members` | gang registry, bank, leader, member ranks |
+| `grid_inventory` / `grid_player_bags` | slot-grid items and equipped bags |
+| `grid_turfs` | per-map turf zones and owners |
+| `grid_player_buffs` | persistent buffs and debuffs |
+| `grid_settings` | key/value settings |
 
-Turf zones are also exported to `data/gangwarsrp/maps/<map>.json` as a backup. Load order is **SQLite → JSON → built-in template**.
+Turf zones are also exported to `data/gridrp/ (or gangwarsrp/)maps/<map>.json` as a backup. Load order is **SQLite → JSON → built-in template**.
 
 ### Turf capture flow
 
@@ -338,7 +338,7 @@ Main settings are in [gamemode/core/sh_config.lua](gamemode/core/sh_config.lua).
 | `Level.*` | see file | Max level, XP curve, rewards |
 | `DefaultShopMarkupPercent` | 65 | Default kiosk markup |
 
-Jobs are in [sh_factions.lua](gamemode/factions/sh_factions.lua). Shop items are in `GW.ShopItems` in `sh_config.lua`.
+Jobs are in [sh_factions.lua](gamemode/factions/sh_factions.lua). Shop items are in `GRID.ShopItems` in `sh_config.lua`.
 
 ---
 
@@ -367,11 +367,11 @@ Jobs are in [sh_factions.lua](gamemode/factions/sh_factions.lua). Shop items are
 ### Admin (admin or superadmin)
 | Command | Description |
 |---|---|
-| `/admin`, `/debug`, `gw_admin` | Open the admin/debug HUD |
-| `/turfsetup`, `/adminsetup`, `gw_turfsetup` | Open the turf editor |
+| `/admin`, `/debug`, `grid_admin` | Open the admin/debug HUD |
+| `/turfsetup`, `/adminsetup`, `grid_turfsetup` | Open the turf editor |
 | `/setmoney`, `/addmoney <player> <amt>` | Wallet control |
 | `/setlevel <player> <lvl>`, `/addxp <player> <amt>` | Progression control |
-| `gw_setlevel`, `gw_addxp` | Console equivalents |
+| `grid_setlevel`, `grid_addxp` | Console equivalents |
 
 The admin HUD also provides: set job/gang/health/armor, godmode, goto/bring/respawn, trigger payday/dividends and spawn entities.
 
@@ -379,7 +379,7 @@ The admin HUD also provides: set job/gang/health/armor, godmode, goto/bring/resp
 
 ## Jobs Reference
 
-Every job receives baseline items (`weapon_fists`, `gw_keys`, `weapon_physgun`, `weapon_physcannon`, `gmod_tool`). Police spawn with duty ammunition and have a rapid 5-second respawn timer (15 seconds for all other factions).
+Every job receives baseline items (`weapon_fists`, `weapon_grid_keys`, `weapon_physgun`, `weapon_physcannon`, `gmod_tool`). Police spawn with duty ammunition and have a rapid 5-second respawn timer (15 seconds for all other factions).
 
 ### 1. Civilian & Specialty Services Faction
 
@@ -428,19 +428,19 @@ Every job receives baseline items (`weapon_fists`, `gw_keys`, `weapon_physgun`, 
 
 ## Extending the Gamemode
 
-- **Add a job:** add an entry to `GW.Jobs` in `factions/sh_factions.lua` (name, level, faction, salary, weapons, models, max, desc).
-- **Add a shop item:** add to `GW.ShopItems` in `core/sh_config.lua` (`type` = weapon/ammo/entity/shipment/consumable/armor/medkit/buff).
-- **Add a crafting recipe or material:** edit `GW.Crafting.Materials`, `DropTable` and `Recipes` in `crafting/sh_crafting.lua`.
-- **Add a buff:** call `GW.Buffs.Register(id, {...})` in `buffs/sh_buff_definitions.lua`. Hooks include `OnApplied`, `OnTick`, `OnRemoved`, `ModifySpeed` and `ModifyDamageTaken`.
-- **Add an entity or weapon:** create a folder under `entities/entities/` or `entities/weapons/` with `shared.lua`, `init.lua` and `cl_init.lua`. Register item data in `sh_inventory.lua` or `GW.Config.EntityQualities`.
-- **Add a DB query:** add a named statement to `GW.Database.Procedures`, then call it via `GW.Database.Call`.
+- **Add a job:** add an entry to `GRID.Jobs` in `factions/sh_factions.lua` (name, level, faction, salary, weapons, models, max, desc).
+- **Add a shop item:** add to `GRID.ShopItems` in `core/sh_config.lua` (`type` = weapon/ammo/entity/shipment/consumable/armor/medkit/buff).
+- **Add a crafting recipe or material:** edit `GRID.Crafting.Materials`, `DropTable` and `Recipes` in `crafting/sh_crafting.lua`.
+- **Add a buff:** call `GRID.Buffs.Register(id, {...})` in `buffs/sh_buff_definitions.lua`. Hooks include `OnApplied`, `OnTick`, `OnRemoved`, `ModifySpeed` and `ModifyDamageTaken`.
+- **Add an entity or weapon:** create a folder under `entities/entities/` or `entities/weapons/` with `shared.lua`, `init.lua` and `cl_init.lua`. Register item data in `sh_inventory.lua` or `GRID.Config.EntityQualities`.
+- **Add a DB query:** add a named statement to `GRID.Database.Procedures`, then call it via `GRID.Database.Call`.
 
 ---
 
 ## Project Structure
 
 ```
-gwrp/
+gridrp/
 ├── gangwarsrp.txt            # Gamemode manifest
 ├── gamemode/
 │   ├── init.lua, cl_init.lua, shared.lua
@@ -456,7 +456,7 @@ gwrp/
 └── entities/
     ├── entities/   printers, switch, computer, WAN uplink, modules, fabricator,
     │               flag pole, clinic pod, shipment, cash stack, crafting material
-    └── weapons/    GWRP firearms, keys, lockpick, medkit, wire tool, repair tool,
+    └── weapons/    GridRP firearms, keys, lockpick, medkit, wire tool, repair tool,
                     scanner, battering ram, CyberDeck phone
 ```
 

@@ -1,73 +1,74 @@
 --[[
     sv_net.lua - Centralized Network Protocol & Rate Limiter
-    Author: GW Core Team
-    Namespace: GW / gw_
-]]
+    Author: GRID Core Team
+    Namespace: GRID / grid_
+--]]
 
-util.AddNetworkString("GW_Notification")
-util.AddNetworkString("GW_PlayerDied")
-util.AddNetworkString("GW_TurfUpdate")
-util.AddNetworkString("GW_TurfAlert")
-util.AddNetworkString("GW_OpenTurfTaxMenu")
-util.AddNetworkString("GW_SetTurfTax")
-util.AddNetworkString("GW_ChangeJob")
-util.AddNetworkString("GW_BuyItem")
-util.AddNetworkString("GW_DoorAction")
-util.AddNetworkString("GW_ChatMessage")
-util.AddNetworkString("GW_SyncTurfZones")
-util.AddNetworkString("GW_OpenTurfSetup")
-util.AddNetworkString("GW_AdminTurfAction")
-util.AddNetworkString("GW_AdminDebugAction")
-util.AddNetworkString("GW_OpenAdminMenu")
-util.AddNetworkString("GW_ToggleF4Menu")
-util.AddNetworkString("GW_ToggleF2Menu")
-util.AddNetworkString("GW_SyncInventory")
-util.AddNetworkString("GW_UseInventoryItem")
-util.AddNetworkString("GW_DropInventoryItem")
-util.AddNetworkString("GW_MoveInventorySlot")
-util.AddNetworkString("GW_DropInventorySlot")
-util.AddNetworkString("GW_UseInventorySlot")
-util.AddNetworkString("GW_EquipBag")
-util.AddNetworkString("GW_ToggleBagWindow")
-util.AddNetworkString("GW_SyncAllBuffs")
-util.AddNetworkString("GW_SyncBuffAdded")
-util.AddNetworkString("GW_SyncBuffRemoved")
-util.AddNetworkString("GW_CancelBuff")
-util.AddNetworkString("GW_BuffCombatText")
-util.AddNetworkString("GW_OpenComputerOS")
-util.AddNetworkString("GW_RunComputerCommand")
-util.AddNetworkString("GW_ComputerCommandResponse")
-util.AddNetworkString("GW_LevelUp")
-util.AddNetworkString("GW_XPGained")
-util.AddNetworkString("GW_OpenCraftingUI")
-util.AddNetworkString("GW_CraftItem")
-util.AddNetworkString("GW_CollectMachineResource")
-util.AddNetworkString("GW_RequestGangData")
-util.AddNetworkString("GW_SendGangData")
-util.AddNetworkString("GW_GangUIAction")
+util.AddNetworkString("GRID_Notification")
+util.AddNetworkString("GRID_PlayerDied")
+util.AddNetworkString("GRID_TurfUpdate")
+util.AddNetworkString("GRID_TurfAlert")
+util.AddNetworkString("GRID_OpenTurfTaxMenu")
+util.AddNetworkString("GRID_SetTurfTax")
+util.AddNetworkString("GRID_ChangeJob")
+util.AddNetworkString("GRID_BuyItem")
+util.AddNetworkString("GRID_DoorAction")
+util.AddNetworkString("GRID_ChatMessage")
+util.AddNetworkString("GRID_SyncTurfZones")
+util.AddNetworkString("GRID_OpenTurfSetup")
+util.AddNetworkString("GRID_AdminTurfAction")
+util.AddNetworkString("GRID_AdminDebugAction")
+util.AddNetworkString("GRID_OpenAdminMenu")
+util.AddNetworkString("GRID_ToggleF4Menu")
+util.AddNetworkString("GRID_ToggleF2Menu")
+util.AddNetworkString("GRID_SyncInventory")
+util.AddNetworkString("GRID_UseInventoryItem")
+util.AddNetworkString("GRID_DropInventoryItem")
+util.AddNetworkString("GRID_MoveInventorySlot")
+util.AddNetworkString("GRID_DropInventorySlot")
+util.AddNetworkString("GRID_UseInventorySlot")
+util.AddNetworkString("GRID_EquipBag")
+util.AddNetworkString("GRID_ToggleBagWindow")
+util.AddNetworkString("GRID_SyncAllBuffs")
+util.AddNetworkString("GRID_SyncBuffAdded")
+util.AddNetworkString("GRID_SyncBuffRemoved")
+util.AddNetworkString("GRID_CancelBuff")
+util.AddNetworkString("GRID_BuffCombatText")
+util.AddNetworkString("GRID_OpenComputerOS")
+util.AddNetworkString("GRID_RunComputerCommand")
+util.AddNetworkString("GRID_ComputerCommandResponse")
+util.AddNetworkString("GRID_LevelUp")
+util.AddNetworkString("GRID_XPGained")
+util.AddNetworkString("GRID_OpenCraftingUI")
+util.AddNetworkString("GRID_CraftItem")
+util.AddNetworkString("GRID_CollectMachineResource")
+util.AddNetworkString("GRID_RequestGangData")
+util.AddNetworkString("GRID_SendGangData")
+util.AddNetworkString("GRID_GangUIAction")
 
-GW.NetLimits = GW.NetLimits or {}
+GRID = GRID or {}
+GRID.NetLimits = GRID.NetLimits or {}
 
-function GW.CheckRateLimit(ply, action, maxPerSec)
+function GRID.CheckRateLimit(ply, action, maxPerSec)
     local id = ply:SteamID() .. "_" .. action
     local now = CurTime()
-    GW.NetLimits[id] = GW.NetLimits[id] or { count = 0, reset = now + 1, warned = false }
+    GRID.NetLimits[id] = GRID.NetLimits[id] or { count = 0, reset = now + 1, warned = false }
 
-    if now > GW.NetLimits[id].reset then
-        GW.NetLimits[id].count = 1
-        GW.NetLimits[id].reset = now + 1
-        GW.NetLimits[id].warned = false
+    if now > GRID.NetLimits[id].reset then
+        GRID.NetLimits[id].count = 1
+        GRID.NetLimits[id].reset = now + 1
+        GRID.NetLimits[id].warned = false
         return true
     end
 
-    GW.NetLimits[id].count = GW.NetLimits[id].count + 1
-    if GW.NetLimits[id].count > maxPerSec then
-        if not GW.NetLimits[id].warned then
-            GW.NetLimits[id].warned = true
-            if GW.Telemetry and GW.Telemetry.LogAnomaly then
-                GW.Telemetry.LogAnomaly(ply:SteamID(), "NET_RATE_LIMIT_EXCEEDED", {
+    GRID.NetLimits[id].count = GRID.NetLimits[id].count + 1
+    if GRID.NetLimits[id].count > maxPerSec then
+        if not GRID.NetLimits[id].warned then
+            GRID.NetLimits[id].warned = true
+            if GRID.Telemetry and GRID.Telemetry.LogAnomaly then
+                GRID.Telemetry.LogAnomaly(ply:SteamID(), "NET_RATE_LIMIT_EXCEEDED", {
                     action = action,
-                    count = GW.NetLimits[id].count,
+                    count = GRID.NetLimits[id].count,
                     max = maxPerSec
                 })
             end

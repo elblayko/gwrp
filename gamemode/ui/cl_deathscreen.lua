@@ -7,7 +7,7 @@ local IsDead = false
 local KillerName = "Unknown"
 local RespawnTime = 0
 
-net.Receive("GW_PlayerDied", function()
+local function HandlePlayerDied()
     KillerName = net.ReadString()
     if not KillerName or KillerName == "" then
         KillerName = "Unknown"
@@ -17,13 +17,16 @@ net.Receive("GW_PlayerDied", function()
     IsDead = true
 
     -- Close F4 menu or dialogs if open
-    if IsValid(GW.UI.F4Frame) then
-        GW.UI.F4Frame:Close()
-        GW.UI.F4Frame = nil
+    local ui = GRID and GRID.UI
+    if ui and IsValid(ui.F4Frame) then
+        ui.F4Frame:Close()
+        ui.F4Frame = nil
     end
-end)
+end
 
-hook.Add("HUDPaint", "GW_DrawDeathScreen", function()
+net.Receive("GRID_PlayerDied", HandlePlayerDied)
+
+hook.Add("HUDPaint", "GRID_DrawDeathScreen", function()
     local cur = CurTime()
 
     local ply = LocalPlayer()
@@ -50,8 +53,9 @@ hook.Add("HUDPaint", "GW_DrawDeathScreen", function()
 
     if alphaMult <= 0 then return end
 
-    if GW.UI and GW.UI.CreateFonts then
-        GW.UI.CreateFonts()
+    local ui = GRID and GRID.UI
+    if ui and ui.CreateFonts then
+        ui.CreateFonts()
     end
 
     local scrW, scrH = ScrW(), ScrH()
@@ -69,14 +73,17 @@ hook.Add("HUDPaint", "GW_DrawDeathScreen", function()
     surface.DrawOutlinedRect(cardX, cardY, cardW, cardH, 1)
 
     -- "YOU DIED" Title
-    draw.SimpleText("YOU DIED", "GW_UI_Title", scrW / 2, cardY + 32, Color(248, 113, 113, 255 * alphaMult), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("YOU DIED", "GRID_UI_Title", scrW / 2, cardY + 32, Color(248, 113, 113, 255 * alphaMult),
+        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- Cause of Death / Killer Nickname
     local killerDisplay = (KillerName == "Suicide") and "Cause of Death: Suicide" or ("Eliminated by: " .. KillerName)
-    draw.SimpleText(killerDisplay, "GW_UI_Header", scrW / 2, cardY + 76, Color(248, 250, 252, 255 * alphaMult), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(killerDisplay, "GRID_UI_Header", scrW / 2, cardY + 76, Color(248, 250, 252, 255 * alphaMult),
+        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- Respawn Status & Countdown
     local secRemaining = math.max(0, math.ceil(remaining))
     local secText = string.format("Respawning in %d second%s...", secRemaining, secRemaining == 1 and "" or "s")
-    draw.SimpleText(secText, "GW_UI_Sub", scrW / 2, cardY + 126, Color(251, 191, 36, 255 * alphaMult), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText(secText, "GRID_UI_Sub", scrW / 2, cardY + 126, Color(251, 191, 36, 255 * alphaMult),
+        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end)

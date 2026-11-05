@@ -6,7 +6,7 @@
 -- ========================================================
 -- 1. HEALING OVER TIME (HoT) - TRAUMA RECOVERY
 -- ========================================================
-GW.Buffs.Register("healing_over_time", {
+GRID.Buffs.Register("healing_over_time", {
     name = "Trauma Recovery",
     desc = "Field trauma treatment stabilizes bleeding and lacerations, restoring +6 Health every 1.5 seconds.",
     isDebuff = false,
@@ -37,7 +37,7 @@ GW.Buffs.Register("healing_over_time", {
                 ply:SetHealth(newHP)
 
                 -- Visual Combat Text net event (green +X HP)
-                net.Start("GW_BuffCombatText")
+                net.Start("GRID_BuffCombatText")
                     net.WriteVector(ply:EyePos() + Vector(0, 0, 10))
                     net.WriteString("+" .. healAmount .. " HP")
                     net.WriteColor(Color(34, 197, 94))
@@ -56,7 +56,7 @@ GW.Buffs.Register("healing_over_time", {
 -- ========================================================
 -- 2. MOVEMENT SPEED BUFF - SWIFTNESS / ADRENALINE
 -- ========================================================
-GW.Buffs.Register("swiftness", {
+GRID.Buffs.Register("swiftness", {
     name = "Adrenaline Surge",
     desc = "Increases walk and run movement speed by +30% per stack. Allows rapid tactical flanking.",
     isDebuff = false,
@@ -93,7 +93,7 @@ GW.Buffs.Register("swiftness", {
 -- ========================================================
 -- 3. WANTED BY POLICE - CRIMINAL STATUS DEBUFF
 -- ========================================================
-GW.Buffs.Register("wanted", {
+GRID.Buffs.Register("wanted", {
     name = "Wanted by Police",
     desc = "Actively pursued by Civil Protection and SWAT! Law enforcement officers have search and arrest authority.",
     isDebuff = true,
@@ -113,13 +113,13 @@ GW.Buffs.Register("wanted", {
             local officer = (inst.data and inst.data.officer) or "Civil Protection"
 
             -- Global alert notification
-            GW.Notify(ply, "YOU ARE WANTED BY POLICE! Reason: " .. reason, NOTIFY_ERROR, 10)
+            GRID.Notify(ply, "YOU ARE WANTED BY POLICE! Reason: " .. reason, NOTIFY_ERROR, 10)
             ply:EmitSound("ambient/alarms/klaxon1.wav", 75, 100)
 
             -- Notify all police officers
             for _, p in ipairs(player.GetAll()) do
                 if p:IsPolice() and p ~= ply then
-                    GW.Notify(p, "[LSPD DISPATCH] " .. ply:Nick() .. " is now WANTED! Reason: " .. reason .. " (By " .. officer .. ")", NOTIFY_HINT, 10)
+                    GRID.Notify(p, "[LSPD DISPATCH] " .. ply:Nick() .. " is now WANTED! Reason: " .. reason .. " (By " .. officer .. ")", NOTIFY_HINT, 10)
                 end
             end
         end
@@ -127,10 +127,10 @@ GW.Buffs.Register("wanted", {
 
     OnRemoved = function(ply, inst, reason)
         if SERVER and IsValid(ply) then
-            GW.Notify(ply, "You are no longer wanted by the police.", NOTIFY_GENERIC, 6)
+            GRID.Notify(ply, "You are no longer wanted by the police.", NOTIFY_GENERIC, 6)
             for _, p in ipairs(player.GetAll()) do
                 if p:IsPolice() and p ~= ply then
-                    GW.Notify(p, "[LSPD DISPATCH] Wanted status cleared for " .. ply:Nick() .. ".", NOTIFY_GENERIC, 6)
+                    GRID.Notify(p, "[LSPD DISPATCH] Wanted status cleared for " .. ply:Nick() .. ".", NOTIFY_GENERIC, 6)
                 end
             end
         end
@@ -140,7 +140,7 @@ GW.Buffs.Register("wanted", {
 -- ========================================================
 -- 4. CRIPPLED LEG - MOVEMENT SPEED DEBUFF
 -- ========================================================
-GW.Buffs.Register("crippled", {
+GRID.Buffs.Register("crippled", {
     name = "Crippled Leg",
     desc = "Compound bone fracture or severe injury. Reduces movement speed by -40%.",
     isDebuff = true,
@@ -168,7 +168,7 @@ GW.Buffs.Register("crippled", {
     OnRemoved = function(ply, inst, reason)
         if SERVER and IsValid(ply) then
             ply:RecalculateSpeed()
-            GW.Notify(ply, "Your crippled leg has healed. Full mobility restored.", NOTIFY_GENERIC)
+            GRID.Notify(ply, "Your crippled leg has healed. Full mobility restored.", NOTIFY_GENERIC)
         end
     end
 })
@@ -176,7 +176,7 @@ GW.Buffs.Register("crippled", {
 -- ========================================================
 -- 5. POISON NEUROTOXIN - DAMAGE OVER TIME (DoT)
 -- ========================================================
-GW.Buffs.Register("poison", {
+GRID.Buffs.Register("poison", {
     name = "Lethal Neurotoxin",
     desc = "Toxic chemical agent coursing through veins. Deals 4 damage every 2 seconds.",
     isDebuff = true,
@@ -212,7 +212,7 @@ GW.Buffs.Register("poison", {
             ply:EmitSound("ambient/water/drip" .. math.random(1, 4) .. ".wav", 60, 80)
 
             -- Visual Combat Text net event (purple -X HP)
-            net.Start("GW_BuffCombatText")
+            net.Start("GRID_BuffCombatText")
                 net.WriteVector(ply:EyePos() + Vector(0, 0, 10))
                 net.WriteString("-" .. dmg .. " HP")
                 net.WriteColor(Color(168, 85, 247))
@@ -224,7 +224,7 @@ GW.Buffs.Register("poison", {
 -- ========================================================
 -- 6. REINFORCED PLATING - MAX HEALTH BUFF
 -- ========================================================
-GW.Buffs.Register("fortitude", {
+GRID.Buffs.Register("fortitude", {
     name = "Reinforced Plating",
     desc = "Hardened ceramic trauma plating shields vital organs, granting +50 Maximum Health for 10 minutes.",
     isDebuff = false,
@@ -261,7 +261,7 @@ GW.Buffs.Register("fortitude", {
 -- ========================================================
 -- 7. BLACK MARKET ADRENALINE (ILLEGAL STIMULANT)
 -- ========================================================
-GW.Buffs.Register("illegal_adrenaline", {
+GRID.Buffs.Register("illegal_adrenaline", {
     name = "Combat Adrenaline",
     desc = "Black-market combat stimulant. Grants +40% Sprint/Walk Speed and 15% Incoming Damage Reduction for 20s. Causes brief crash upon wearing off.",
     isDebuff = false,
@@ -303,7 +303,7 @@ GW.Buffs.Register("illegal_adrenaline", {
 -- ========================================================
 -- 8. ADRENALINE CRASH (POST-STIM DEBUFF)
 -- ========================================================
-GW.Buffs.Register("stim_exhaustion", {
+GRID.Buffs.Register("stim_exhaustion", {
     name = "Adrenaline Crash",
     desc = "Severe physiological crash after an adrenaline surge. Decreases movement speed by -15% for 10 seconds.",
     isDebuff = true,
@@ -331,7 +331,7 @@ GW.Buffs.Register("stim_exhaustion", {
     OnRemoved = function(ply, inst, reason)
         if SERVER and IsValid(ply) then
             ply:RecalculateSpeed()
-            GW.Notify(ply, "Heart rate stabilized. Adrenaline crash cleared.", NOTIFY_GENERIC)
+            GRID.Notify(ply, "Heart rate stabilized. Adrenaline crash cleared.", NOTIFY_GENERIC)
         end
     end
 })
@@ -339,7 +339,7 @@ GW.Buffs.Register("stim_exhaustion", {
 -- ========================================================
 -- 9. DETOX & CLEANSE RECOVERY
 -- ========================================================
-GW.Buffs.Register("detox", {
+GRID.Buffs.Register("detox", {
     name = "Detox Recovery",
     desc = "High-grade pharmaceutical antidote that neutralizes poisons, heals trauma, and cleanses debilitating status effects.",
     isDebuff = false,
@@ -361,7 +361,7 @@ GW.Buffs.Register("detox", {
             if ply:HasBuff("crippled") then ply:RemoveBuff("crippled", "cleansed") end
             if ply:HasBuff("stim_exhaustion") then ply:RemoveBuff("stim_exhaustion", "cleansed") end
             ply:EmitSound("items/smallmedkit1.wav", 70, 120)
-            GW.Notify(ply, "Debuffs purged! Cellular detox in progress (+3 HP/s).", NOTIFY_GENERIC)
+            GRID.Notify(ply, "Debuffs purged! Cellular detox in progress (+3 HP/s).", NOTIFY_GENERIC)
         end
     end,
 

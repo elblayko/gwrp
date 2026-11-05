@@ -2,90 +2,90 @@
     sh_config.lua - Gamemode Constants, Economy Items & Balancing
 --]]
 
-GW.Config = GW.Config or {}
+GRID.Config = GRID.Config or {}
 
 -- Economy
-GW.Config.StartingMoney = 250
-GW.Config.PaydayInterval = 90    -- seconds between salary ticks
-GW.Config.DropMoneyOnDeathMax = 75
-GW.Config.GangCreationCost = 200 -- cost to register a new player gang
+GRID.Config.StartingMoney = 250
+GRID.Config.PaydayInterval = 90    -- seconds between salary ticks
+GRID.Config.DropMoneyOnDeathMax = 75
+GRID.Config.GangCreationCost = 200 -- cost to register a new player gang
 
 -- Dynamic Anti-Inflation Sinks (Hybrid Base + Wealth %)
-GW.Config.HospitalFeeBase = 50
-GW.Config.HospitalFeeWealthPct = 0.015       -- 1.5% of player wallet deducted on respawn
-GW.Config.PropertyUpkeepBase = 15          -- Baseline upkeep per payday for landlords
-GW.Config.PropertyUpkeepPerDoor = 5        -- Additional upkeep per owned door
-GW.Config.PropertyUpkeepWealthPct = 0.005   -- 0.5% wealth tax per payday for property owners
-GW.Config.GangVaultUpkeepThreshold = 5000  -- Vaults above $5,000 pay syndication tax
-GW.Config.GangVaultUpkeepPct = 0.02         -- 2% vault sink per payday
-GW.Config.VendorSalesTaxPct = 0.08         -- 8% non-refundable sales tax on kiosk purchases
+GRID.Config.HospitalFeeBase = 50
+GRID.Config.HospitalFeeWealthPct = 0.015       -- 1.5% of player wallet deducted on respawn
+GRID.Config.PropertyUpkeepBase = 15          -- Baseline upkeep per payday for landlords
+GRID.Config.PropertyUpkeepPerDoor = 5        -- Additional upkeep per owned door
+GRID.Config.PropertyUpkeepWealthPct = 0.005   -- 0.5% wealth tax per payday for property owners
+GRID.Config.GangVaultUpkeepThreshold = 5000  -- Vaults above $5,000 pay syndication tax
+GRID.Config.GangVaultUpkeepPct = 0.02         -- 2% vault sink per payday
+GRID.Config.VendorSalesTaxPct = 0.08         -- 8% non-refundable sales tax on kiosk purchases
 
 -- Job Switching & Weapon Durability
-GW.Config.JobChangeCooldown = 900          -- 15 minutes cooldown before changing jobs again
-GW.Config.WeaponWearPerReload = 4          -- Durability lost per combat reload (100 -> 0)
-GW.Config.EnableDebugShop = false          -- Gated strictly to superadmins only when true
+GRID.Config.JobChangeCooldown = 900          -- 15 minutes cooldown before changing jobs again
+GRID.Config.WeaponWearPerReload = 4          -- Durability lost per combat reload (100 -> 0)
+GRID.Config.EnableDebugShop = false          -- Gated strictly to superadmins only when true
 
 -- Respawn Times
-GW.Config.DefaultRespawnTime = 30 -- Baseline respawn time for all players (seconds)
-GW.Config.PoliceRespawnTime = 5   -- Rapid dispatch respawn for base police officer (seconds)
+GRID.Config.DefaultRespawnTime = 30 -- Baseline respawn time for all players (seconds)
+GRID.Config.PoliceRespawnTime = 5   -- Rapid dispatch respawn for base police officer (seconds)
 
 -- Turf Warfare
-GW.Config.TurfCaptureRadius = 450   -- Hammer units
-GW.Config.TurfCaptureTime = 15      -- seconds of holding uncontested to capture
-GW.Config.TurfDividendInterval = 90 -- seconds between turf payouts
-GW.Config.TurfDividendAmount = 25   -- cash given to each online gang member per owned turf
-GW.Config.TurfCaptureReward = 40    -- instant cash reward to capturing player
+GRID.Config.TurfCaptureRadius = 450   -- Hammer units
+GRID.Config.TurfCaptureTime = 15      -- seconds of holding uncontested to capture
+GRID.Config.TurfDividendInterval = 90 -- seconds between turf payouts
+GRID.Config.TurfDividendAmount = 25   -- cash given to each online gang member per owned turf
+GRID.Config.TurfCaptureReward = 40    -- instant cash reward to capturing player
 
 -- Contraband Money Printers & Networking
-GW.Config.MaxPrintersPerPlayer = 4
-GW.Config.PoliceBountyPerPrinter = 125
-GW.Config.PoliceBountyPerSwitch = 50
-GW.Config.PoliceBountyPerModule = 25
-GW.Config.EntityHUDViewDistance = 380 -- Shared max 3D2D HUD visibility distance for printers & synthesizers
+GRID.Config.MaxPrintersPerPlayer = 4
+GRID.Config.PoliceBountyPerPrinter = 125
+GRID.Config.PoliceBountyPerSwitch = 50
+GRID.Config.PoliceBountyPerModule = 25
+GRID.Config.EntityHUDViewDistance = 380 -- Shared max 3D2D HUD visibility distance for printers & synthesizers
 
 -- Thermal Regulation & Undervolt Module
-GW.Config.PrinterHeatRiseStandard = 4    -- +4C per cycle
-GW.Config.PrinterHeatRiseUndervolted = 1 -- +1C per cycle (+400% lifespan)
-GW.Config.ModuleUndervoltCost = 80
+GRID.Config.PrinterHeatRiseStandard = 4    -- +4C per cycle
+GRID.Config.PrinterHeatRiseUndervolted = 1 -- +1C per cycle (+400% lifespan)
+GRID.Config.ModuleUndervoltCost = 80
 
 -- Network Switch & Efficiency Rates
-GW.Config.SwitchMaxPorts = 3               -- 2 copper ports + Port 3 combo SFP (10G/1G) + Port 4 10G SFP uplink
-GW.Config.MaxCableLength = 550             -- maximum length in hammer units before copper cable snaps
-GW.Config.MaxFiberCableLength = 800        -- maximum length in hammer units for SFP fiber optic cable
-GW.Config.WLANSniffMaxDistance = 2500      -- maximum distance in hammer units for airmon & computer WLAN traffic sniffing
-GW.Config.PrinterStandaloneEfficiency = 60 -- 1 printer or unlinked = 60%
-GW.Config.PrinterNetworkEfficiency2 = 80   -- 2 printers on switch = 80%
-GW.Config.PrinterNetworkEfficiency3 = 100  -- 3 printers on switch = 100%
+GRID.Config.SwitchMaxPorts = 3               -- 2 copper ports + Port 3 combo SFP (10G/1G) + Port 4 10G SFP uplink
+GRID.Config.MaxCableLength = 550             -- maximum length in hammer units before copper cable snaps
+GRID.Config.MaxFiberCableLength = 800        -- maximum length in hammer units for SFP fiber optic cable
+GRID.Config.WLANSniffMaxDistance = 2500      -- maximum distance in hammer units for airmon & computer WLAN traffic sniffing
+GRID.Config.PrinterStandaloneEfficiency = 60 -- 1 printer or unlinked = 60%
+GRID.Config.PrinterNetworkEfficiency2 = 80   -- 2 printers on switch = 80%
+GRID.Config.PrinterNetworkEfficiency3 = 100  -- 3 printers on switch = 100%
 
 -- Cloud Botnet C2 Daemon (Personal Computer + Satellite WAN Uplink)
-GW.Config.BotnetTickInterval = 20.0           -- Seconds between automated cloud attack payouts
-GW.Config.BotnetBaseTrickle = 2               -- Minimum cash per tick when 0 printers are connected
-GW.Config.BotnetPrinterYieldMultiplier = 0.50 -- Fraction of connected printers' base yield paid per tick (~1/3 = acts as a 4th printer)
-GW.Config.BotnetMaxCountedPrinters = 24       -- Max printers on the broadcast domain that contribute hashpower
-GW.Config.BotnetEngineerBonusMultiplier = 1.5 -- Payout multiplier when started by a Cyber Engineer (+25%)
+GRID.Config.BotnetTickInterval = 20.0           -- Seconds between automated cloud attack payouts
+GRID.Config.BotnetBaseTrickle = 2               -- Minimum cash per tick when 0 printers are connected
+GRID.Config.BotnetPrinterYieldMultiplier = 0.50 -- Fraction of connected printers' base yield paid per tick (~1/3 = acts as a 4th printer)
+GRID.Config.BotnetMaxCountedPrinters = 24       -- Max printers on the broadcast domain that contribute hashpower
+GRID.Config.BotnetEngineerBonusMultiplier = 1.5 -- Payout multiplier when started by a Cyber Engineer (+25%)
 
 -- Centralized Entity Quality Registry (Entities can also set ENT.ItemQuality in their shared.lua)
-GW.Config.EntityQualities = {
-    ["gw_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
-    ["gw_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
-    ["gw_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
-    ["gw_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "2x Cu + 2x SFP (10G/Cu Combo + 10G Uplink) | L3 Layer" },
-    ["gw_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-3 Terminal | Cloud Botnet C2" },
-    ["gw_wan_uplink"] = { quality = 3, subType = "Wireless Gateway", stats = "Cloud Botnet Gateway | WPA3 L3 Mesh" },
-    ["gw_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
-    ["gw_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },
-    ["gw_resource_machine"] = { quality = 1, subType = "Automated Extractor", stats = "Extracts Metals & Blueprints | Network Capable" },
+GRID.Config.EntityQualities = {
+    ["grid_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
+    ["grid_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
+    ["grid_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
+    ["grid_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "2x Cu + 2x SFP (10G/Cu Combo + 10G Uplink) | L3 Layer" },
+    ["grid_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-3 Terminal | Cloud Botnet C2" },
+    ["grid_wan_uplink"] = { quality = 3, subType = "Wireless Gateway", stats = "Cloud Botnet Gateway | WPA3 L3 Mesh" },
+    ["grid_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
+    ["grid_shipment"] = { quality = 3, subType = "Wholesale Container", stats = "Holds 10x Packaged Firearms" },
+    ["grid_resource_machine"] = { quality = 1, subType = "Automated Extractor", stats = "Extracts Metals & Blueprints | Network Capable" },
 
     -- Explicit Exclusions (Never have item quality)
-    ["gw_flag_pole"] = false,
-    ["gw_cash_stack"] = false
+    ["grid_flag_pole"] = false,
+    ["grid_cash_stack"] = false
 }
 
 -- Door Pricing
-GW.Config.DoorCost = 15
+GRID.Config.DoorCost = 15
 
 -- Leveling & Progression System (MMO Curve, Capped at Level 50)
-GW.Config.Level = {
+GRID.Config.Level = {
     MaxLevel = 50,
     StartLevel = 1,
     BaseXP = 250,
@@ -100,32 +100,32 @@ GW.Config.Level = {
     XP_PrinterCollect = 20,
 }
 
-function GW.GetRequiredXP(level)
-    level = math.Clamp(tonumber(level) or 1, 1, GW.Config.Level.MaxLevel)
-    if level >= GW.Config.Level.MaxLevel then
+function GRID.GetRequiredXP(level)
+    level = math.Clamp(tonumber(level) or 1, 1, GRID.Config.Level.MaxLevel)
+    if level >= GRID.Config.Level.MaxLevel then
         return 0 -- Max level cap reached
     end
     -- MMO Curve: Floor(250 * level ^ 1.65)
-    return math.floor(GW.Config.Level.BaseXP * (level ^ GW.Config.Level.Exponent))
+    return math.floor(GRID.Config.Level.BaseXP * (level ^ GRID.Config.Level.Exponent))
 end
 
 -- F4 Shop Retail Surcharge & Markup Settings (200% - 300% convenience markup)
-GW.Config.ShowShopMarkup = true          -- Display markup badges and savings hints in F4 menu
-GW.Config.DefaultShopMarkupPercent = 250 -- Default surcharge percentage for public kiosk convenience items
+GRID.Config.ShowShopMarkup = true          -- Display markup badges and savings hints in F4 menu
+GRID.Config.DefaultShopMarkupPercent = 250 -- Default surcharge percentage for public kiosk convenience items
 
 -- Whitelist of allowed tools and RP equipment for the Hobo job
-GW.HoboAllowedWeapons = {
+GRID.HoboAllowedWeapons = {
     ["weapon_physgun"] = true,
     ["gmod_tool"] = true,
     ["weapon_physcannon"] = true,
     ["weapon_fists"] = true,
-    ["weapon_gw_keys"] = true,
+    ["weapon_grid_keys"] = true,
     ["weapon_bugbait"] = true,
     ["gmod_camera"] = true
 }
 
 -- Default Colors
-GW.Colors = {
+GRID.Colors = {
     Background = Color(15, 23, 42, 230),
     Border = Color(56, 189, 248),
     HealthRed = Color(220, 38, 38),
@@ -137,12 +137,12 @@ GW.Colors = {
 }
 
 -- Dynamic Gang Color Generator: converts any gang name into a unique, persistent vivid color
-function GW.GetGangColor(gangName)
+function GRID.GetGangColor(gangName)
     if not gangName or gangName == "" or gangName == "neutral" or gangName == "Unclaimed" then
-        return GW.Colors.Muted
+        return GRID.Colors.Muted
     end
     if string.lower(gangName) == "police" then
-        return GW.Colors.MoneyGreen
+        return GRID.Colors.MoneyGreen
     end
 
     local hash = 0
@@ -153,7 +153,7 @@ function GW.GetGangColor(gangName)
 end
 
 -- Helper: Retrieve dynamic purchase price for an item based on player's job (Wholesale vs Retail)
-function GW.GetItemCost(item, ply)
+function GRID.GetItemCost(item, ply)
     if not item then return 0 end
     local baseCost = item.cost or 0
     if not IsValid(ply) then return baseCost end
@@ -180,13 +180,13 @@ function GW.GetItemCost(item, ply)
 end
 
 -- Helper: Retrieve configured or calculated shop markup percentage for an item
-function GW.GetItemMarkupPercent(item, ply)
-    if not GW.Config.ShowShopMarkup then return nil end
+function GRID.GetItemMarkupPercent(item, ply)
+    if not GRID.Config.ShowShopMarkup then return nil end
     if not item then return nil end
 
     -- If player is a specialist receiving wholesale cost, no retail markup applies to them
     if IsValid(ply) and item.wholesaleCost then
-        local cost = GW.GetItemCost(item, ply)
+        local cost = GRID.GetItemCost(item, ply)
         if cost <= item.wholesaleCost then
             return nil
         end
@@ -197,13 +197,13 @@ function GW.GetItemMarkupPercent(item, ply)
         return math.Round(((item.cost - item.wholesaleCost) / item.wholesaleCost) * 100)
     end
     if item.isMarkedUp then
-        return GW.Config.DefaultShopMarkupPercent or 250
+        return GRID.Config.DefaultShopMarkupPercent or 250
     end
     return nil
 end
 
 -- F4 Shop Items
-GW.ShopItems = {
+GRID.ShopItems = {
     -- ========================================================
     -- 1. PUBLIC STREET SUPPLIES & BASIC TOOLS
     -- ========================================================
@@ -259,7 +259,7 @@ GW.ShopItems = {
         level = 1,
         cost = 180,
         type = "shipment",
-        weapon = "weapon_gw_glock",
+        weapon = "weapon_grid_glock",
         weaponName = "Glock-18",
         count = 10,
         jobs = { "arms_dealer" },
@@ -270,7 +270,7 @@ GW.ShopItems = {
         level = 3,
         cost = 750,
         type = "shipment",
-        weapon = "weapon_gw_shotgun",
+        weapon = "weapon_grid_shotgun",
         weaponName = "Pump Shotgun",
         count = 10,
         jobs = { "arms_dealer" },
@@ -285,7 +285,7 @@ GW.ShopItems = {
         level = 2,
         cost = 45,
         type = "weapon",
-        class = "weapon_gw_lockpick",
+        class = "weapon_grid_lockpick",
         jobs = { "black_market_dealer", "thief" },
         isContraband = true,
         desc = "Mechanical lock bypass tool. Used to breach locked doors and security pins."
@@ -295,7 +295,7 @@ GW.ShopItems = {
         level = 2,
         cost = 120,
         type = "shipment",
-        weapon = "weapon_gw_lockpick",
+        weapon = "weapon_grid_lockpick",
         weaponName = "Tactical Lockpick",
         count = 5,
         jobs = { "black_market_dealer" },
@@ -317,7 +317,7 @@ GW.ShopItems = {
         level = 5,
         cost = 420,
         type = "shipment",
-        weapon = "weapon_gw_deagle",
+        weapon = "weapon_grid_deagle",
         weaponName = "Desert Eagle",
         count = 10,
         jobs = { "black_market_dealer" },
@@ -328,7 +328,7 @@ GW.ShopItems = {
         level = 8,
         cost = 1500,
         type = "shipment",
-        weapon = "weapon_gw_ak47",
+        weapon = "weapon_grid_ak47",
         weaponName = "AK-47",
         count = 10,
         jobs = { "black_market_dealer" },
@@ -343,7 +343,7 @@ GW.ShopItems = {
         level = 1,
         cost = 150,
         type = "entity",
-        class = "gw_clinic_pod",
+        class = "grid_clinic_pod",
         category = "supplies",
         jobs = { "pharmacist" },
         desc =
@@ -354,7 +354,7 @@ GW.ShopItems = {
         level = 1,
         cost = 50,
         type = "weapon",
-        class = "weapon_gw_medkit",
+        class = "weapon_grid_medkit",
         jobs = { "pharmacist" },
         desc = "Deployable trauma kit used to treat injuries and administer combat adrenaline stims in the field."
     },
@@ -383,7 +383,7 @@ GW.ShopItems = {
         markupRole = "Cyber Engineer",
         wholesaleJob = "cyber_engineer",
         type = "weapon",
-        class = "weapon_gw_wiretool",
+        class = "weapon_grid_wiretool",
         category = "networking",
         desc = "Cabling tool used to connect printers, switches, and computer terminals."
     },
@@ -396,7 +396,7 @@ GW.ShopItems = {
         markupRole = "Cyber Engineer",
         wholesaleJob = "cyber_engineer",
         type = "weapon",
-        class = "weapon_gw_repairtool",
+        class = "weapon_grid_repairtool",
         category = "networking",
         desc =
         "Handheld printer calibrator. Cools printers (-35°C), repairs integrity, and allows Cyber Engineers to Supercharge hardware."
@@ -406,7 +406,7 @@ GW.ShopItems = {
         level = 2,
         cost = 120,
         type = "entity",
-        class = "gw_network_switch",
+        class = "grid_network_switch",
         category = "networking",
         desc =
         "Layer-3 hardware switch featuring 2 copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink."
@@ -416,7 +416,7 @@ GW.ShopItems = {
         level = 5,
         cost = 200,
         type = "entity",
-        class = "gw_computer",
+        class = "grid_computer",
         category = "networking",
         desc =
         "CyberDeck OS terminal. Connect to an L3 switch with a Satellite WAN Uplink to run automated Cloud Botnet C2 attacks (scales with networked printers), plus nmap & Metasploit."
@@ -426,7 +426,7 @@ GW.ShopItems = {
         level = 3,
         cost = 180,
         type = "entity",
-        class = "gw_wan_uplink",
+        class = "grid_wan_uplink",
         category = "networking",
         desc =
         "Encrypted microwave satellite dish. Unlocks automated Cloud Botnet C2 income on a networked Personal Computer and links separate L3 switch networks wirelessly across the map."
@@ -436,7 +436,7 @@ GW.ShopItems = {
         level = 3,
         cost = 250,
         type = "weapon",
-        class = "weapon_gw_cyberphone",
+        class = "weapon_grid_cyberphone",
         category = "networking",
         jobs = { "cyber_engineer" },
         desc =
@@ -447,7 +447,7 @@ GW.ShopItems = {
         level = 3,
         cost = 80,
         type = "entity",
-        class = "gw_module_undervolt",
+        class = "grid_module_undervolt",
         category = "networking",
         isContraband = true,
         desc = "Microcontroller module that drops operating voltage (-75% heat, +400% lifespan)."
@@ -457,7 +457,7 @@ GW.ShopItems = {
         level = 4,
         cost = 150,
         type = "entity",
-        class = "gw_module_overclock",
+        class = "grid_module_overclock",
         category = "networking",
         isContraband = true,
         desc = "High-frequency module that boosts printer cash yield by +50% (+60% heat output)."
@@ -471,7 +471,7 @@ GW.ShopItems = {
         level = 1,
         cost = 250,
         type = "entity",
-        class = "gw_printer_bronze",
+        class = "grid_printer_bronze",
         category = "printers",
         isContraband = true,
         desc = "Entry-level contraband printer. Generates steady cash revenue."
@@ -481,7 +481,7 @@ GW.ShopItems = {
         level = 4,
         cost = 750,
         type = "entity",
-        class = "gw_printer_silver",
+        class = "grid_printer_silver",
         category = "printers",
         isContraband = true,
         desc = "Commercial grade contraband printer. High efficiency throughput."
@@ -491,7 +491,7 @@ GW.ShopItems = {
         level = 8,
         cost = 2200,
         type = "entity",
-        class = "gw_printer_diamond",
+        class = "grid_printer_diamond",
         category = "printers",
         isContraband = true,
         desc = "Maximum tier industrial printer. High yields, benefits greatly from networking."
@@ -502,7 +502,7 @@ GW.ShopItems = {
         cost = 500,
         max = 2,
         type = "entity",
-        class = "gw_resource_machine",
+        class = "grid_resource_machine",
         category = "printers",
         badge = "Legal Tech",
         desc =

@@ -2,10 +2,11 @@
     sh_turf.lua - Shared Turf Definitions & Zones
 --]]
 
-GW.Turf = GW.Turf or {}
+GRID = GRID or {}
+GRID.Turf = GRID.Turf or {}
 
 -- Default Starter Templates (Used if no per-map JSON profile exists yet)
-GW.Turf.DefaultTemplates = {
+GRID.Turf.DefaultTemplates = {
     ["rp_downtown_v4c_v2"] = {
         [1] = { id = 1, name = "Downtown Plaza", pos = Vector(-137, -196, -143), radius = 500, owner = "neutral", progress = 100, tax_rate = 10 },
         [2] = { id = 2, name = "Eastside Slums", pos = Vector(-2010, -1480, -140), radius = 450, owner = "neutral", progress = 100, tax_rate = 10 },
@@ -15,12 +16,12 @@ GW.Turf.DefaultTemplates = {
 }
 
 -- Active runtime turf zones on current map
-GW.Turf.Zones = GW.Turf.Zones or {}
+GRID.Turf.Zones = GRID.Turf.Zones or {}
 
 -- Spatial Zone Query Helper
-function GW.Turf.GetZoneAtPos(pos)
+function GRID.Turf.GetZoneAtPos(pos)
     if not pos then return nil, nil end
-    for id, zone in pairs(GW.Turf.Zones) do
+    for id, zone in pairs(GRID.Turf.Zones) do
         local rad = zone.radius or 450
         if zone.pos and pos:DistToSqr(zone.pos) <= (rad * rad) then
             return zone, id

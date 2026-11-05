@@ -2,9 +2,9 @@
     cl_economy.lua - Client Currency Formatters
 --]]
 
-GW.EconomyClient = GW.EconomyClient or {}
+GRID.EconomyClient = GRID.EconomyClient or {}
 
-function GW.FormatMoney(amount)
+function GRID.FormatMoney(amount)
     local formatted = tostring(math.floor(amount or 0))
     local k
     while true do

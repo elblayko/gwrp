@@ -1,55 +1,71 @@
 --[[
     cl_chatbox.lua - Roleplay Chat Coloration (/advert, /ooc, /radio, /g)
+    Author: Toxic & Antigravity
 --]]
 
-net.Receive("GW_ChatMessage", function()
+GRID = GRID or {}
+GRID.UI = GRID.UI or {}
+
+local function HandleChatMessage()
     local gang = net.ReadString()
     local nick = net.ReadString()
     local msg = net.ReadString()
-    local col = GW.GetGangColor(gang)
-    chat.AddText(col, gang .. " | ", GW.Colors.White, nick, ": ", Color(230, 230, 230), msg)
-end)
+    local getGangCol = GRID and GRID.GetGangColor
+    local col = getGangCol and getGangCol(gang) or Color(168, 85, 247)
+    local colors = (GRID and GRID.Colors) or {}
+    chat.AddText(col, gang .. " | ", colors.White or Color(255, 255, 255), nick, ": ", Color(230, 230, 230), msg)
+end
 
-hook.Add("OnPlayerChat", "GW_FormatChat", function(ply, strText, bTeam, bDead)
+net.Receive("GRID_ChatMessage", HandleChatMessage)
+
+hook.Add("OnPlayerChat", "GRID_FormatChat", function(ply, strText, bTeam, bDead)
+    local colors = (GRID and GRID.Colors) or {}
+    local getGangCol = GRID and GRID.GetGangColor
+
     if not IsValid(ply) then
         -- Console / Server announcement
-        chat.AddText(Color(56, 189, 248), "Server: ", GW.Colors.White, strText)
+        chat.AddText(Color(56, 189, 248), "Server: ", colors.White or Color(255, 255, 255), strText)
         return true
     end
 
     local job = ply:GetJobData()
     local faction = ply:GetFaction()
     local gangName = ply:GetGang()
-    local gangCol = (gangName ~= "") and GW.GetGangColor(gangName) or (faction and faction.color or GW.Colors.White)
+    local gangCol = (gangName ~= "") and (getGangCol and getGangCol(gangName) or Color(168, 85, 247)) or (faction and faction.color or colors.White or Color(255, 255, 255))
 
     local lower = string.lower(string.Trim(strText))
+    local ui = GRID.UI
     if lower == "/f4" or lower == "!f4" or lower == "/menu" or lower == "!menu" then
-        GW.UI.ToggleF4Menu()
+        if ui and ui.ToggleF4Menu then
+            ui.ToggleF4Menu()
+        end
         return true
     elseif lower == "/inv" or lower == "!inv" or lower == "/inventory" or lower == "!inventory" then
-        GW.UI.ActiveF4Tab = "inventory"
-        if IsValid(GW.UI.F4Frame) then
-            if GW.UI.RefreshInventoryTab then
-                GW.UI.RefreshInventoryTab()
+        if ui then
+            ui.ActiveF4Tab = "inventory"
+            if IsValid(ui.F4Frame) then
+                if ui.RefreshInventoryTab then
+                    ui.RefreshInventoryTab()
+                end
+            elseif ui.ToggleF4Menu then
+                ui.ToggleF4Menu()
             end
-        else
-            GW.UI.ToggleF4Menu()
         end
         return true
     end
 
     if string.StartWith(strText, "/advert ") then
         local msg = string.sub(strText, 9)
-        chat.AddText(GW.Colors.Gold, "Advert | ", gangCol, ply:Nick(), GW.Colors.White, ": " .. msg)
+        chat.AddText(colors.Gold or Color(245, 158, 11), "Advert | ", gangCol, ply:Nick(), colors.White or Color(255, 255, 255), ": " .. msg)
         return true
     elseif string.StartWith(strText, "/ooc ") then
         local msg = string.sub(strText, 6)
-        chat.AddText(GW.Colors.Muted, "OOC | ", gangCol, ply:Nick(), GW.Colors.White, ": " .. msg)
+        chat.AddText(colors.Muted or Color(148, 163, 184), "OOC | ", gangCol, ply:Nick(), colors.White or Color(255, 255, 255), ": " .. msg)
         return true
     elseif string.StartWith(strText, "/radio ") then
         local msg = string.sub(strText, 8)
         local radioTag = (gangName ~= "") and gangName or (faction and faction.name or "Citizen")
-        chat.AddText(gangCol, "Radio (" .. radioTag .. "): ", ply:Nick(), GW.Colors.White, ": " .. msg)
+        chat.AddText(gangCol, "Radio (" .. radioTag .. "): ", ply:Nick(), colors.White or Color(255, 255, 255), ": " .. msg)
         return true
     else
         -- Standard proximity speech

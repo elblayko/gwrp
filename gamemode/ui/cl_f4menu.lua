@@ -3,28 +3,30 @@
     Author: Toxic & Antigravity
 --]]
 
-GW.UI = GW.UI or {}
-GW.UI.F4Frame = nil
-GW.UI.ActiveF4Tab = "jobs"
-GW.UI.ActiveJobCategory = "all"
-GW.UI.SearchQuery = ""
-GW.UI.ClientGangData = nil
+GRID = GRID or {}
+GRID.UI = GRID.UI or {}
+GRID.UI.F4Frame = nil
+GRID.UI.ActiveF4Tab = "jobs"
+GRID.UI.ActiveJobCategory = "all"
+GRID.UI.SearchQuery = ""
+GRID.UI.ClientGangData = nil
 
 -- Network Receiver for Gang Dashboard Data
-net.Receive("GW_SendGangData", function()
+local function HandleSendGangData()
     local jsonStr = net.ReadString() or "{}"
-    GW.UI.ClientGangData = util.JSONToTable(jsonStr) or {}
+    GRID.UI.ClientGangData = util.JSONToTable(jsonStr) or {}
 
-    if IsValid(GW.UI.F4Frame) and GW.UI.ActiveF4Tab == "gang" then
-        if IsValid(GW.UI.CurrentContentPanel) then
-            GW.UI.CurrentContentPanel:Clear()
-            GW.UI.RenderContentTab(GW.UI.CurrentContentPanel, "gang", GW.UI.F4Frame)
+    if IsValid(GRID.UI.F4Frame) and GRID.UI.ActiveF4Tab == "gang" then
+        if IsValid(GRID.UI.CurrentContentPanel) then
+            GRID.UI.CurrentContentPanel:Clear()
+            GRID.UI.RenderContentTab(GRID.UI.CurrentContentPanel, "gang", GRID.UI.F4Frame)
         end
     end
-end)
+end
+net.Receive("GRID_SendGangData", HandleSendGangData)
 
 -- Text Formatting Helpers: Word Wrap & Boundary Protection
-function GW.UI.WrapText(text, font, maxW)
+function GRID.UI.WrapText(text, font, maxW)
     if not text or text == "" then return {} end
     surface.SetFont(font)
     local words = string.Explode(" ", text)
@@ -46,7 +48,7 @@ function GW.UI.WrapText(text, font, maxW)
     return lines
 end
 
-function GW.UI.FitText(text, font, maxW)
+function GRID.UI.FitText(text, font, maxW)
     if not text or text == "" then return "" end
     surface.SetFont(font)
     local tw = surface.GetTextSize(text)
@@ -58,10 +60,10 @@ function GW.UI.FitText(text, font, maxW)
     return s .. "..."
 end
 
-function GW.UI.ToggleF4Menu()
-    if IsValid(GW.UI.F4Frame) then
-        GW.UI.F4Frame:Close()
-        GW.UI.F4Frame = nil
+function GRID.UI.ToggleF4Menu()
+    if IsValid(GRID.UI.F4Frame) then
+        GRID.UI.F4Frame:Close()
+        GRID.UI.F4Frame = nil
         return
     end
 
@@ -69,8 +71,8 @@ function GW.UI.ToggleF4Menu()
     if not IsValid(ply) then return end
 
     -- Ensure fonts are always initialized and scaled
-    if GW.UI.CreateFonts then
-        GW.UI.CreateFonts()
+    if GRID.UI.CreateFonts then
+        GRID.UI.CreateFonts()
     end
 
     local scrW, scrH = ScrW(), ScrH()
@@ -85,9 +87,9 @@ function GW.UI.ToggleF4Menu()
     frame:SetDraggable(true)
     frame:MakePopup()
     frame.OnClose = function()
-        GW.UI.F4Frame = nil
+        GRID.UI.F4Frame = nil
     end
-    GW.UI.F4Frame = frame
+    GRID.UI.F4Frame = frame
 
     -- Main Container Paint (Glassmorphic Obsidian Palette)
     frame.Paint = function(s, w, h)
@@ -104,19 +106,19 @@ function GW.UI.ToggleF4Menu()
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
         -- Title & Brand Tag (Large, Clean Font)
-        draw.SimpleText("GangWars RP", "GW_UI_Title", 24, 20, Color(248, 250, 252), TEXT_ALIGN_LEFT)
+        draw.SimpleText("GridRP", "GRID_UI_Title", 24, 20, Color(248, 250, 252), TEXT_ALIGN_LEFT)
         draw.RoundedBox(4, 240, 24, 114, 24, Color(6, 182, 212, 35))
         surface.SetDrawColor(6, 182, 212, 120)
         surface.DrawOutlinedRect(240, 24, 114, 24, 1)
-        draw.SimpleText("v0.0.1", "GW_UI_Badge", 297, 36, Color(34, 211, 238), TEXT_ALIGN_CENTER,
+        draw.SimpleText("v0.0.1", "GRID_UI_Badge", 297, 36, Color(34, 211, 238), TEXT_ALIGN_CENTER,
             TEXT_ALIGN_CENTER)
 
         -- Player Wallet & Gang Pill (Center Header)
         local curMoney = IsValid(ply) and ply:GetMoney() or 0
         local curGang = IsValid(ply) and ply:GetGang() or ""
         local curJob = IsValid(ply) and ply:GetJobData() or {}
-        local gangCol = (curGang ~= "") and GW.GetGangColor(curGang) or
-            (curJob.faction and curJob.faction.color or GW.Colors.White)
+        local gangCol = (curGang ~= "") and GRID.GetGangColor(curGang) or
+            (curJob.faction and curJob.faction.color or GRID.Colors.White)
 
         local pillText = "$" .. string.Comma(curMoney) .. "   |   " .. (curJob.name or "Citizen")
         if curGang ~= "" then
@@ -127,7 +129,7 @@ function GW.UI.ToggleF4Menu()
         draw.RoundedBox(18, pillX - 190, 14, 380, 42, Color(24, 32, 47, 240))
         surface.SetDrawColor(gangCol.r, gangCol.g, gangCol.b, 100)
         surface.DrawOutlinedRect(pillX - 190, 14, 380, 42, 1)
-        draw.SimpleText(pillText, "GW_UI_Header", pillX, 35, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(pillText, "GRID_UI_Header", pillX, 35, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     -- Close Button (Top-Right X)
@@ -138,7 +140,7 @@ function GW.UI.ToggleF4Menu()
     btnClose.Paint = function(s, w, h)
         local bgCol = s:IsHovered() and Color(239, 68, 68, 220) or Color(30, 41, 59, 160)
         draw.RoundedBox(6, 0, 0, w, h, bgCol)
-        draw.SimpleText("X", "GW_UI_Title", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("X", "GRID_UI_Title", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     btnClose.DoClick = function()
         frame:Close()
@@ -153,13 +155,13 @@ function GW.UI.ToggleF4Menu()
         btnAdmin.Paint = function(s, w, h)
             local bg = s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200)
             draw.RoundedBox(6, 0, 0, w, h, bg)
-            draw.SimpleText("Admin HUD", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+            draw.SimpleText("Admin HUD", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                 TEXT_ALIGN_CENTER)
         end
         btnAdmin.DoClick = function()
             frame:Close()
-            if GW.Turf and GW.Turf.OpenSetupMenu then
-                GW.Turf.OpenSetupMenu()
+            if GRID.Turf and GRID.Turf.OpenSetupMenu then
+                GRID.Turf.OpenSetupMenu()
             end
         end
     end
@@ -184,11 +186,11 @@ function GW.UI.ToggleF4Menu()
         draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
         surface.SetDrawColor(30, 41, 59, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-        draw.SimpleText("Map: " .. game.GetMap(), "GW_UI_Caption", 12, 16, Color(148, 163, 184))
-        draw.SimpleText("Online: " .. #player.GetAll() .. " players", "GW_UI_Caption", 12, 38, Color(74, 222, 128))
+        draw.SimpleText("Map: " .. game.GetMap(), "GRID_UI_Caption", 12, 16, Color(148, 163, 184))
+        draw.SimpleText("Online: " .. #player.GetAll() .. " players", "GRID_UI_Caption", 12, 38, Color(74, 222, 128))
     end
 
-    local invItems = GW.Inventory and GW.Inventory.ClientItems or {}
+    local invItems = GRID.Inventory and GRID.Inventory.ClientItems or {}
     local invBadge = #invItems > 0 and tostring(#invItems) or "0"
     local rawGang = IsValid(ply) and ply:GetRawGang() or ""
     local gangBadge = (rawGang ~= "") and "Active" or "None"
@@ -201,7 +203,7 @@ function GW.UI.ToggleF4Menu()
         {
             header = "ROLES & ASSETS",
             tabs = {
-                { id = "jobs",      title = "Careers & Jobs", badge = table.Count(GW.Jobs or {}) },
+                { id = "jobs",      title = "Careers & Jobs", badge = table.Count(GRID.Jobs or {}) },
                 { id = "inventory", title = "Inventory",      badge = invBadge }
             }
         },
@@ -254,12 +256,12 @@ function GW.UI.ToggleF4Menu()
         surface.SetDrawColor(30, 41, 59, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
     end
-    GW.UI.CurrentContentPanel = contentPanel
+    GRID.UI.CurrentContentPanel = contentPanel
 
     local function SwitchTab(tabId)
-        GW.UI.ActiveF4Tab = tabId
+        GRID.UI.ActiveF4Tab = tabId
         contentPanel:Clear()
-        GW.UI.RenderContentTab(contentPanel, tabId, frame)
+        GRID.UI.RenderContentTab(contentPanel, tabId, frame)
     end
 
     -- Build Grouped Navigation Elements
@@ -270,8 +272,8 @@ function GW.UI.ToggleF4Menu()
         secHeader:DockMargin(4, secIdx == 1 and 4 or 12, 4, 4)
         secHeader:SetTall(24)
         secHeader.Paint = function(s, w, h)
-            draw.SimpleText(sec.header, "GW_UI_Badge", 8, h / 2, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            surface.SetFont("GW_UI_Badge")
+            draw.SimpleText(sec.header, "GRID_UI_Badge", 8, h / 2, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            surface.SetFont("GRID_UI_Badge")
             local tw, _ = surface.GetTextSize(sec.header)
             local lineX = 14 + tw
             if lineX < w - 8 then
@@ -289,7 +291,7 @@ function GW.UI.ToggleF4Menu()
             btnTab:SetText("")
 
             btnTab.Paint = function(s, w, h)
-                local isActive = (GW.UI.ActiveF4Tab == tab.id)
+                local isActive = (GRID.UI.ActiveF4Tab == tab.id)
                 local isHovered = s:IsHovered()
 
                 local bgCol = isActive and Color(30, 41, 59, 255) or
@@ -302,7 +304,7 @@ function GW.UI.ToggleF4Menu()
 
                 local textCol = isActive and Color(248, 250, 252) or
                     (isHovered and Color(226, 232, 240) or Color(148, 163, 184))
-                draw.SimpleText(tab.title, "GW_UI_Sub", 16, h / 2, textCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(tab.title, "GRID_UI_Sub", 16, h / 2, textCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 if tab.badge then
                     local badgeText = tostring(tab.badge)
@@ -315,10 +317,10 @@ function GW.UI.ToggleF4Menu()
                         badgeFg = Color(52, 211, 153)
                     end
 
-                    surface.SetFont("GW_UI_Badge")
+                    surface.SetFont("GRID_UI_Badge")
                     local bw = surface.GetTextSize(badgeText) + 16
                     draw.RoundedBox(4, w - bw - 8, (h - 22) / 2, bw, 22, badgeBg)
-                    draw.SimpleText(badgeText, "GW_UI_Badge", w - 8 - bw / 2, h / 2, badgeFg, TEXT_ALIGN_CENTER,
+                    draw.SimpleText(badgeText, "GRID_UI_Badge", w - 8 - bw / 2, h / 2, badgeFg, TEXT_ALIGN_CENTER,
                         TEXT_ALIGN_CENTER)
                 end
             end
@@ -330,14 +332,14 @@ function GW.UI.ToggleF4Menu()
     end
 
     -- Initial tab load
-    SwitchTab(GW.UI.ActiveF4Tab or "jobs")
+    SwitchTab(GRID.UI.ActiveF4Tab or "jobs")
 end
 
-function GW.UI.RefreshInventoryTab()
-    if not IsValid(GW.UI.F4Frame) or GW.UI.ActiveF4Tab ~= "inventory" then return end
-    if IsValid(GW.UI.CurrentContentPanel) then
-        GW.UI.CurrentContentPanel:Clear()
-        GW.UI.RenderContentTab(GW.UI.CurrentContentPanel, "inventory", GW.UI.F4Frame)
+function GRID.UI.RefreshInventoryTab()
+    if not IsValid(GRID.UI.F4Frame) or GRID.UI.ActiveF4Tab ~= "inventory" then return end
+    if IsValid(GRID.UI.CurrentContentPanel) then
+        GRID.UI.CurrentContentPanel:Clear()
+        GRID.UI.RenderContentTab(GRID.UI.CurrentContentPanel, "inventory", GRID.UI.F4Frame)
     end
 end
 
@@ -345,7 +347,7 @@ end
 -- TAB CONTENT RENDERER
 -- ==========================================
 
-function GW.UI.RenderContentTab(container, tabId, mainFrame)
+function GRID.UI.RenderContentTab(container, tabId, mainFrame)
     local ply = LocalPlayer()
     local contW, contH = container:GetWide(), container:GetTall()
 
@@ -368,7 +370,7 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
             guide = "Citizen Handbook & Server Guide",
             gang = "Gang Management & Underworld Syndicate"
         }
-        draw.SimpleText(titles[tabId] or "Catalog", "GW_UI_Header", 0, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT,
+        draw.SimpleText(titles[tabId] or "Catalog", "GRID_UI_Header", 0, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT,
             TEXT_ALIGN_CENTER)
     end
 
@@ -384,13 +386,13 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
                 draw.RoundedBox(6, 0, 0, w, h, bg)
                 surface.SetDrawColor(245, 215, 130, 200)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
-                draw.SimpleText("Open Bag (B)", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+                draw.SimpleText("Open Bag (B)", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                     TEXT_ALIGN_CENTER)
             end
             btnBag.DoClick = function()
                 mainFrame:Close()
-                if GW.UI.ToggleBag then
-                    GW.UI.ToggleBag()
+                if GRID.UI.ToggleBag then
+                    GRID.UI.ToggleBag()
                 end
             end
         end
@@ -400,7 +402,7 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
         txtSearch:SetPos(topBar:GetWide() - 280, 4)
         txtSearch:SetPlaceholderText(tabId == "inventory" and "Search inventory..." or
             (tabId == "jobs" and "Search roles..." or "Search catalog..."))
-        txtSearch:SetFont("GW_UI_Sub")
+        txtSearch:SetFont("GRID_UI_Sub")
         txtSearch.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
             surface.SetDrawColor(30, 41, 59, 200)
@@ -408,14 +410,14 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
             s:DrawTextEntryText(Color(248, 250, 252), Color(6, 182, 212), Color(248, 250, 252))
         end
         txtSearch.OnChange = function(s)
-            GW.UI.SearchQuery = string.lower(string.Trim(s:GetText()))
+            GRID.UI.SearchQuery = string.lower(string.Trim(s:GetText()))
             local targetScroll = container:GetChildren()[2]
             if IsValid(targetScroll) then
                 targetScroll:Clear()
                 if tabId == "inventory" then
-                    GW.UI.PopulateInventoryGrid(targetScroll, mainFrame, GW.UI.SearchQuery)
+                    GRID.UI.PopulateInventoryGrid(targetScroll, mainFrame, GRID.UI.SearchQuery)
                 else
-                    GW.UI.PopulateGrid(targetScroll, tabId, mainFrame, GW.UI.SearchQuery)
+                    GRID.UI.PopulateGrid(targetScroll, tabId, mainFrame, GRID.UI.SearchQuery)
                 end
             end
         end
@@ -434,15 +436,15 @@ function GW.UI.RenderContentTab(container, tabId, mainFrame)
     sbar.btnDown.Paint = function() end
 
     if tabId == "rules" then
-        GW.UI.RenderRulesContent(scroll)
+        GRID.UI.RenderRulesContent(scroll)
     elseif tabId == "guide" then
-        GW.UI.RenderGuideContent(scroll)
+        GRID.UI.RenderGuideContent(scroll)
     elseif tabId == "gang" then
-        GW.UI.RenderGangContent(scroll, mainFrame)
+        GRID.UI.RenderGangContent(scroll, mainFrame)
     elseif tabId == "inventory" then
-        GW.UI.PopulateInventoryGrid(scroll, mainFrame, "")
+        GRID.UI.PopulateInventoryGrid(scroll, mainFrame, "")
     else
-        GW.UI.PopulateGrid(scroll, tabId, mainFrame, "")
+        GRID.UI.PopulateGrid(scroll, tabId, mainFrame, "")
     end
 end
 
@@ -450,13 +452,13 @@ end
 -- SERVER GUIDE CONTENT
 -- ==========================================
 
-function GW.UI.RenderGuideContent(scroll)
+function GRID.UI.RenderGuideContent(scroll)
     local guideSections = {
         {
             num = "01",
             title = "Getting Started & Career Advancement",
             desc =
-            "Begin your life in GangWars RP by opening the Careers tab. Choosing a job grants regular periodic salaries, specialized equipment, and unlocks corresponding trade items. Earn Respect and XP to Level Up by surviving, completing faction activities, contesting territory, and engaging in trade.",
+            "Begin your life in GridRP by opening the Careers tab. Choosing a job grants regular periodic salaries, specialized equipment, and unlocks corresponding trade items. Earn Respect and XP to Level Up by surviving, completing faction activities, contesting territory, and engaging in trade.",
             accent = Color(6, 182, 212)
         },
         {
@@ -499,7 +501,7 @@ function GW.UI.RenderGuideContent(scroll)
     local scrollW = scroll:GetWide() - 32
     for _, g in ipairs(guideSections) do
         local maxTextW = math.max(scrollW - 100, 400)
-        local lines = GW.UI.WrapText(g.desc, "GW_UI_Body", maxTextW)
+        local lines = GRID.UI.WrapText(g.desc, "GRID_UI_Body", maxTextW)
         local cardH = math.max(130, 68 + #lines * 22 + 16)
 
         local card = scroll:Add("DPanel")
@@ -515,14 +517,14 @@ function GW.UI.RenderGuideContent(scroll)
 
             -- Number badge
             draw.RoundedBox(4, 18, 16, 44, 34, Color(g.accent.r, g.accent.g, g.accent.b, 35))
-            draw.SimpleText(g.num, "GW_UI_Header", 40, 33, g.accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(g.num, "GRID_UI_Header", 40, 33, g.accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             -- Title
-            draw.SimpleText(g.title, "GW_UI_Header", 76, 33, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(g.title, "GRID_UI_Header", 76, 33, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Word-Wrapped Description
             for i, line in ipairs(lines) do
-                draw.SimpleText(line, "GW_UI_Body", 76, 62 + (i - 1) * 22, Color(148, 163, 184))
+                draw.SimpleText(line, "GRID_UI_Body", 76, 62 + (i - 1) * 22, Color(148, 163, 184))
             end
         end
     end
@@ -532,14 +534,14 @@ end
 -- GANG MANAGEMENT DASHBOARD (VIEW GANG)
 -- ==========================================
 
-function GW.UI.RenderGangContent(scroll, mainFrame)
+function GRID.UI.RenderGangContent(scroll, mainFrame)
     local ply = LocalPlayer()
 
     -- Request latest sync data from server
-    net.Start("GW_RequestGangData")
+    net.Start("GRID_RequestGangData")
     net.SendToServer()
 
-    local data = GW.UI.ClientGangData
+    local data = GRID.UI.ClientGangData
 
     -- Loading Placeholder
     if not data then
@@ -548,7 +550,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
         loading:SetTall(160)
         loading.Paint = function(s, w, h)
             draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 180))
-            draw.SimpleText("Loading Syndicate Intelligence...", "GW_UI_Header", w / 2, h / 2, Color(6, 182, 212),
+            draw.SimpleText("Loading Syndicate Intelligence...", "GRID_UI_Header", w / 2, h / 2, Color(6, 182, 212),
                 TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         return
@@ -570,17 +572,17 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
                 draw.RoundedBox(8, 0, 0, w, h, Color(245, 158, 11, 25))
                 surface.SetDrawColor(245, 158, 11, 140)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
-                draw.SimpleText("⚠ GANG AFFILIATION CURRENTLY SUSPENDED", "GW_UI_Sub", 18, 18, Color(251, 191, 36))
+                draw.SimpleText("⚠ GANG AFFILIATION CURRENTLY SUSPENDED", "GRID_UI_Sub", 18, 18, Color(251, 191, 36))
                 draw.SimpleText(
                     "You are on duty as " ..
                     data.currentJob ..
                     ". Gang territory dividends & controls are dormant until you switch to Street Gangs in Careers.",
-                    "GW_UI_Caption", 18, 40, Color(226, 232, 240))
+                    "GRID_UI_Caption", 18, 40, Color(226, 232, 240))
             end
         end
 
         -- 2. Top Gang Header Banner
-        local gangCol = GW.GetGangColor(data.gangName)
+        local gangCol = GRID.GetGangColor(data.gangName)
         local topBanner = scroll:Add("DPanel")
         topBanner:Dock(TOP)
         topBanner:DockMargin(0, 0, 0, 16)
@@ -592,21 +594,21 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
             -- Gang Name
-            draw.SimpleText(data.gangName, "GW_UI_Title", 24, 26, Color(248, 250, 252))
+            draw.SimpleText(data.gangName, "GRID_UI_Title", 24, 26, Color(248, 250, 252))
 
             -- Rank Pill
             local rText = data.isLeader and "GANG LEADER" or "SYNDICATE MEMBER"
             local rCol = data.isLeader and Color(6, 182, 212) or Color(148, 163, 184)
-            surface.SetFont("GW_UI_Badge")
+            surface.SetFont("GRID_UI_Badge")
             local tw = surface.GetTextSize(rText) + 20
             draw.RoundedBox(4, 24, 50, tw, 22, Color(rCol.r, rCol.g, rCol.b, 35))
-            draw.SimpleText(rText, "GW_UI_Badge", 24 + tw / 2, 61, rCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(rText, "GRID_UI_Badge", 24 + tw / 2, 61, rCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             -- Right Stats
             local stat1 = "★ Respect: " .. string.Comma(data.respect)
             local stat2 = #data.members .. " Registered Gangsters"
-            draw.SimpleText(stat1, "GW_UI_Header", w - 24, 24, Color(245, 158, 11), TEXT_ALIGN_RIGHT)
-            draw.SimpleText(stat2, "GW_UI_Sub", w - 24, 52, Color(74, 222, 128), TEXT_ALIGN_RIGHT)
+            draw.SimpleText(stat1, "GRID_UI_Header", w - 24, 24, Color(245, 158, 11), TEXT_ALIGN_RIGHT)
+            draw.SimpleText(stat2, "GRID_UI_Sub", w - 24, 52, Color(74, 222, 128), TEXT_ALIGN_RIGHT)
         end
 
         -- 3. Two Column Layout Container
@@ -634,10 +636,10 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-            draw.SimpleText("GANG VAULT & TREASURY", "GW_UI_Sub", 18, 16, Color(16, 185, 129))
+            draw.SimpleText("GANG VAULT & TREASURY", "GRID_UI_Sub", 18, 16, Color(16, 185, 129))
             local balText = "$" .. string.Comma(data.bank)
-            draw.SimpleText(balText, "GW_UI_Price", 18, 52, Color(74, 222, 128))
-            draw.SimpleText("Territory tax earnings and dividends accumulate directly in the vault.", "GW_UI_Caption", 18,
+            draw.SimpleText(balText, "GRID_UI_Price", 18, 52, Color(74, 222, 128))
+            draw.SimpleText("Territory tax earnings and dividends accumulate directly in the vault.", "GRID_UI_Caption", 18,
                 88, Color(148, 163, 184))
         end
 
@@ -652,11 +654,11 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             bDep.Paint = function(s, w, h)
                 local bg = s:IsHovered() and Color(16, 185, 129, 220) or Color(5, 150, 105, 180)
                 draw.RoundedBox(6, 0, 0, w, h, bg)
-                draw.SimpleText("+$" .. string.Comma(amt), "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252),
+                draw.SimpleText("+$" .. string.Comma(amt), "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252),
                     TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
             bDep.DoClick = function()
-                net.Start("GW_GangUIAction")
+                net.Start("GRID_GangUIAction")
                 net.WriteString("deposit")
                 net.WriteString(util.TableToJSON({ amount = amt }))
                 net.SendToServer()
@@ -677,11 +679,11 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
                     local bg = not canWith and Color(51, 65, 85, 160) or
                         (s:IsHovered() and Color(239, 68, 68, 220) or Color(185, 28, 28, 180))
                     draw.RoundedBox(6, 0, 0, w, h, bg)
-                    draw.SimpleText("-$" .. string.Comma(amt), "GW_UI_Btn", w / 2, h / 2,
+                    draw.SimpleText("-$" .. string.Comma(amt), "GRID_UI_Btn", w / 2, h / 2,
                         canWith and Color(248, 250, 252) or Color(156, 163, 175), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 end
                 bWith.DoClick = function()
-                    net.Start("GW_GangUIAction")
+                    net.Start("GRID_GangUIAction")
                     net.WriteString("withdraw")
                     net.WriteString(util.TableToJSON({ amount = amt }))
                     net.SendToServer()
@@ -692,7 +694,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             local lblOnlyLeader = vgui.Create("DLabel", vaultCard)
             lblOnlyLeader:SetPos(18, 166)
             lblOnlyLeader:SetSize(colW - 36, 24)
-            lblOnlyLeader:SetFont("GW_UI_Caption")
+            lblOnlyLeader:SetFont("GRID_UI_Caption")
             lblOnlyLeader:SetTextColor(Color(148, 163, 184))
             lblOnlyLeader:SetText("★ Vault withdrawals are reserved exclusively for the Gang Leader.")
         end
@@ -707,7 +709,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-            draw.SimpleText("CONTROLLED TERRITORIES (" .. #data.turfs .. ")", "GW_UI_Sub", 18, 16, Color(168, 85, 247))
+            draw.SimpleText("CONTROLLED TERRITORIES (" .. #data.turfs .. ")", "GRID_UI_Sub", 18, 16, Color(168, 85, 247))
         end
 
         local turfScroll = vgui.Create("DScrollPanel", turfCard)
@@ -718,7 +720,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             local noTurf = turfScroll:Add("DLabel")
             noTurf:Dock(TOP)
             noTurf:DockMargin(4, 16, 4, 4)
-            noTurf:SetFont("GW_UI_Caption")
+            noTurf:SetFont("GRID_UI_Caption")
             noTurf:SetTextColor(Color(148, 163, 184))
             noTurf:SetText(
                 "No city districts currently owned. Hold holographic flag poles in contested areas to capture.")
@@ -730,9 +732,9 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
                 tRow:SetTall(38)
                 tRow.Paint = function(s, w, h)
                     draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
-                    draw.SimpleText(t.name, "GW_UI_Sub", 12, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT,
+                    draw.SimpleText(t.name, "GRID_UI_Sub", 12, h / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT,
                         TEXT_ALIGN_CENTER)
-                    draw.SimpleText("District Tax: " .. (t.tax_rate or 10) .. "%", "GW_UI_Caption", w - 12, h / 2,
+                    draw.SimpleText("District Tax: " .. (t.tax_rate or 10) .. "%", "GRID_UI_Caption", w - 12, h / 2,
                         Color(74, 222, 128), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
                 end
             end
@@ -748,7 +750,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-            draw.SimpleText("SYNDICATE ROSTER & RECRUITS", "GW_UI_Sub", 18, 16, Color(6, 182, 212))
+            draw.SimpleText("SYNDICATE ROSTER & RECRUITS", "GRID_UI_Sub", 18, 16, Color(6, 182, 212))
         end
 
         -- Recruitment Bar (Invite Player)
@@ -756,7 +758,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
         txtInvite:SetPos(18, 48)
         txtInvite:SetSize(colW - 138, 36)
         txtInvite:SetPlaceholderText("Enter player name or SteamID...")
-        txtInvite:SetFont("GW_UI_Caption")
+        txtInvite:SetFont("GRID_UI_Caption")
         txtInvite.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
             surface.SetDrawColor(30, 41, 59, 200)
@@ -771,13 +773,13 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
         btnInvite.Paint = function(s, w, h)
             local bg = s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200)
             draw.RoundedBox(6, 0, 0, w, h, bg)
-            draw.SimpleText("Invite", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+            draw.SimpleText("Invite", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                 TEXT_ALIGN_CENTER)
         end
         btnInvite.DoClick = function()
             local targetName = string.Trim(txtInvite:GetText())
             if targetName == "" then return end
-            net.Start("GW_GangUIAction")
+            net.Start("GRID_GangUIAction")
             net.WriteString("invite")
             net.WriteString(util.TableToJSON({ target = targetName }))
             net.SendToServer()
@@ -805,17 +807,17 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
 
                 -- Member Name & Role
                 local nameCol = m.isOnline and Color(248, 250, 252) or Color(148, 163, 184)
-                draw.SimpleText(m.name, "GW_UI_Sub", 28, 14, nameCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText(m.job, "GW_UI_Caption", 28, 32, Color(100, 116, 139), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(m.name, "GRID_UI_Sub", 28, 14, nameCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(m.job, "GRID_UI_Caption", 28, 32, Color(100, 116, 139), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
                 -- Rank Tag
                 local rankText = m.isLeader and "Leader" or "Member"
                 local rankCol = m.isLeader and Color(6, 182, 212) or Color(148, 163, 184)
-                surface.SetFont("GW_UI_Badge")
+                surface.SetFont("GRID_UI_Badge")
                 local rtw = surface.GetTextSize(rankText) + 16
                 local rX = (data.isLeader and m.steamid ~= ply:SteamID()) and (w - rtw - 74) or (w - rtw - 12)
                 draw.RoundedBox(4, rX, (h - 22) / 2, rtw, 22, Color(rankCol.r, rankCol.g, rankCol.b, 35))
-                draw.SimpleText(rankText, "GW_UI_Badge", rX + rtw / 2, h / 2, rankCol, TEXT_ALIGN_CENTER,
+                draw.SimpleText(rankText, "GRID_UI_Badge", rX + rtw / 2, h / 2, rankCol, TEXT_ALIGN_CENTER,
                     TEXT_ALIGN_CENTER)
             end
 
@@ -828,12 +830,12 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
                 btnKick.Paint = function(s, w, h)
                     local bg = s:IsHovered() and Color(239, 68, 68, 240) or Color(185, 28, 28, 190)
                     draw.RoundedBox(4, 0, 0, w, h, bg)
-                    draw.SimpleText("Kick", "GW_UI_Badge", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+                    draw.SimpleText("Kick", "GRID_UI_Badge", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                         TEXT_ALIGN_CENTER)
                 end
                 btnKick.DoClick = function()
                     Derma_Query("Kick " .. m.name .. " from the gang?", "Confirm Kick", "Kick", function()
-                        net.Start("GW_GangUIAction")
+                        net.Start("GRID_GangUIAction")
                         net.WriteString("kick")
                         net.WriteString(util.TableToJSON({ steamid = m.steamid }))
                         net.SendToServer()
@@ -856,13 +858,13 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
         btnLeave.Paint = function(s, w, h)
             local bg = s:IsHovered() and Color(239, 68, 68, 220) or Color(185, 28, 28, 180)
             draw.RoundedBox(6, 0, 0, w, h, bg)
-            draw.SimpleText("Leave Gang", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+            draw.SimpleText("Leave Gang", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                 TEXT_ALIGN_CENTER)
         end
         btnLeave.DoClick = function()
             Derma_Query("Are you sure you want to leave '" .. data.gangName .. "'?", "Leave Gang", "Yes, Leave",
                 function()
-                    net.Start("GW_GangUIAction")
+                    net.Start("GRID_GangUIAction")
                     net.WriteString("leave")
                     net.WriteString("{}")
                     net.SendToServer()
@@ -877,7 +879,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             btnDisband.Paint = function(s, w, h)
                 local bg = s:IsHovered() and Color(220, 38, 38, 255) or Color(153, 27, 27, 200)
                 draw.RoundedBox(6, 0, 0, w, h, bg)
-                draw.SimpleText("Disband Gang", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+                draw.SimpleText("Disband Gang", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                     TEXT_ALIGN_CENTER)
             end
             btnDisband.DoClick = function()
@@ -885,7 +887,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
                     "Are you sure you want to PERMANENTLY disband '" ..
                     data.gangName .. "'? All members will be removed.",
                     "Disband Gang", "Disband Gang", function()
-                        net.Start("GW_GangUIAction")
+                        net.Start("GRID_GangUIAction")
                         net.WriteString("disband")
                         net.WriteString("{}")
                         net.SendToServer()
@@ -909,13 +911,13 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
                 surface.SetDrawColor(30, 41, 59, 180)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-                draw.SimpleText("Gang Affiliantions Temporarily Disabled", "GW_UI_Header", 24, 26, Color(248, 113, 113))
-                draw.SimpleText("You are currently employed as " .. data.currentJob .. ".", "GW_UI_Sub", 24, 58,
+                draw.SimpleText("Gang Affiliantions Temporarily Disabled", "GRID_UI_Header", 24, 26, Color(248, 113, 113))
+                draw.SimpleText("You are currently employed as " .. data.currentJob .. ".", "GRID_UI_Sub", 24, 58,
                     Color(248, 250, 252))
                 draw.SimpleText("Law enforcement officers and neutral civilians cannot participate in street gangs.",
-                    "GW_UI_Caption", 24, 88, Color(148, 163, 184))
+                    "GRID_UI_Caption", 24, 88, Color(148, 163, 184))
                 draw.SimpleText("To found or join a gang, switch to any Street Gang role in the Careers tab.",
-                    "GW_UI_Caption", 24, 110, Color(74, 222, 128))
+                    "GRID_UI_Caption", 24, 110, Color(74, 222, 128))
             end
 
             local btnGoJobs = vgui.Create("DButton", restCard)
@@ -925,14 +927,14 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             btnGoJobs.Paint = function(s, w, h)
                 local bg = s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200)
                 draw.RoundedBox(6, 0, 0, w, h, bg)
-                draw.SimpleText("Open Careers & Jobs", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+                draw.SimpleText("Open Careers & Jobs", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                     TEXT_ALIGN_CENTER)
             end
             btnGoJobs.DoClick = function()
-                if IsValid(GW.UI.CurrentContentPanel) then
-                    GW.UI.ActiveF4Tab = "jobs"
-                    GW.UI.CurrentContentPanel:Clear()
-                    GW.UI.RenderContentTab(GW.UI.CurrentContentPanel, "jobs", mainFrame)
+                if IsValid(GRID.UI.CurrentContentPanel) then
+                    GRID.UI.ActiveF4Tab = "jobs"
+                    GRID.UI.CurrentContentPanel:Clear()
+                    GRID.UI.RenderContentTab(GRID.UI.CurrentContentPanel, "jobs", mainFrame)
                 end
             end
             return
@@ -949,19 +951,19 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-            draw.SimpleText("FOUND A NEW STREET GANG", "GW_UI_Header", 24, 24, Color(245, 158, 11))
+            draw.SimpleText("FOUND A NEW STREET GANG", "GRID_UI_Header", 24, 24, Color(245, 158, 11))
             draw.SimpleText(
                 "Establish your own syndicate, conquer territory, collect district taxes, and recruit allies.",
-                "GW_UI_Caption", 24, 52, Color(148, 163, 184))
+                "GRID_UI_Caption", 24, 52, Color(148, 163, 184))
             draw.SimpleText("Founding Fee: $" .. (data.creationCost or 500) .. " (Deducted from your personal wallet)",
-                "GW_UI_Sub", 24, 118, Color(74, 222, 128))
+                "GRID_UI_Sub", 24, 118, Color(74, 222, 128))
         end
 
         local txtGangName = vgui.Create("DTextEntry", foundCard)
         txtGangName:SetPos(24, 76)
         txtGangName:SetSize(scrollW - 260, 38)
         txtGangName:SetPlaceholderText("Enter gang name (2 to 24 characters)...")
-        txtGangName:SetFont("GW_UI_Sub")
+        txtGangName:SetFont("GRID_UI_Sub")
         txtGangName.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(11, 15, 25, 220))
             surface.SetDrawColor(30, 41, 59, 200)
@@ -976,16 +978,16 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
         btnFound.Paint = function(s, w, h)
             local bg = s:IsHovered() and Color(245, 158, 11, 240) or Color(217, 119, 6, 200)
             draw.RoundedBox(6, 0, 0, w, h, bg)
-            draw.SimpleText("Found Gang ($500)", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+            draw.SimpleText("Found Gang ($500)", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                 TEXT_ALIGN_CENTER)
         end
         btnFound.DoClick = function()
             local gName = string.Trim(txtGangName:GetText())
             if #gName < 2 then
-                GW.Notify(ply, "Gang name must be at least 2 characters!", NOTIFY_ERROR)
+                GRID.Notify(ply, "Gang name must be at least 2 characters!", NOTIFY_ERROR)
                 return
             end
-            net.Start("GW_GangUIAction")
+            net.Start("GRID_GangUIAction")
             net.WriteString("create")
             net.WriteString(util.TableToJSON({ name = gName }))
             net.SendToServer()
@@ -998,9 +1000,9 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
         dirBanner:SetTall(42)
         dirBanner.Paint = function(s, w, h)
             draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
-            draw.SimpleText("REGISTERED CITY GANGS (" .. #data.cityGangs .. ")", "GW_UI_Sub", 18, h / 2,
+            draw.SimpleText("REGISTERED CITY GANGS (" .. #data.cityGangs .. ")", "GRID_UI_Sub", 18, h / 2,
                 Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText("Reach out to gang leaders in-game to request an invite (/invitegang).", "GW_UI_Caption",
+            draw.SimpleText("Reach out to gang leaders in-game to request an invite (/invitegang).", "GRID_UI_Caption",
                 w - 18, h / 2, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
 
@@ -1011,7 +1013,7 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
             noGangs.Paint = function(s, w, h)
                 draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 140))
                 draw.SimpleText("No gangs currently registered in the city database. Be the first to form one!",
-                    "GW_UI_Sub", w / 2, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    "GRID_UI_Sub", w / 2, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
         else
             for _, g in ipairs(data.cityGangs) do
@@ -1020,19 +1022,19 @@ function GW.UI.RenderGangContent(scroll, mainFrame)
                 gCard:DockMargin(0, 0, 0, 8)
                 gCard:SetTall(52)
                 gCard.Paint = function(s, w, h)
-                    local gCol = GW.GetGangColor(g.name)
+                    local gCol = GRID.GetGangColor(g.name)
                     draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
                     draw.RoundedBoxEx(6, 0, 0, 4, h, gCol, true, false, true, false)
                     surface.SetDrawColor(30, 41, 59, 160)
                     surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-                    draw.SimpleText(g.name, "GW_UI_Header", 18, 18, Color(248, 250, 252))
-                    draw.SimpleText((g.memberCount or 1) .. " Registered Members", "GW_UI_Caption", 18, 36,
+                    draw.SimpleText(g.name, "GRID_UI_Header", 18, 18, Color(248, 250, 252))
+                    draw.SimpleText((g.memberCount or 1) .. " Registered Members", "GRID_UI_Caption", 18, 36,
                         Color(148, 163, 184))
 
-                    draw.SimpleText("★ Respect: " .. string.Comma(g.respect or 0), "GW_UI_Sub", w - 24, 18,
+                    draw.SimpleText("★ Respect: " .. string.Comma(g.respect or 0), "GRID_UI_Sub", w - 24, 18,
                         Color(245, 158, 11), TEXT_ALIGN_RIGHT)
-                    draw.SimpleText("Vault: $" .. string.Comma(g.bank or 0), "GW_UI_Caption", w - 24, 36,
+                    draw.SimpleText("Vault: $" .. string.Comma(g.bank or 0), "GRID_UI_Caption", w - 24, 36,
                         Color(74, 222, 128), TEXT_ALIGN_RIGHT)
                 end
             end
@@ -1044,14 +1046,14 @@ end
 -- INVENTORY GRID POPULATION
 -- ==========================================
 
-function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
+function GRID.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
     local ply = LocalPlayer()
 
-    local rows = GW.Inventory and GW.Inventory.ClientItems or {}
+    local rows = GRID.Inventory and GRID.Inventory.ClientItems or {}
     local filteredRows = {}
 
     for _, r in ipairs(rows) do
-        local def = GW.Inventory.GetItemData(r.item_id)
+        local def = GRID.Inventory.GetItemData(r.item_id)
         local name = def and def.name or r.item_id
         if searchFilter == "" or string.find(string.lower(name), searchFilter, 1, true) then
             table.insert(filteredRows, r)
@@ -1064,10 +1066,10 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
         emptyCard:SetTall(160)
         emptyCard.Paint = function(s, w, h)
             draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 140))
-            draw.SimpleText("No stored items found.", "GW_UI_Header", w / 2, h / 2 - 12, Color(148, 163, 184),
+            draw.SimpleText("No stored items found.", "GRID_UI_Header", w / 2, h / 2 - 12, Color(148, 163, 184),
                 TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             draw.SimpleText("Open your 16-slot Backpack with [B] or interact with items using hands (+USE).",
-                "GW_UI_Caption", w / 2, h / 2 + 16, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                "GRID_UI_Caption", w / 2, h / 2 + 16, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         return
     end
@@ -1085,10 +1087,10 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
         local itemId = r.item_id
         local itemType = r.item_type
         local amount = tonumber(r.amount) or 1
-        local def = GW.Inventory.GetItemData(itemId)
+        local def = GRID.Inventory.GetItemData(itemId)
         local quality = def.quality or 1
-        local qCol = GW.Inventory.QualityColors and GW.Inventory.QualityColors[quality] or Color(148, 163, 184)
-        local qName = GW.Inventory.QualityNames and GW.Inventory.QualityNames[quality] or "Standard"
+        local qCol = GRID.Inventory.QualityColors and GRID.Inventory.QualityColors[quality] or Color(148, 163, 184)
+        local qName = GRID.Inventory.QualityNames and GRID.Inventory.QualityNames[quality] or "Standard"
 
         local card = layout:Add("DPanel")
         card:SetSize(cardW, cardH)
@@ -1103,24 +1105,24 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
             -- Item Name
             local contentX = 140
             local contentW = w - contentX - 16
-            local fitName = GW.UI.FitText(def.name, "GW_UI_Header", contentW - 80)
-            draw.SimpleText(fitName, "GW_UI_Header", contentX, 16, Color(248, 250, 252))
+            local fitName = GRID.UI.FitText(def.name, "GRID_UI_Header", contentW - 80)
+            draw.SimpleText(fitName, "GRID_UI_Header", contentX, 16, Color(248, 250, 252))
 
             -- Quality Pill
-            surface.SetFont("GW_UI_Badge")
+            surface.SetFont("GRID_UI_Badge")
             local qTextW = surface.GetTextSize(qName) + 16
             draw.RoundedBox(4, w - qTextW - 16, 16, qTextW, 22, Color(qCol.r, qCol.g, qCol.b, 35))
-            draw.SimpleText(qName, "GW_UI_Badge", w - 16 - qTextW / 2, 27, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(qName, "GRID_UI_Badge", w - 16 - qTextW / 2, 27, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             -- Amount / SubType
             local subInfo = string.format("Quantity: %dx  •  %s", amount, def.subType or "Asset")
-            draw.SimpleText(subInfo, "GW_UI_Sub", contentX, 48, Color(74, 222, 128))
+            draw.SimpleText(subInfo, "GRID_UI_Sub", contentX, 48, Color(74, 222, 128))
 
             -- Stats / Description
             local metaStr = def.stats or def.desc or ""
-            local lines = GW.UI.WrapText(metaStr, "GW_UI_Caption", contentW)
+            local lines = GRID.UI.WrapText(metaStr, "GRID_UI_Caption", contentW)
             for i = 1, math.min(#lines, 2) do
-                draw.SimpleText(lines[i], "GW_UI_Caption", contentX, 76 + (i - 1) * 18, Color(148, 163, 184))
+                draw.SimpleText(lines[i], "GRID_UI_Caption", contentX, 76 + (i - 1) * 18, Color(148, 163, 184))
             end
         end
 
@@ -1158,10 +1160,10 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
         btnDrop.Paint = function(s, w, h)
             local bg = s:IsHovered() and Color(239, 68, 68, 240) or Color(185, 28, 28, 190)
             draw.RoundedBox(6, 0, 0, w, h, bg)
-            draw.SimpleText("Drop", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Drop", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         btnDrop.DoClick = function()
-            GW.Inventory.DropItem(rowId)
+            GRID.Inventory.DropItem(rowId)
         end
 
         if itemType == "weapon" then
@@ -1172,11 +1174,11 @@ function GW.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
             btnEquip.Paint = function(s, w, h)
                 local bg = s:IsHovered() and Color(16, 185, 129, 240) or Color(5, 150, 105, 190)
                 draw.RoundedBox(6, 0, 0, w, h, bg)
-                draw.SimpleText("Equip", "GW_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+                draw.SimpleText("Equip", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                     TEXT_ALIGN_CENTER)
             end
             btnEquip.DoClick = function()
-                GW.Inventory.UseItem(rowId)
+                GRID.Inventory.UseItem(rowId)
             end
         end
     end
@@ -1186,7 +1188,7 @@ end
 -- GRID POPULATION (JOBS & STORE CATALOG)
 -- ==========================================
 
-function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
+function GRID.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
     local ply = LocalPlayer()
 
     -- ========================================================
@@ -1222,7 +1224,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
         }
 
         local catCounts = { neutral = 0, gang = 0, police = 0 }
-        for _, job in pairs(GW.Jobs or {}) do
+        for _, job in pairs(GRID.Jobs or {}) do
             local fId = (job.faction and job.faction.id) or "neutral"
             if catCounts[fId] ~= nil then
                 catCounts[fId] = catCounts[fId] + 1
@@ -1240,7 +1242,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
         end
 
         local filterButtons = {
-            { id = "all",     label = "All Roles (" .. table.Count(GW.Jobs or {}) .. ")", color = Color(6, 182, 212) },
+            { id = "all",     label = "All Roles (" .. table.Count(GRID.Jobs or {}) .. ")", color = Color(6, 182, 212) },
             { id = "neutral", label = "Civilians (" .. catCounts.neutral .. ")",          color = Color(148, 163, 184) },
             { id = "gang",    label = "Street Gangs (" .. catCounts.gang .. ")",          color = Color(245, 158, 11) },
             { id = "police",  label = "Police (" .. catCounts.police .. ")",              color = Color(16, 185, 129) }
@@ -1248,7 +1250,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
         local btnX = 8
         for _, fBtn in ipairs(filterButtons) do
-            surface.SetFont("GW_UI_Btn")
+            surface.SetFont("GRID_UI_Btn")
             local tw = surface.GetTextSize(fBtn.label) + 28
             local b = vgui.Create("DButton", filterBar)
             b:SetPos(btnX, 6)
@@ -1256,7 +1258,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
             b:SetText("")
 
             b.Paint = function(s, bw, bh)
-                local isCur = (GW.UI.ActiveJobCategory == fBtn.id)
+                local isCur = (GRID.UI.ActiveJobCategory == fBtn.id)
                 local bg = isCur and Color(fBtn.color.r, fBtn.color.g, fBtn.color.b, 45) or
                     (s:IsHovered() and Color(30, 41, 59, 200) or Color(11, 15, 25, 140))
                 draw.RoundedBox(6, 0, 0, bw, bh, bg)
@@ -1266,13 +1268,13 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 surface.DrawOutlinedRect(0, 0, bw, bh, 1)
 
                 local textCol = isCur and fBtn.color or (s:IsHovered() and Color(248, 250, 252) or Color(148, 163, 184))
-                draw.SimpleText(fBtn.label, "GW_UI_Btn", bw / 2, bh / 2, textCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(fBtn.label, "GRID_UI_Btn", bw / 2, bh / 2, textCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
 
             b.DoClick = function()
-                GW.UI.ActiveJobCategory = fBtn.id
+                GRID.UI.ActiveJobCategory = fBtn.id
                 scroll:Clear()
-                GW.UI.PopulateGrid(scroll, "jobs", mainFrame, searchFilter)
+                GRID.UI.PopulateGrid(scroll, "jobs", mainFrame, searchFilter)
             end
 
             btnX = btnX + tw + 8
@@ -1281,11 +1283,11 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
         local cardW = (scroll:GetWide() - 28) / 2
 
         for _, cat in ipairs(categories) do
-            if GW.UI.ActiveJobCategory == "all" or GW.UI.ActiveJobCategory == cat.id then
+            if GRID.UI.ActiveJobCategory == "all" or GRID.UI.ActiveJobCategory == cat.id then
                 local catJobs = {}
                 local catActivePlayers = 0
 
-                for jobId, job in pairs(GW.Jobs or {}) do
+                for jobId, job in pairs(GRID.Jobs or {}) do
                     local fId = (job.faction and job.faction.id) or "neutral"
                     if fId == cat.id then
                         if searchFilter == "" or string.find(string.lower(job.name), searchFilter, 1, true) then
@@ -1315,17 +1317,17 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         surface.SetDrawColor(30, 41, 59, 180)
                         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-                        draw.SimpleText(cat.title, "GW_UI_Sub", 18, 14, cat.color, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                        draw.SimpleText(cat.desc, "GW_UI_Caption", 18, 33, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+                        draw.SimpleText(cat.title, "GRID_UI_Sub", 18, 14, cat.color, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                        draw.SimpleText(cat.desc, "GRID_UI_Caption", 18, 33, Color(148, 163, 184), TEXT_ALIGN_LEFT,
                             TEXT_ALIGN_CENTER)
 
                         local actText = #catJobs .. " Roles  •  " .. catActivePlayers .. " Active Players"
-                        surface.SetFont("GW_UI_Badge")
+                        surface.SetFont("GRID_UI_Badge")
                         local tw = surface.GetTextSize(actText) + 20
                         draw.RoundedBox(4, w - tw - 16, 12, tw, 24, Color(cat.color.r, cat.color.g, cat.color.b, 35))
                         surface.SetDrawColor(cat.color.r, cat.color.g, cat.color.b, 120)
                         surface.DrawOutlinedRect(w - tw - 16, 12, tw, 24, 1)
-                        draw.SimpleText(actText, "GW_UI_Badge", w - 16 - tw / 2, 24, cat.color, TEXT_ALIGN_CENTER,
+                        draw.SimpleText(actText, "GRID_UI_Badge", w - 16 - tw / 2, 24, cat.color, TEXT_ALIGN_CENTER,
                             TEXT_ALIGN_CENTER)
                     end
 
@@ -1342,7 +1344,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         local card = catLayout:Add("DPanel")
                         card:SetSize(cardW, 220)
 
-                        local fCol = (job.faction and job.faction.color) or GW.Colors.White
+                        local fCol = (job.faction and job.faction.color) or GRID.Colors.White
                         local isMyJob = (myJob == jobId)
                         local maxTextW = cardW - 146
                         local reqJobLvl = job.level or 1
@@ -1385,25 +1387,25 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
                             -- Faction Pill
                             local fName = job.faction and job.faction.name or "Civilian"
-                            surface.SetFont("GW_UI_Badge")
+                            surface.SetFont("GRID_UI_Badge")
                             local badgeW = surface.GetTextSize(fName) + 20
                             draw.RoundedBox(4, 138, 14, badgeW, 22, Color(fCol.r, fCol.g, fCol.b, 35))
-                            draw.SimpleText(fName, "GW_UI_Badge", 138 + badgeW / 2, 25, fCol, TEXT_ALIGN_CENTER,
+                            draw.SimpleText(fName, "GRID_UI_Badge", 138 + badgeW / 2, 25, fCol, TEXT_ALIGN_CENTER,
                                 TEXT_ALIGN_CENTER)
 
                             -- Slot Availability Pill
-                            surface.SetFont("GW_UI_Badge")
+                            surface.SetFont("GRID_UI_Badge")
                             local slotW = surface.GetTextSize(slotText) + 18
                             local slotX = cardW - 16 - slotW
                             draw.RoundedBox(4, slotX, 14, slotW, 22, Color(slotCol.r, slotCol.g, slotCol.b, 35))
                             surface.SetDrawColor(slotCol.r, slotCol.g, slotCol.b, 90)
                             surface.DrawOutlinedRect(slotX, 14, slotW, 22, 1)
-                            draw.SimpleText(slotText, "GW_UI_Badge", slotX + slotW / 2, 25, slotCol, TEXT_ALIGN_CENTER,
+                            draw.SimpleText(slotText, "GRID_UI_Badge", slotX + slotW / 2, 25, slotCol, TEXT_ALIGN_CENTER,
                                 TEXT_ALIGN_CENTER)
 
                             -- Job Name
-                            local cleanJobName = GW.UI.FitText(job.name, "GW_UI_Header", maxTextW)
-                            draw.SimpleText(cleanJobName, "GW_UI_Header", 138, 42, Color(248, 250, 252))
+                            local cleanJobName = GRID.UI.FitText(job.name, "GRID_UI_Header", maxTextW)
+                            draw.SimpleText(cleanJobName, "GRID_UI_Header", 138, 42, Color(248, 250, 252))
 
                             -- Stats Line
                             local statsText = "Salary: +$" .. (job.salary or 45) .. " / 90s"
@@ -1413,12 +1415,12 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                             if job.runSpeed then
                                 statsText = statsText .. "   |   Sprint: " .. job.runSpeed
                             end
-                            draw.SimpleText(statsText, "GW_UI_Sub", 138, 72, Color(74, 222, 128))
+                            draw.SimpleText(statsText, "GRID_UI_Sub", 138, 72, Color(74, 222, 128))
 
                             -- Description
-                            local descLines = GW.UI.WrapText(job.desc or "", "GW_UI_Caption", maxTextW)
+                            local descLines = GRID.UI.WrapText(job.desc or "", "GRID_UI_Caption", maxTextW)
                             for i = 1, math.min(#descLines, 3) do
-                                draw.SimpleText(descLines[i], "GW_UI_Caption", 138, 98 + (i - 1) * 20,
+                                draw.SimpleText(descLines[i], "GRID_UI_Caption", 138, 98 + (i - 1) * 20,
                                     Color(148, 163, 184))
                             end
                         end
@@ -1449,8 +1451,8 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                             draw.RoundedBox(6, 0, 0, w, h, btnCol)
                             local rawText = isMyJob and "Current Active Role" or
                                 (not hasJobLvl and ("Requires Level " .. reqJobLvl) or (isFull and ("Role Full (" .. currentCount .. "/" .. maxSlots .. ")") or ("Enlist as " .. job.name)))
-                            local fitBtnText = GW.UI.FitText(rawText, "GW_UI_Btn", w - 20)
-                            draw.SimpleText(fitBtnText, "GW_UI_Btn", w / 2, h / 2,
+                            local fitBtnText = GRID.UI.FitText(rawText, "GRID_UI_Btn", w - 20)
+                            draw.SimpleText(fitBtnText, "GRID_UI_Btn", w / 2, h / 2,
                                 (not hasJobLvl or (isFull and not isMyJob)) and Color(156, 163, 175) or
                                 Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                         end
@@ -1458,18 +1460,18 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         btnEnlist.DoClick = function()
                             if isMyJob then return end
                             if not hasJobLvl then
-                                GW.Notify(ply, string.format("You must be Level %d to become a %s!", reqJobLvl, job.name),
+                                GRID.Notify(ply, string.format("You must be Level %d to become a %s!", reqJobLvl, job.name),
                                     NOTIFY_ERROR)
                                 surface.PlaySound("buttons/button10.wav")
                                 return
                             end
                             if isFull then
-                                GW.Notify(ply, "That role is currently at capacity!", NOTIFY_ERROR)
+                                GRID.Notify(ply, "That role is currently at capacity!", NOTIFY_ERROR)
                                 surface.PlaySound("buttons/button10.wav")
                                 return
                             end
 
-                            net.Start("GW_ChangeJob")
+                            net.Start("GRID_ChangeJob")
                             net.WriteString(jobId)
                             net.SendToServer()
                             surface.PlaySound("buttons/button14.wav")
@@ -1496,7 +1498,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
         layout:SetSpaceY(14)
 
         local itemsList = {}
-        for itemId, item in pairs(GW.ShopItems or {}) do
+        for itemId, item in pairs(GRID.ShopItems or {}) do
             if tabId == "weapons" and (item.category == "networking" or item.category == "supplies" or (item.type ~= "weapon" and item.type ~= "ammo")) then continue end
             if tabId == "shipments" and item.type ~= "shipment" then continue end
             if tabId == "entities" and (item.category ~= "printers" or item.debug or string.StartWith(itemId, "debug_")) then continue end
@@ -1508,7 +1510,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 continue
             end
 
-            local effectiveCost = GW.GetItemCost(item, ply)
+            local effectiveCost = GRID.GetItemCost(item, ply)
             local reqItemLevel = item.level or 1
             local canBuyLevel = (myLevel >= reqItemLevel)
             local canAfford = (myMoney >= effectiveCost)
@@ -1520,13 +1522,13 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 canBuyJob = table.HasValue(item.jobs, plyJob)
                 local names = {}
                 for _, jId in ipairs(item.jobs) do
-                    local jData = GW.Jobs[jId]
+                    local jData = GRID.Jobs[jId]
                     if jData then table.insert(names, jData.name) end
                 end
                 reqJobName = table.concat(names, " / ")
             elseif item.job then
                 canBuyJob = (plyJob == item.job)
-                local jData = GW.Jobs[item.job]
+                local jData = GRID.Jobs[item.job]
                 reqJobName = jData and jData.name or item.job
             end
 
@@ -1607,7 +1609,7 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
 
                 -- Item Type Pill
-                local isItemDebuff = (item.isDebuff or (item.buffId and GW.Buffs and GW.Buffs.Registry and GW.Buffs.Registry[item.buffId] and GW.Buffs.Registry[item.buffId].isDebuff) or string.find(string.lower(item.name), "debuff", 1, true))
+                local isItemDebuff = (item.isDebuff or (item.buffId and GRID.Buffs and GRID.Buffs.Registry and GRID.Buffs.Registry[item.buffId] and GRID.Buffs.Registry[item.buffId].isDebuff) or string.find(string.lower(item.name), "debuff", 1, true))
                 local typePillLabels = {
                     weapon = "Weapon",
                     ammo = "Ammo",
@@ -1641,45 +1643,45 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 end
 
                 draw.RoundedBox(4, 16, 14, 80, 26, Color(pCol.r, pCol.g, pCol.b, 35))
-                draw.SimpleText(pLabel, "GW_UI_Badge", 56, 27, pCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(pLabel, "GRID_UI_Badge", 56, 27, pCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
                 -- Item Name
-                local fitItemName = GW.UI.FitText(item.name, "GW_UI_Header", cardW - 116)
-                draw.SimpleText(fitItemName, "GW_UI_Header", 108, 14, Color(248, 250, 252))
+                local fitItemName = GRID.UI.FitText(item.name, "GRID_UI_Header", cardW - 116)
+                draw.SimpleText(fitItemName, "GRID_UI_Header", 108, 14, Color(248, 250, 252))
 
                 -- Dynamic Price Tag
                 local priceStr = (effectiveCost == 0) and "FREE" or ("$" .. string.Comma(effectiveCost))
-                draw.SimpleText(priceStr, "GW_UI_Price", 18, 54, Color(74, 222, 128))
+                draw.SimpleText(priceStr, "GRID_UI_Price", 18, 54, Color(74, 222, 128))
 
                 -- Wholesale Badge vs 200%-300% Markup Pill
                 local isWholesaleActive = (item.wholesaleCost and effectiveCost <= item.wholesaleCost)
-                surface.SetFont("GW_UI_Price")
+                surface.SetFont("GRID_UI_Price")
                 local pw, _ = surface.GetTextSize(priceStr)
                 local badgeX = 18 + pw + 12
                 local badgeY = 56
                 local badgeH = 22
 
                 if isWholesaleActive then
-                    surface.SetFont("GW_UI_Badge")
+                    surface.SetFont("GRID_UI_Badge")
                     local wText = "Wholesale Direct Price"
                     local mw, _ = surface.GetTextSize(wText)
                     local badgeW = mw + 16
                     draw.RoundedBox(4, badgeX, badgeY, badgeW, badgeH, Color(16, 185, 129, 35))
                     surface.SetDrawColor(16, 185, 129, 140)
                     surface.DrawOutlinedRect(badgeX, badgeY, badgeW, badgeH, 1)
-                    draw.SimpleText(wText, "GW_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2, Color(52, 211, 153),
+                    draw.SimpleText(wText, "GRID_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2, Color(52, 211, 153),
                         TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 else
-                    local markupPct = GW.GetItemMarkupPercent and GW.GetItemMarkupPercent(item, ply)
+                    local markupPct = GRID.GetItemMarkupPercent and GRID.GetItemMarkupPercent(item, ply)
                     if markupPct and markupPct > 0 then
-                        surface.SetFont("GW_UI_Badge")
+                        surface.SetFont("GRID_UI_Badge")
                         local markupTxt = "+" .. markupPct .. "% Shop Markup"
                         local mw, _ = surface.GetTextSize(markupTxt)
                         local badgeW = mw + 16
                         draw.RoundedBox(4, badgeX, badgeY, badgeW, badgeH, Color(245, 158, 11, 40))
                         surface.SetDrawColor(245, 158, 11, 140)
                         surface.DrawOutlinedRect(badgeX, badgeY, badgeW, badgeH, 1)
-                        draw.SimpleText(markupTxt, "GW_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2,
+                        draw.SimpleText(markupTxt, "GRID_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2,
                             Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                     end
                 end
@@ -1690,13 +1692,13 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                     draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
                     surface.SetDrawColor(239, 68, 68, 90)
                     surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                    draw.SimpleText("Hobos Cannot Buy Items", "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113),
+                    draw.SimpleText("Hobos Cannot Buy Items", "GRID_UI_Caption", cardW - 114, 64, Color(248, 113, 113),
                         TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 elseif isPoliceProhibited then
                     draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
                     surface.SetDrawColor(239, 68, 68, 90)
                     surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                    draw.SimpleText("Prohibited for Law Enforcement", "GW_UI_Caption", cardW - 114, 64,
+                    draw.SimpleText("Prohibited for Law Enforcement", "GRID_UI_Caption", cardW - 114, 64,
                         Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 elseif hasJobReq then
                     if canBuyJob then
@@ -1705,16 +1707,16 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(16, 185, 129, 35))
                         surface.SetDrawColor(16, 185, 129, 140)
                         surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                        local fitCheck = GW.UI.FitText(checkText, "GW_UI_Caption", 186)
-                        draw.SimpleText(fitCheck, "GW_UI_Caption", cardW - 114, 64, Color(52, 211, 153),
+                        local fitCheck = GRID.UI.FitText(checkText, "GRID_UI_Caption", 186)
+                        draw.SimpleText(fitCheck, "GRID_UI_Caption", cardW - 114, 64, Color(52, 211, 153),
                             TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                     else
                         local lockTag = "Requires: " .. reqJobName
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(239, 68, 68, 30))
                         surface.SetDrawColor(239, 68, 68, 90)
                         surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                        local fitLock = GW.UI.FitText(lockTag, "GW_UI_Caption", 186)
-                        draw.SimpleText(fitLock, "GW_UI_Caption", cardW - 114, 64, Color(248, 113, 113),
+                        local fitLock = GRID.UI.FitText(lockTag, "GRID_UI_Caption", 186)
+                        draw.SimpleText(fitLock, "GRID_UI_Caption", cardW - 114, 64, Color(248, 113, 113),
                             TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                     end
                 elseif hasLevelReq then
@@ -1722,13 +1724,13 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(16, 185, 129, 35))
                         surface.SetDrawColor(16, 185, 129, 140)
                         surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                        draw.SimpleText("✓ Level " .. reqItemLevel .. " Unlocked", "GW_UI_Caption", cardW - 114, 64,
+                        draw.SimpleText("✓ Level " .. reqItemLevel .. " Unlocked", "GRID_UI_Caption", cardW - 114, 64,
                             Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                     else
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(245, 158, 11, 40))
                         surface.SetDrawColor(245, 158, 11, 140)
                         surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                        draw.SimpleText("Requires Level " .. reqItemLevel, "GW_UI_Caption", cardW - 114, 64,
+                        draw.SimpleText("Requires Level " .. reqItemLevel, "GRID_UI_Caption", cardW - 114, 64,
                             Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                     end
                 end
@@ -1736,17 +1738,17 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 -- Item Description
                 local subText = item.desc or ""
                 if subText ~= "" then
-                    local subLines = GW.UI.WrapText(subText, "GW_UI_Caption", leftContentW)
+                    local subLines = GRID.UI.WrapText(subText, "GRID_UI_Caption", leftContentW)
                     for i = 1, math.min(#subLines, 2) do
-                        draw.SimpleText(subLines[i], "GW_UI_Caption", 18, 96 + (i - 1) * 18, Color(148, 163, 184))
+                        draw.SimpleText(subLines[i], "GRID_UI_Caption", 18, 96 + (i - 1) * 18, Color(148, 163, 184))
                     end
                 end
 
                 -- Savings Tip for Non-Specialists
                 if not isWholesaleActive and item.markupRole then
                     local tipText = "★ Tip: Buy from a " .. item.markupRole .. " to avoid this markup!"
-                    local fitTip = GW.UI.FitText(tipText, "GW_UI_Caption", leftContentW)
-                    draw.SimpleText(fitTip, "GW_UI_Caption", 18, 134, Color(251, 191, 36, 200))
+                    local fitTip = GRID.UI.FitText(tipText, "GRID_UI_Caption", leftContentW)
+                    draw.SimpleText(fitTip, "GRID_UI_Caption", 18, 134, Color(251, 191, 36, 200))
                 end
             end
 
@@ -1788,48 +1790,48 @@ function GW.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 end
 
                 draw.RoundedBox(6, 0, 0, w, h, btnCol)
-                local fitBtnText = GW.UI.FitText(text, "GW_UI_Btn", w - 16)
-                draw.SimpleText(fitBtnText, "GW_UI_Btn", w / 2, h / 2,
+                local fitBtnText = GRID.UI.FitText(text, "GRID_UI_Btn", w - 16)
+                draw.SimpleText(fitBtnText, "GRID_UI_Btn", w / 2, h / 2,
                     isLocked and Color(156, 163, 175) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
 
             btnBuy.DoClick = function()
                 if isHoboProhibited then
-                    GW.Notify(ply, "Hobos cannot purchase items! You can only use building tools.", NOTIFY_ERROR)
+                    GRID.Notify(ply, "Hobos cannot purchase items! You can only use building tools.", NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
                 if isPoliceProhibited then
-                    GW.Notify(ply, "Police officers cannot purchase printers or contraband!", NOTIFY_ERROR)
+                    GRID.Notify(ply, "Police officers cannot purchase printers or contraband!", NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
                 if not canBuyLevel and not canBuyJob then
-                    GW.Notify(ply,
+                    GRID.Notify(ply,
                         string.format("You must be Level %d and employed as %s to purchase this!", reqItemLevel,
                             reqJobName ~= "" and reqJobName or "Specialist"), NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
                 if not canBuyLevel then
-                    GW.Notify(ply, string.format("You must be Level %d to purchase this item!", reqItemLevel),
+                    GRID.Notify(ply, string.format("You must be Level %d to purchase this item!", reqItemLevel),
                         NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
                 if not canBuyJob then
-                    GW.Notify(ply, "Requires employment as: " .. (reqJobName ~= "" and reqJobName or "Specialist"),
+                    GRID.Notify(ply, "Requires employment as: " .. (reqJobName ~= "" and reqJobName or "Specialist"),
                         NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
                 if not canAfford then
-                    GW.Notify(ply, "You cannot afford this item ($" .. effectiveCost .. ")!", NOTIFY_ERROR)
+                    GRID.Notify(ply, "You cannot afford this item ($" .. effectiveCost .. ")!", NOTIFY_ERROR)
                     surface.PlaySound("buttons/button10.wav")
                     return
                 end
 
-                net.Start("GW_BuyItem")
+                net.Start("GRID_BuyItem")
                 net.WriteString(itemId)
                 net.SendToServer()
             end
@@ -1841,7 +1843,7 @@ end
 -- RULES TAB (SOPHISTICATED ACCORDION WITH WORD WRAP)
 -- ==========================================
 
-function GW.UI.RenderRulesContent(scroll)
+function GRID.UI.RenderRulesContent(scroll)
     local rules = {
         {
             num = "01",
@@ -1883,7 +1885,7 @@ function GW.UI.RenderRulesContent(scroll)
     local scrollW = scroll:GetWide() - 32
     for _, r in ipairs(rules) do
         local maxTextW = math.max(scrollW - 100, 400)
-        local lines = GW.UI.WrapText(r.desc, "GW_UI_Body", maxTextW)
+        local lines = GRID.UI.WrapText(r.desc, "GRID_UI_Body", maxTextW)
         local cardH = math.max(130, 68 + #lines * 24 + 16)
 
         local card = scroll:Add("DPanel")
@@ -1898,12 +1900,12 @@ function GW.UI.RenderRulesContent(scroll)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
             draw.RoundedBox(4, 18, 16, 44, 34, Color(r.accent.r, r.accent.g, r.accent.b, 35))
-            draw.SimpleText(r.num, "GW_UI_Header", 40, 33, r.accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(r.num, "GRID_UI_Header", 40, 33, r.accent, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-            draw.SimpleText(r.title, "GW_UI_Header", 76, 33, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(r.title, "GRID_UI_Header", 76, 33, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             for i, line in ipairs(lines) do
-                draw.SimpleText(line, "GW_UI_Body", 76, 62 + (i - 1) * 24, Color(148, 163, 184))
+                draw.SimpleText(line, "GRID_UI_Body", 76, 62 + (i - 1) * 24, Color(148, 163, 184))
             end
         end
     end

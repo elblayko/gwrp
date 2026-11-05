@@ -3,14 +3,14 @@
     Author: Toxic & Antigravity
 --]]
 
-GW = GW or {}
-GW.Crafting = GW.Crafting or {}
+GRID = GRID or {}
+GRID.Crafting = GRID.Crafting or {}
 
 -- ========================================================
 -- 1. MATERIAL PICKUP HANDLER
 -- ========================================================
 
-function GW.Crafting.PickupMaterial(ply, matEnt)
+function GRID.Crafting.PickupMaterial(ply, matEnt)
     if not IsValid(ply) or not ply:Alive() or not IsValid(matEnt) then return false end
 
     -- Verify proximity (within 130 Source units)
@@ -23,17 +23,17 @@ function GW.Crafting.PickupMaterial(ply, matEnt)
     if amount <= 0 then amount = 1 end
 
     local iType = string.StartWith(matId, "blueprint_") and "blueprint" or "material"
-    local added = GW.Database.AddInventoryItem(ply:SteamID(), matId, iType, amount, {})
+    local added = GRID.Database.AddInventoryItem(ply:SteamID(), matId, iType, amount, {})
     if not added then
-        GW.Notify(ply, "Your bags are full! Equip extra bags or drop items.", NOTIFY_ERROR)
+        GRID.Notify(ply, "Your bags are full! Equip extra bags or drop items.", NOTIFY_ERROR)
         ply:EmitSound("common/warning.wav", 65, 100)
         return false
     end
 
     matEnt:EmitSound("items/itempickup.wav", 65, 100)
-    local def = GW.Crafting.Materials[matId] or (GW.Inventory.GetItemData and GW.Inventory.GetItemData(matId))
+    local def = GRID.Crafting.Materials[matId] or (GRID.Inventory.GetItemData and GRID.Inventory.GetItemData(matId))
     local itemName = def and def.name or matId
-    GW.Notify(ply, string.format("Pocketed %dx %s into your bag.", amount, itemName), NOTIFY_GENERIC)
+    GRID.Notify(ply, string.format("Pocketed %dx %s into your bag.", amount, itemName), NOTIFY_GENERIC)
 
     -- Notify parent machine that resource was harvested
     if IsValid(matEnt.ParentMachine) then
@@ -41,7 +41,7 @@ function GW.Crafting.PickupMaterial(ply, matEnt)
     end
 
     matEnt:Remove()
-    GW.Inventory.Sync(ply)
+    GRID.Inventory.Sync(ply)
     return true
 end
 
@@ -49,8 +49,8 @@ end
 -- 2. INVENTORY INGREDIENT DEDUCTION ENGINE
 -- ========================================================
 
-function GW.Crafting.GetPlayerMaterialCount(steamID, itemId)
-    local rows = GW.Database.GetInventory(steamID) or {}
+function GRID.Crafting.GetPlayerMaterialCount(steamID, itemId)
+    local rows = GRID.Database.GetInventory(steamID) or {}
     local total = 0
     for _, row in ipairs(rows) do
         if row.item_id == itemId then
@@ -60,20 +60,20 @@ function GW.Crafting.GetPlayerMaterialCount(steamID, itemId)
     return total
 end
 
-function GW.Crafting.DeductMaterial(steamID, itemId, totalAmount)
+function GRID.Crafting.DeductMaterial(steamID, itemId, totalAmount)
     local needed = totalAmount
     while needed > 0 do
-        local rows = GW.Database.Call("GET_INVENTORY_ITEM", { steamID, itemId })
+        local rows = GRID.Database.Call("GET_INVENTORY_ITEM", { steamID, itemId })
         if not rows or not rows[1] then break end
         local row = rows[1]
         local rowId = tonumber(row.id)
         local curAmt = tonumber(row.amount) or 1
 
         if curAmt <= needed then
-            GW.Database.Call("DELETE_INVENTORY_ITEM", { rowId })
+            GRID.Database.Call("DELETE_INVENTORY_ITEM", { rowId })
             needed = needed - curAmt
         else
-            GW.Database.Call("DECREMENT_INVENTORY_ITEM", { needed, rowId })
+            GRID.Database.Call("DECREMENT_INVENTORY_ITEM", { needed, rowId })
             needed = 0
         end
     end
@@ -84,26 +84,26 @@ end
 -- 3. CRAFTING REQUEST NETWORK HANDLER
 -- ========================================================
 
-net.Receive("GW_CraftItem", function(len, ply)
+local function HandleCraftItem(len, ply)
     if not IsValid(ply) or not ply:Alive() then return end
-    if not GW.CheckRateLimit(ply, "craft_item", 3) then return end
+    if not GRID.CheckRateLimit(ply, "craft_item", 3) then return end
 
     local machine = net.ReadEntity()
     local recipeId = net.ReadString()
 
-    if not IsValid(machine) or machine:GetClass() ~= "gw_resource_machine" then
-        GW.Notify(ply, "Invalid Resource Fabricator!", NOTIFY_ERROR)
+    if not IsValid(machine) or machine:GetClass() ~= "grid_resource_machine" then
+        GRID.Notify(ply, "Invalid Resource Fabricator!", NOTIFY_ERROR)
         return
     end
 
     if machine:GetPos():DistToSqr(ply:GetPos()) > (140 * 140) then
-        GW.Notify(ply, "You are too far from the Resource Fabricator!", NOTIFY_ERROR)
+        GRID.Notify(ply, "You are too far from the Resource Fabricator!", NOTIFY_ERROR)
         return
     end
 
-    local recipe = GW.Crafting.GetRecipe(recipeId)
+    local recipe = GRID.Crafting.GetRecipe(recipeId)
     if not recipe then
-        GW.Notify(ply, "Unknown crafting recipe!", NOTIFY_ERROR)
+        GRID.Notify(ply, "Unknown crafting recipe!", NOTIFY_ERROR)
         return
     end
 
@@ -111,11 +111,11 @@ net.Receive("GW_CraftItem", function(len, ply)
 
     -- 1. Verify player has all ingredients
     for _, ing in ipairs(recipe.ingredients) do
-        local have = GW.Crafting.GetPlayerMaterialCount(steamID, ing.id)
+        local have = GRID.Crafting.GetPlayerMaterialCount(steamID, ing.id)
         if have < ing.amount then
-            local matDef = GW.Crafting.Materials[ing.id] or (GW.Inventory.GetItemData and GW.Inventory.GetItemData(ing.id))
+            local matDef = GRID.Crafting.Materials[ing.id] or (GRID.Inventory.GetItemData and GRID.Inventory.GetItemData(ing.id))
             local matName = matDef and matDef.name or ing.name or ing.id
-            GW.Notify(ply, string.format("Missing materials: %s (%d/%d required)!", matName, have, ing.amount), NOTIFY_ERROR)
+            GRID.Notify(ply, string.format("Missing materials: %s (%d/%d required)!", matName, have, ing.amount), NOTIFY_ERROR)
             ply:EmitSound("common/warning.wav", 65, 100)
             return
         end
@@ -123,7 +123,7 @@ net.Receive("GW_CraftItem", function(len, ply)
 
     -- 2. Deduct materials
     for _, ing in ipairs(recipe.ingredients) do
-        GW.Crafting.DeductMaterial(steamID, ing.id, ing.amount)
+        GRID.Crafting.DeductMaterial(steamID, ing.id, ing.amount)
     end
 
     -- 3. Grant crafted item
@@ -131,15 +131,15 @@ net.Receive("GW_CraftItem", function(len, ply)
     local rId = recipe.resultId
 
     if rType == "weapon" then
-        local def = GW.Inventory.GetItemData(rId)
+        local def = GRID.Inventory.GetItemData(rId)
         local reqLevel = (def and def.level) or 1
 
-        local added = GW.Database.AddInventoryItem(steamID, rId, "weapon", 1, {})
+        local added = GRID.Database.AddInventoryItem(steamID, rId, "weapon", 1, {})
         if not added then
             if ply:GetLevel() >= reqLevel and not ply:HasWeapon(rId) then
                 ply:Give(rId)
                 ply:SelectWeapon(rId)
-                GW.Notify(ply, "Bags full! Equipped " .. recipe.name .. " directly.", NOTIFY_GENERIC)
+                GRID.Notify(ply, "Bags full! Equipped " .. recipe.name .. " directly.", NOTIFY_GENERIC)
             else
                 -- Spawn weapon on ground
                 local tr = ply:GetEyeTrace()
@@ -150,14 +150,14 @@ net.Receive("GW_CraftItem", function(len, ply)
                     dropWep:Spawn()
                     dropWep:Activate()
                 end
-                GW.Notify(ply, "Bags full! Dropped " .. recipe.name .. " onto the ground.", NOTIFY_HINT)
+                GRID.Notify(ply, "Bags full! Dropped " .. recipe.name .. " onto the ground.", NOTIFY_HINT)
             end
         else
-            GW.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
+            GRID.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
         end
 
     elseif rType == "bag" then
-        local added = GW.Database.AddInventoryItem(steamID, rId, "bag", 1, {})
+        local added = GRID.Database.AddInventoryItem(steamID, rId, "bag", 1, {})
         if not added then
             local dropBag = ents.Create("prop_physics")
             if IsValid(dropBag) then
@@ -166,17 +166,17 @@ net.Receive("GW_CraftItem", function(len, ply)
                 dropBag:Spawn()
                 dropBag:Activate()
             end
-            GW.Notify(ply, "Bags full! Dropped " .. recipe.name .. " onto the ground.", NOTIFY_HINT)
+            GRID.Notify(ply, "Bags full! Dropped " .. recipe.name .. " onto the ground.", NOTIFY_HINT)
         else
-            GW.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
+            GRID.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
         end
 
     elseif rType == "consumable" then
-        local added = GW.Database.AddInventoryItem(steamID, rId, "consumable", 1, {})
+        local added = GRID.Database.AddInventoryItem(steamID, rId, "consumable", 1, {})
         if not added then
-            GW.Notify(ply, "Bags full! Unable to store " .. recipe.name .. ".", NOTIFY_ERROR)
+            GRID.Notify(ply, "Bags full! Unable to store " .. recipe.name .. ".", NOTIFY_ERROR)
         else
-            GW.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
+            GRID.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
         end
 
     elseif rType == "ammo" then
@@ -184,7 +184,7 @@ net.Receive("GW_CraftItem", function(len, ply)
         ply:GiveAmmo(120, "AR2", true)
         ply:GiveAmmo(32, "Buckshot", true)
         ply:GiveAmmo(28, "357", true)
-        GW.Notify(ply, "Crafted Universal Ammo Pack (Restored all standard ammo)!", NOTIFY_GENERIC)
+        GRID.Notify(ply, "Crafted Universal Ammo Pack (Restored all standard ammo)!", NOTIFY_GENERIC)
     end
 
     -- Visual & sound effects on machine
@@ -197,38 +197,42 @@ net.Receive("GW_CraftItem", function(len, ply)
     ed:SetScale(1.5)
     util.Effect("ElectricSpark", ed, true, true)
 
-    GW.Inventory.Sync(ply)
-end)
+    GRID.Inventory.Sync(ply)
+end
+
+net.Receive("GRID_CraftItem", HandleCraftItem)
 
 -- Quick Collect button from UI
-net.Receive("GW_CollectMachineResource", function(len, ply)
+local function HandleCollectMachineResource(len, ply)
     if not IsValid(ply) or not ply:Alive() then return end
     local machine = net.ReadEntity()
 
-    if not IsValid(machine) or machine:GetClass() ~= "gw_resource_machine" then return end
+    if not IsValid(machine) or machine:GetClass() ~= "grid_resource_machine" then return end
     if machine:GetPos():DistToSqr(ply:GetPos()) > (140 * 140) then return end
 
     if IsValid(machine.CurrentItem) then
-        GW.Crafting.PickupMaterial(ply, machine.CurrentItem)
+        GRID.Crafting.PickupMaterial(ply, machine.CurrentItem)
     end
-end)
+end
 
--- Debug verification concommand: gw_test_drops <count>
-concommand.Add("gw_test_drops", function(ply, cmd, args)
+net.Receive("GRID_CollectMachineResource", HandleCollectMachineResource)
+
+-- Debug verification concommand: grid_test_drops <count>
+local function RunTestDrops(ply, cmd, args)
     if IsValid(ply) and not ply:IsAdmin() then return end
 
     local count = math.Clamp(tonumber(args[1]) or 1000, 10, 50000)
     local results = {}
 
     for i = 1, count do
-        local id = GW.Crafting.RollRandomResource()
+        local id = GRID.Crafting.RollRandomResource()
         results[id] = (results[id] or 0) + 1
     end
 
-    local out = string.format("\n[GWRP Crafting] Simulated %d extraction rolls:\n", count)
+    local out = string.format("\n[GridRP Crafting] Simulated %d extraction rolls:\n", count)
     for id, cnt in pairs(results) do
         local pct = (cnt / count) * 100
-        local def = GW.Crafting.Materials[id]
+        local def = GRID.Crafting.Materials[id]
         local name = def and def.name or id
         out = out .. string.format("  %-28s: %5d  (%5.1f%%)\n", name, cnt, pct)
     end
@@ -238,4 +242,6 @@ concommand.Add("gw_test_drops", function(ply, cmd, args)
     else
         print(out)
     end
-end)
+end
+
+concommand.Add("grid_test_drops", RunTestDrops)

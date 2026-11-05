@@ -1,5 +1,6 @@
 --[[
-    cl_scoreboard.lua - GangWars RP Faction Scoreboard
+    cl_scoreboard.lua - GridRP Faction Scoreboard
+    Author: Toxic & Antigravity
 --]]
 
 local ScoreboardFrame = nil
@@ -15,11 +16,13 @@ function GM:ScoreboardShow()
     frame:SetDraggable(false)
     ScoreboardFrame = frame
 
+    local colors = (GRID and GRID.Colors) or {}
+
     frame.Paint = function(s, w, h)
         draw.RoundedBox(8, 0, 0, w, h, Color(15, 23, 42, 245))
         draw.RoundedBox(8, 0, 0, w, 45, Color(30, 41, 59))
-        draw.SimpleText("GANGWARS RP — Toxic", "GW_FontLarge", 20, 10, GW.Colors.Border)
-        draw.SimpleText("Players Online: " .. #player.GetAll(), "GW_FontSmall", w - 20, 15, GW.Colors.White, TEXT_ALIGN_RIGHT)
+        draw.SimpleText("GRIDRP — Toxic", "GRID_FontLarge", 20, 10, colors.Border or Color(56, 189, 248))
+        draw.SimpleText("Players Online: " .. #player.GetAll(), "GRID_FontSmall", w - 20, 15, colors.White or Color(255, 255, 255), TEXT_ALIGN_RIGHT)
     end
 
     local scroll = vgui.Create("DScrollPanel", frame)
@@ -34,7 +37,8 @@ function GM:ScoreboardShow()
 
         local job = ply:GetJobData()
         local gang = ply:GetGang()
-        local col = (gang ~= "") and GW.GetGangColor(gang) or (job and job.faction and job.faction.color or GW.Colors.White)
+        local getGangCol = GRID and GRID.GetGangColor
+        local col = (gang ~= "") and (getGangCol and getGangCol(gang) or Color(168, 85, 247)) or (job and job.faction and job.faction.color or colors.White or Color(255, 255, 255))
 
         line.Paint = function(s, w, h)
             draw.RoundedBox(4, 0, 0, w, h, Color(24, 32, 47))
@@ -43,20 +47,20 @@ function GM:ScoreboardShow()
             -- Player Level Capsule Badge
             local lvl = ply.GetLevel and ply:GetLevel() or 1
             local lvlStr = "LVL " .. lvl
-            surface.SetFont("GW_UI_Badge")
+            surface.SetFont("GRID_UI_Badge")
             local lw = surface.GetTextSize(lvlStr)
             local pillW = lw + 14
             draw.RoundedBox(4, 16, 8, pillW, 22, Color(245, 158, 11, 40))
             surface.SetDrawColor(245, 158, 11, 160)
             surface.DrawOutlinedRect(16, 8, pillW, 22, 1)
-            draw.SimpleText(lvlStr, "GW_UI_Badge", 16 + pillW / 2, 19, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(lvlStr, "GRID_UI_Badge", 16 + pillW / 2, 19, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-            draw.SimpleText(ply:Nick(), "GW_FontMedium", 16 + pillW + 10, 8, GW.Colors.White)
+            draw.SimpleText(ply:Nick(), "GRID_FontMedium", 16 + pillW + 10, 8, colors.White or Color(255, 255, 255))
             if gang ~= "" then
-                draw.SimpleText("[" .. gang .. "]", "GW_FontSmall", 250, 11, col)
+                draw.SimpleText("[" .. gang .. "]", "GRID_FontSmall", 250, 11, col)
             end
-            draw.SimpleText(job and job.name or "Citizen", "GW_FontSmall", 410, 11, col)
-            draw.SimpleText("Ping: " .. ply:Ping() .. "ms", "GW_FontSmall", w - 20, 11, GW.Colors.Muted, TEXT_ALIGN_RIGHT)
+            draw.SimpleText(job and job.name or "Citizen", "GRID_FontSmall", 410, 11, col)
+            draw.SimpleText("Ping: " .. ply:Ping() .. "ms", "GRID_FontSmall", w - 20, 11, colors.Muted or Color(148, 163, 184), TEXT_ALIGN_RIGHT)
         end
     end
 end

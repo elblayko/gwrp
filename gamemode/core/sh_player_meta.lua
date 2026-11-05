@@ -6,7 +6,7 @@ local meta = FindMetaTable("Player")
 if meta then
     -- Money Methods
     function meta:GetMoney()
-        return self:GetNWInt("GW_Money", 0)
+        return self:GetNWInt("GRID_Money", 0)
     end
 
     function meta:CanAfford(amount)
@@ -15,16 +15,16 @@ if meta then
 
     -- Job Methods
     function meta:GetJob()
-        return self:GetNWString("GW_Job", "citizen")
+        return self:GetNWString("GRID_Job", "citizen")
     end
 
     function meta:GetJobData()
-        return GW.Jobs[self:GetJob()] or GW.Jobs["citizen"]
+        return GRID.Jobs[self:GetJob()] or GRID.Jobs["citizen"]
     end
 
     -- Player Gang Methods (Active gang is suspended while playing as Police or Civilian)
     function meta:GetRawGang()
-        return self:GetNWString("GW_Gang", "")
+        return self:GetNWString("GRID_Gang", "")
     end
 
     function meta:GetGang()
@@ -32,7 +32,7 @@ if meta then
         if not job or not job.faction or job.faction.id ~= "gang" then
             return ""
         end
-        return self:GetNWString("GW_Gang", "")
+        return self:GetNWString("GRID_Gang", "")
     end
 
     function meta:IsInGang()
@@ -45,7 +45,7 @@ if meta then
 
     function meta:GetFaction()
         local job = self:GetJobData()
-        local baseFaction = job and job.faction or GW.Factions.FACTION_CITIZEN
+        local baseFaction = job and job.faction or GRID.Factions.FACTION_CITIZEN
 
         -- If in a player-created gang and on the Street Gang faction, return dynamic faction object
         local gangName = self:GetGang()
@@ -53,7 +53,7 @@ if meta then
             return {
                 id = string.lower(gangName),
                 name = gangName,
-                color = GW.GetGangColor(gangName)
+                color = GRID.GetGangColor(gangName)
             }
         end
 
@@ -88,15 +88,15 @@ if meta then
 
     -- Level & Progression Methods
     function meta:GetLevel()
-        return math.max(1, self:GetNWInt("GW_Level", 1))
+        return math.max(1, self:GetNWInt("GRID_Level", 1))
     end
 
     function meta:GetXP()
-        return math.max(0, self:GetNWInt("GW_XP", 0))
+        return math.max(0, self:GetNWInt("GRID_XP", 0))
     end
 
     function meta:GetRequiredXP()
-        return GW.GetRequiredXP and GW.GetRequiredXP(self:GetLevel()) or 0
+        return GRID.GetRequiredXP and GRID.GetRequiredXP(self:GetLevel()) or 0
     end
 
     function meta:CanUseItemLevel(reqLevel)
@@ -106,8 +106,8 @@ if meta then
     if SERVER then
         function meta:SetMoney(amount)
             amount = math.max(0, math.floor(amount))
-            self:SetNWInt("GW_Money", amount)
-            GW.Database.SavePlayerMoney(self, amount)
+            self:SetNWInt("GRID_Money", amount)
+            GRID.Database.SavePlayerMoney(self, amount)
         end
 
         function meta:AddMoney(amount)
@@ -116,24 +116,24 @@ if meta then
 
         function meta:SetGang(gangName)
             gangName = string.Trim(gangName or "")
-            self:SetNWString("GW_Gang", gangName)
-            GW.Database.SavePlayerGang(self, gangName)
+            self:SetNWString("GRID_Gang", gangName)
+            GRID.Database.SavePlayerGang(self, gangName)
         end
 
         function meta:SetLevel(lvl)
-            local maxLvl = (GW.Config and GW.Config.Level and GW.Config.Level.MaxLevel) or 50
+            local maxLvl = (GRID.Config and GRID.Config.Level and GRID.Config.Level.MaxLevel) or 50
             lvl = math.Clamp(math.floor(tonumber(lvl) or 1), 1, maxLvl)
-            self:SetNWInt("GW_Level", lvl)
-            if GW.Database and GW.Database.SavePlayerLevelXP then
-                GW.Database.SavePlayerLevelXP(self, lvl, self:GetXP())
+            self:SetNWInt("GRID_Level", lvl)
+            if GRID.Database and GRID.Database.SavePlayerLevelXP then
+                GRID.Database.SavePlayerLevelXP(self, lvl, self:GetXP())
             end
         end
 
         function meta:SetXP(xp)
             xp = math.max(0, math.floor(tonumber(xp) or 0))
-            self:SetNWInt("GW_XP", xp)
-            if GW.Database and GW.Database.SavePlayerLevelXP then
-                GW.Database.SavePlayerLevelXP(self, self:GetLevel(), xp)
+            self:SetNWInt("GRID_XP", xp)
+            if GRID.Database and GRID.Database.SavePlayerLevelXP then
+                GRID.Database.SavePlayerLevelXP(self, self:GetLevel(), xp)
             end
         end
 
@@ -141,7 +141,7 @@ if meta then
             amount = math.floor(tonumber(amount) or 0)
             if amount <= 0 then return end
 
-            local maxLvl = (GW.Config and GW.Config.Level and GW.Config.Level.MaxLevel) or 50
+            local maxLvl = (GRID.Config and GRID.Config.Level and GRID.Config.Level.MaxLevel) or 50
             local curLvl = self:GetLevel()
             if curLvl >= maxLvl then return end -- Max level cap
 
@@ -149,8 +149,8 @@ if meta then
             local leveledUp = false
             local initialLvl = curLvl
 
-            while curLvl < maxLvl and curXP >= GW.GetRequiredXP(curLvl) do
-                local req = GW.GetRequiredXP(curLvl)
+            while curLvl < maxLvl and curXP >= GRID.GetRequiredXP(curLvl) do
+                local req = GRID.GetRequiredXP(curLvl)
                 if req <= 0 then break end
                 curXP = curXP - req
                 curLvl = curLvl + 1
@@ -161,31 +161,31 @@ if meta then
                 curXP = 0
             end
 
-            self:SetNWInt("GW_Level", curLvl)
-            self:SetNWInt("GW_XP", curXP)
+            self:SetNWInt("GRID_Level", curLvl)
+            self:SetNWInt("GRID_XP", curXP)
 
-            if GW.Database and GW.Database.SavePlayerLevelXP then
-                GW.Database.SavePlayerLevelXP(self, curLvl, curXP)
+            if GRID.Database and GRID.Database.SavePlayerLevelXP then
+                GRID.Database.SavePlayerLevelXP(self, curLvl, curXP)
             end
 
             -- Dispatch XP popup combat text / floating HUD event
-            net.Start("GW_XPGained")
+            net.Start("GRID_XPGained")
                 net.WriteInt(amount, 32)
                 net.WriteString(reason or "Action")
             net.Send(self)
 
             if leveledUp then
-                local cashMultiplier = (GW.Config and GW.Config.Level and GW.Config.Level.CashRewardPerLevel) or 500
+                local cashMultiplier = (GRID.Config and GRID.Config.Level and GRID.Config.Level.CashRewardPerLevel) or 500
                 local rewardCash = curLvl * cashMultiplier
                 self:AddMoney(rewardCash)
                 self:SetHealth(self:GetMaxHealth())
 
-                net.Start("GW_LevelUp")
+                net.Start("GRID_LevelUp")
                     net.WriteInt(curLvl, 16)
                     net.WriteInt(rewardCash, 32)
                 net.Send(self)
 
-                GW.Notify(self, string.format("★ LEVEL UP! You reached Level %d! Awarded +$%s & Health Restored!", curLvl, string.Comma(rewardCash)), NOTIFY_GENERIC, 6)
+                GRID.Notify(self, string.format("★ LEVEL UP! You reached Level %d! Awarded +$%s & Health Restored!", curLvl, string.Comma(rewardCash)), NOTIFY_GENERIC, 6)
             end
         end
     end
@@ -204,11 +204,11 @@ if entMeta then
     end
 
     function entMeta:GetDoorOwner()
-        return self:GetNWEntity("GW_DoorOwner")
+        return self:GetNWEntity("GRID_DoorOwner")
     end
 
     function entMeta:GetDoorFaction()
-        return self:GetNWString("GW_DoorFaction", "")
+        return self:GetNWString("GRID_DoorFaction", "")
     end
 
     function entMeta:CanAccessDoor(ply)

@@ -3,12 +3,13 @@
     Door Raycast HUD Tag is handled natively in cl_hud.lua (matching printer & clinic pod HUD elements)
 --]]
 
-GW.Doors = GW.Doors or {}
+GRID = GRID or {}
+GRID.Doors = GRID.Doors or {}
 
 -- Remove legacy 3D2D in-world door text hook to prevent text clipping into door frames
-hook.Remove("PostDrawOpaqueRenderables", "GW_DrawDoorText")
+hook.Remove("PostDrawOpaqueRenderables", "GRID_DrawDoorText")
 
-function GW.Doors.OpenDoorMenu()
+function GRID.Doors.OpenDoorMenu()
     local ply = LocalPlayer()
     if not IsValid(ply) then return end
 
@@ -17,15 +18,15 @@ function GW.Doors.OpenDoorMenu()
     if not IsValid(ent) or not ent:isDoor() then return end
     if tr.HitPos:DistToSqr(ply:EyePos()) > (180 * 180) and ply:GetPos():DistToSqr(ent:GetPos()) > (180 * 180) then return end
 
-    if IsValid(GW.Doors.ActiveMenu) then
-        GW.Doors.ActiveMenu:Remove()
+    if IsValid(GRID.Doors.ActiveMenu) then
+        GRID.Doors.ActiveMenu:Remove()
     end
 
-    local owner = ent:GetNWEntity("GW_DoorOwner")
-    local gangName = ent:GetNWString("GW_DoorFaction", "")
+    local owner = ent:GetNWEntity("GRID_DoorOwner")
+    local gangName = ent:GetNWString("GRID_DoorFaction", "")
     local isOwned = IsValid(owner)
     local isOwner = isOwned and (owner == ply)
-    local cost = (GW.Config and GW.Config.DoorCost) or 15
+    local cost = (GRID.Config and GRID.Config.DoorCost) or 15
     local isHobo = (ply:GetJob() == "hobo")
 
     local w, h = 380, 200
@@ -35,7 +36,7 @@ function GW.Doors.OpenDoorMenu()
     frame:SetTitle("")
     frame:MakePopup()
     frame:ShowCloseButton(false)
-    GW.Doors.ActiveMenu = frame
+    GRID.Doors.ActiveMenu = frame
 
     local accentCol = isOwner and Color(52, 211, 153) or (isOwned and Color(251, 191, 36) or Color(6, 182, 212))
 
@@ -52,9 +53,9 @@ function GW.Doors.OpenDoorMenu()
         draw.RoundedBox(4, 18, 14, 52, 20, Color(accentCol.r, accentCol.g, accentCol.b, 35))
         surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 140)
         surface.DrawOutlinedRect(18, 14, 52, 20, 1)
-        draw.SimpleText("DOOR", "GW_UI_Badge", 44, 24, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("DOOR", "GRID_UI_Badge", 44, 24, accentCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        draw.SimpleText("Property Management", "GW_UI_Sub", 80, 24, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Property Management", "GRID_UI_Sub", 80, 24, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
         -- Subtitle Info
         local subInfo
@@ -66,7 +67,7 @@ function GW.Doors.OpenDoorMenu()
         else
             subInfo = string.format("Owner: %s%s", owner:Nick(), (gangName ~= "" and (" [" .. gangName .. "]") or ""))
         end
-        draw.SimpleText(subInfo, "GW_UI_Caption", 18, 48, Color(148, 163, 184))
+        draw.SimpleText(subInfo, "GRID_UI_Caption", 18, 48, Color(148, 163, 184))
     end
 
     -- Close Button [X]
@@ -77,7 +78,7 @@ function GW.Doors.OpenDoorMenu()
     closeBtn.Paint = function(s, bw, bh)
         local bg = s:IsHovered() and Color(239, 68, 68, 200) or Color(30, 41, 59, 160)
         draw.RoundedBox(4, 0, 0, bw, bh, bg)
-        draw.SimpleText("✕", "GW_UI_Badge", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("✕", "GRID_UI_Badge", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     closeBtn.DoClick = function()
         frame:Close()
@@ -99,7 +100,7 @@ function GW.Doors.OpenDoorMenu()
         local descLabel = vgui.Create("DLabel", card)
         descLabel:SetPos(16, 14)
         descLabel:SetSize(w - 68, 22)
-        descLabel:SetFont("GW_FontSmall")
+        descLabel:SetFont("GRID_FontSmall")
         descLabel:SetTextColor(Color(226, 232, 240))
         descLabel:SetText(isHobo and "Hobos are homeless and cannot purchase properties." or "Purchase this door to lock, unlock, and secure access.")
 
@@ -111,7 +112,7 @@ function GW.Doors.OpenDoorMenu()
         buyBtn.Paint = function(s, bw, bh)
             if isHobo then
                 draw.RoundedBox(6, 0, 0, bw, bh, Color(51, 65, 85, 180))
-                draw.SimpleText("HOBOS CANNOT PURCHASE PROPERTY", "GW_UI_Btn", bw / 2, bh / 2, Color(156, 163, 175), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText("HOBOS CANNOT PURCHASE PROPERTY", "GRID_UI_Btn", bw / 2, bh / 2, Color(156, 163, 175), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 return
             end
 
@@ -122,11 +123,11 @@ function GW.Doors.OpenDoorMenu()
 
             local txt = canAfford and ("PURCHASE PROPERTY ($" .. string.Comma(cost) .. ")") or ("CANNOT AFFORD ($" .. string.Comma(cost) .. ")")
             local txtCol = canAfford and Color(248, 250, 252) or Color(148, 163, 184)
-            draw.SimpleText(txt, "GW_UI_Btn", bw / 2, bh / 2, txtCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(txt, "GRID_UI_Btn", bw / 2, bh / 2, txtCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         buyBtn.DoClick = function()
             if isHobo then
-                GW.Notify(ply, "Hobos are homeless and cannot purchase properties!", NOTIFY_ERROR)
+                GRID.Notify(ply, "Hobos are homeless and cannot purchase properties!", NOTIFY_ERROR)
                 surface.PlaySound("buttons/button10.wav")
                 return
             end
@@ -134,7 +135,7 @@ function GW.Doors.OpenDoorMenu()
                 surface.PlaySound("buttons/button10.wav")
                 return
             end
-            net.Start("GW_DoorAction")
+            net.Start("GRID_DoorAction")
                 net.WriteEntity(ent)
                 net.WriteString("buy")
             net.SendToServer()
@@ -148,7 +149,7 @@ function GW.Doors.OpenDoorMenu()
         local descLabel = vgui.Create("DLabel", card)
         descLabel:SetPos(16, 14)
         descLabel:SetSize(w - 68, 22)
-        descLabel:SetFont("GW_FontSmall")
+        descLabel:SetFont("GRID_FontSmall")
         descLabel:SetTextColor(Color(226, 232, 240))
         descLabel:SetText("You are the registered owner of this property.")
 
@@ -159,10 +160,10 @@ function GW.Doors.OpenDoorMenu()
         sellBtn.Paint = function(s, bw, bh)
             local bg = s:IsHovered() and Color(239, 68, 68, 200) or Color(185, 28, 28, 160)
             draw.RoundedBox(6, 0, 0, bw, bh, bg)
-            draw.SimpleText("SELL PROPERTY (+$" .. string.Comma(refund) .. ")", "GW_UI_Btn", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("SELL PROPERTY (+$" .. string.Comma(refund) .. ")", "GRID_UI_Btn", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         sellBtn.DoClick = function()
-            net.Start("GW_DoorAction")
+            net.Start("GRID_DoorAction")
                 net.WriteEntity(ent)
                 net.WriteString("sell")
             net.SendToServer()
@@ -174,14 +175,14 @@ function GW.Doors.OpenDoorMenu()
         local descLabel = vgui.Create("DLabel", card)
         descLabel:SetPos(16, 20)
         descLabel:SetSize(w - 68, 24)
-        descLabel:SetFont("GW_FontSmall")
+        descLabel:SetFont("GRID_FontSmall")
         descLabel:SetTextColor(Color(248, 250, 252))
         descLabel:SetText("Private Residence - No Unauthorized Access")
 
         local subDesc = vgui.Create("DLabel", card)
         subDesc:SetPos(16, 50)
         subDesc:SetSize(w - 68, 22)
-        subDesc:SetFont("GW_UI_Caption")
+        subDesc:SetFont("GRID_UI_Caption")
         subDesc:SetTextColor(Color(148, 163, 184))
         subDesc:SetText("This property is currently occupied and managed by another citizen.")
     end

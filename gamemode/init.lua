@@ -1,5 +1,5 @@
 --[[
-    GangWars RP (GWRP) by Toxic
+    GridRP (GRID) by Toxic
     gamemode/init.lua - Server Gamemode Entry Point
 --]]
 
@@ -62,28 +62,28 @@ function GM:Initialize()
     for i = 1, 5 do math.random() end
 
     print("==================================================")
-    print("           GangWars RP (by Toxic)                 ")
+    print("           GridRP (by Toxic)                      ")
     print("   Gamemode Loaded Successfully!                  ")
     print("==================================================")
 
-    GW.Database.Init()
-    GW.Turf.Init()
-    GW.Doors.Init()
-    GW.Economy.StartPaydayTimer()
+    GRID.Database.Init()
+    GRID.Turf.Init()
+    GRID.Doors.Init()
+    GRID.Economy.StartPaydayTimer()
 end
 
 function GM:PlayerInitialSpawn(ply)
-    ply.GW_DataLoaded = false
-    GW.Database.LoadPlayer(ply, function(data)
-        local initialJob = (data and data.job and GW.Jobs[data.job]) and data.job or "citizen"
+    ply.GRID_DataLoaded = false
+    GRID.Database.LoadPlayer(ply, function(data)
+        local initialJob = (data and data.job and GRID.Jobs[data.job]) and data.job or "citizen"
         ply:SetJob(initialJob, true)
-        GW.Turf.SyncToPlayer(ply)
-        GW.Doors.SyncToPlayer(ply)
+        GRID.Turf.SyncToPlayer(ply)
+        GRID.Doors.SyncToPlayer(ply)
 
         timer.Simple(1, function()
             if IsValid(ply) then
-                GW.Notify(ply, "Welcome to GangWars RP! Press F4 to open the Store & Jobs.", NOTIFY_GENERIC, 8)
-                GW.Notify(ply, "Claim Turf Flag Poles for your gang to earn dividends!", NOTIFY_HINT, 10)
+                GRID.Notify(ply, "Welcome to GridRP! Press F4 to open the Store & Jobs.", NOTIFY_GENERIC, 8)
+                GRID.Notify(ply, "Claim Turf Flag Poles for your gang to earn dividends!", NOTIFY_HINT, 10)
             end
         end)
     end)
@@ -91,17 +91,17 @@ end
 
 function GM:PlayerDisconnected(ply)
     -- Flush pending combat skirmish buffer
-    if GW.Telemetry and GW.Telemetry.FlushCombat then
-        GW.Telemetry.FlushCombat(ply)
+    if GRID.Telemetry and GRID.Telemetry.FlushCombat then
+        GRID.Telemetry.FlushCombat(ply)
     end
 
     -- Despawn active money-generating entities and job deployables on disconnect
     for _, ent in ipairs(ents.GetAll()) do
         if IsValid(ent) then
-            local isOwner = (ent.GW_Owner == ply) or (ent:GetNWEntity("GW_Owner") == ply) or (ent.PurchaserSteamID == ply:SteamID())
+            local isOwner = (ent.GRID_Owner == ply) or (ent:GetNWEntity("GRID_Owner") == ply) or (ent.PurchaserSteamID == ply:SteamID())
             if isOwner then
                 local c = ent:GetClass()
-                if string.StartWith(c, "gw_printer_") or c == "gw_resource_machine" or c == "gw_clinic_pod" or c == "gw_computer" or c == "gw_shipment" or c == "gw_network_switch" or c == "gw_wan_uplink" then
+                if string.StartWith(c, "grid_printer_") or c == "grid_resource_machine" or c == "grid_clinic_pod" or c == "grid_computer" or c == "grid_shipment" or c == "grid_network_switch" or c == "grid_wan_uplink" then
                     ent:Remove()
                 end
             end
@@ -109,24 +109,24 @@ function GM:PlayerDisconnected(ply)
     end
 
     -- Unown all session-based purchased doors
-    if GW.Doors and GW.Doors.UnownAll then
-        GW.Doors.UnownAll(ply)
+    if GRID.Doors and GRID.Doors.UnownAll then
+        GRID.Doors.UnownAll(ply)
     end
-    if GW.Database and GW.Database.SavePlayer then
-        GW.Database.SavePlayer(ply)
+    if GRID.Database and GRID.Database.SavePlayer then
+        GRID.Database.SavePlayer(ply)
     end
 end
 
 function GM:ShutDown()
     for _, ply in ipairs(player.GetAll()) do
-        if GW.Database and GW.Database.SavePlayer then
-            GW.Database.SavePlayer(ply)
+        if GRID.Database and GRID.Database.SavePlayer then
+            GRID.Database.SavePlayer(ply)
         end
     end
-    if GW.Turf and GW.Turf.SaveMapProfile then
-        GW.Turf.SaveMapProfile()
+    if GRID.Turf and GRID.Turf.SaveMapProfile then
+        GRID.Turf.SaveMapProfile()
     end
-    print("[GWRP] All player, gang, and turf records committed to SQLite.")
+    print("[GridRP] All player, gang, and turf records committed to SQLite.")
 end
 
 function GM:PlayerSpawn(ply)
@@ -154,7 +154,7 @@ function GM:PlayerSpawn(ply)
 
         -- Universal RP tools (Given to ALL jobs)
         ply:Give("weapon_fists")
-        ply:Give("weapon_gw_keys")
+        ply:Give("weapon_grid_keys")
         ply:Give("weapon_physgun")
         ply:Give("weapon_physcannon")
         ply:Give("gmod_tool")
@@ -209,12 +209,12 @@ end
 -- WEAPON PICKUP & PROGRAMMATIC GIVE CONTROL
 -- ========================================================
 local plyMeta = FindMetaTable("Player")
-if plyMeta and not plyMeta.GW_OldGive then
-    plyMeta.GW_OldGive = plyMeta.Give
+if plyMeta and not plyMeta.GRID_OldGive then
+    plyMeta.GRID_OldGive = plyMeta.Give
     function plyMeta:Give(class, bNoAmmo)
-        self.GW_GivingWeapon = true
-        local wep = self:GW_OldGive(class, bNoAmmo)
-        self.GW_GivingWeapon = nil
+        self.GRID_GivingWeapon = true
+        local wep = self:GRID_OldGive(class, bNoAmmo)
+        self.GRID_GivingWeapon = nil
         return wep
     end
 end
@@ -223,12 +223,12 @@ function GM:PlayerCanPickupWeapon(ply, wep)
     if not IsValid(ply) or not IsValid(wep) then return false end
 
     -- Hobo Restriction: Hobos can only use building tools and hands
-    if ply:GetJob() == "hobo" and not (GW.HoboAllowedWeapons and GW.HoboAllowedWeapons[wep:GetClass()]) then
+    if ply:GetJob() == "hobo" and not (GRID.HoboAllowedWeapons and GRID.HoboAllowedWeapons[wep:GetClass()]) then
         return false
     end
 
     -- Allow programmatic Give() calls (job spawn loadout, vendor purchase, inventory equip)
-    if ply.GW_GivingWeapon then
+    if ply.GRID_GivingWeapon then
         return true
     end
 
@@ -242,32 +242,32 @@ function GM:PlayerCanPickupWeapon(ply, wep)
 end
 
 function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
-    if GW.Telemetry and GW.Telemetry.FlushCombat and oldWep ~= newWep then
-        GW.Telemetry.FlushCombat(ply)
+    if GRID.Telemetry and GRID.Telemetry.FlushCombat and oldWep ~= newWep then
+        GRID.Telemetry.FlushCombat(ply)
     end
     if not IsValid(ply) or not IsValid(newWep) then return end
     local class = newWep:GetClass()
 
     -- Hobo Restriction: Hobos can only wield building tools and hands
-    if ply:GetJob() == "hobo" and not (GW.HoboAllowedWeapons and GW.HoboAllowedWeapons[class]) then
-        GW.Notify(ply, "Hobos can only use building tools and hands!", NOTIFY_ERROR)
+    if ply:GetJob() == "hobo" and not (GRID.HoboAllowedWeapons and GRID.HoboAllowedWeapons[class]) then
+        GRID.Notify(ply, "Hobos can only use building tools and hands!", NOTIFY_ERROR)
         return true -- Blocks switching to this weapon
     end
 
-    local def = GW.Inventory and GW.Inventory.GetItemData and GW.Inventory.GetItemData(class)
+    local def = GRID.Inventory and GRID.Inventory.GetItemData and GRID.Inventory.GetItemData(class)
     local reqLvl = (def and def.level) or (newWep.RequiredLevel or 1)
     if reqLvl > 1 and ply:GetLevel() < reqLvl then
-        GW.Notify(ply, string.format("You must be Level %d to wield %s!", reqLvl, def and def.name or class), NOTIFY_ERROR)
+        GRID.Notify(ply, string.format("You must be Level %d to wield %s!", reqLvl, def and def.name or class), NOTIFY_ERROR)
         return true -- Blocks switching to this weapon
     end
 end
 
 function GM:PlayerDeath(victim, inflictor, attacker)
     -- Flush pending combat telemetry
-    if GW.Telemetry and GW.Telemetry.FlushCombat then
-        GW.Telemetry.FlushCombat(victim)
+    if GRID.Telemetry and GRID.Telemetry.FlushCombat then
+        GRID.Telemetry.FlushCombat(victim)
         if IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim then
-            GW.Telemetry.FlushCombat(attacker)
+            GRID.Telemetry.FlushCombat(attacker)
         end
     end
 
@@ -278,19 +278,19 @@ function GM:PlayerDeath(victim, inflictor, attacker)
     end
 
     -- Dynamic Anti-Inflation Resuscitation Fee (Hybrid Base + Wealth %)
-    if GW.Economy and GW.Economy.CalculateDynamicFee then
-        local hospFee = GW.Economy.CalculateDynamicFee(victim, GW.Config.HospitalFeeBase or 50, GW.Config.HospitalFeeWealthPct or 0.015)
+    if GRID.Economy and GRID.Economy.CalculateDynamicFee then
+        local hospFee = GRID.Economy.CalculateDynamicFee(victim, GRID.Config.HospitalFeeBase or 50, GRID.Config.HospitalFeeWealthPct or 0.015)
         if hospFee > 0 and victim:CanAfford(hospFee) then
             victim:AddMoney(-hospFee)
-            GW.Notify(victim, string.format("Emergency Medical Resuscitation Fee: -$%d", hospFee), NOTIFY_ERROR)
-            if GW.Telemetry and GW.Telemetry.Log then
-                GW.Telemetry.Log("ECONOMY", "HOSPITAL_FEE", victim:SteamID(), "", hospFee, {})
+            GRID.Notify(victim, string.format("Emergency Medical Resuscitation Fee: -$%d", hospFee), NOTIFY_ERROR)
+            if GRID.Telemetry and GRID.Telemetry.Log then
+                GRID.Telemetry.Log("ECONOMY", "HOSPITAL_FEE", victim:SteamID(), "", hospFee, {})
             end
         end
     end
     -- Rapid Dispatch: Patrol Officers respawn in 5s, baseline for all other roles is 30s
-    local defaultSecs = (GW.Config and GW.Config.DefaultRespawnTime) or 30
-    local policeSecs = (GW.Config and GW.Config.PoliceRespawnTime) or 5
+    local defaultSecs = (GRID.Config and GRID.Config.DefaultRespawnTime) or 30
+    local policeSecs = (GRID.Config and GRID.Config.PoliceRespawnTime) or 5
     local respawnSecs = (victim:GetJob() == "police_officer") and policeSecs or defaultSecs
     victim.NextSpawnTime = CurTime() + respawnSecs
 
@@ -313,27 +313,27 @@ function GM:PlayerDeath(victim, inflictor, attacker)
         killerName = "Suicide"
     end
 
-    net.Start("GW_PlayerDied")
+    net.Start("GRID_PlayerDied")
         net.WriteString(killerName)
         net.WriteUInt(respawnSecs, 8)
     net.Send(victim)
 
     -- Drop a small amount of cash on death
-    local dropAmount = math.min(GW.Config.DropMoneyOnDeathMax or 75, math.floor(victim:GetMoney() * 0.1))
+    local dropAmount = math.min(GRID.Config.DropMoneyOnDeathMax or 75, math.floor(victim:GetMoney() * 0.1))
     if dropAmount > 0 then
         victim:AddMoney(-dropAmount)
-        GW.Economy.SpawnCashStack(victim:GetPos() + Vector(0, 0, 10), dropAmount)
+        GRID.Economy.SpawnCashStack(victim:GetPos() + Vector(0, 0, 10), dropAmount)
     end
 
     -- Award Combat XP
     if IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim then
-        local xpReward = (GW.Config and GW.Config.Level and GW.Config.Level.XP_PlayerKill) or 50
+        local xpReward = (GRID.Config and GRID.Config.Level and GRID.Config.Level.XP_PlayerKill) or 50
         local isRival = false
         local aGang = attacker:GetGang()
         local vGang = victim:GetGang()
         if aGang ~= "" and vGang ~= "" and string.lower(aGang) ~= string.lower(vGang) then
             isRival = true
-            xpReward = xpReward + ((GW.Config and GW.Config.Level and GW.Config.Level.XP_RivalGangKillBonus) or 50)
+            xpReward = xpReward + ((GRID.Config and GRID.Config.Level and GRID.Config.Level.XP_RivalGangKillBonus) or 50)
         end
         if attacker.AddXP then
             local reason = isRival and "Rival Gang Kill" or "Player Kill"
@@ -341,13 +341,13 @@ function GM:PlayerDeath(victim, inflictor, attacker)
         end
 
         -- Turf Defense Bonus: Eliminating police within your gang's territory
-        local zone = GW.Turf and GW.Turf.GetZoneAtPos and GW.Turf.GetZoneAtPos(victim:GetPos())
+        local zone = GRID.Turf and GRID.Turf.GetZoneAtPos and GRID.Turf.GetZoneAtPos(victim:GetPos())
         if aGang ~= "" and zone and zone.owner and string.lower(zone.owner) == string.lower(aGang) and victim.IsPolice and victim:IsPolice() then
             attacker:AddMoney(100)
             if attacker.AddXP then
                 attacker:AddXP(100, "Turf Defense: Incursion Repelled")
             end
-            GW.Notify(attacker, string.format("[TURF DEFENDER] +$100 & +100 XP for eliminating Police in %s!", zone.name), NOTIFY_GENERIC)
+            GRID.Notify(attacker, string.format("[TURF DEFENDER] +$100 & +100 XP for eliminating Police in %s!", zone.name), NOTIFY_GENERIC)
         end
     end
 end
@@ -368,11 +368,11 @@ end
 
 -- Hook F4 (gm_showspare2) and F2 (gm_showteam) from engine
 function GM:ShowSpare2(ply)
-    net.Start("GW_ToggleF4Menu")
+    net.Start("GRID_ToggleF4Menu")
     net.Send(ply)
 end
 
 function GM:ShowTeam(ply)
-    net.Start("GW_ToggleF2Menu")
+    net.Start("GRID_ToggleF2Menu")
     net.Send(ply)
 end

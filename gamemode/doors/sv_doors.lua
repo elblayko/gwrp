@@ -3,84 +3,92 @@
     Author: Toxic & Antigravity
 --]]
 
-GW.Doors = GW.Doors or {}
+GRID = GRID or {}
+GRID.Doors = GRID.Doors or {}
 
-function GW.Doors.Init()
-    print("[GWRP-Doors] Initialized session-based door management.")
+function GRID.Doors.Init()
+    print("[GridRP-Doors] Initialized session-based door management.")
 end
 
-function GW.Doors.SyncToPlayer(ply)
+function GRID.Doors.SyncToPlayer(ply)
     -- Doors use standard SetNWEntity/SetNWString for seamless client prediction
 end
 
-net.Receive("GW_DoorAction", function(len, ply)
-    if not GW.CheckRateLimit(ply, "door_action", 3) then return end
+local function HandleDoorAction(len, ply)
+    if not GRID.CheckRateLimit(ply, "door_action", 3) then return end
     local ent = net.ReadEntity()
     local action = net.ReadString()
 
     if not IsValid(ent) or not ent:isDoor() then return end
     if ply:GetPos():DistToSqr(ent:GetPos()) > (120 * 120) then return end
 
-    local currentOwner = ent:GetNWEntity("GW_DoorOwner")
+    local currentOwner = ent:GetNWEntity("GRID_DoorOwner")
 
     if action == "buy" then
         -- Disallow purchasing func_door entities
         if ent:GetClass() == "func_door" then
-            GW.Notify(ply, "This type of door cannot be purchased!", NOTIFY_ERROR)
+            GRID.Notify(ply, "This type of door cannot be purchased!", NOTIFY_ERROR)
             return
         end
 
         -- Hobos cannot purchase property
         if ply:GetJob() == "hobo" then
-            GW.Notify(ply, "Hobos are homeless and cannot purchase properties!", NOTIFY_ERROR)
+            GRID.Notify(ply, "Hobos are homeless and cannot purchase properties!", NOTIFY_ERROR)
             return
         end
 
         if IsValid(currentOwner) then
-            GW.Notify(ply, "This door is already owned!", NOTIFY_ERROR)
+            GRID.Notify(ply, "This door is already owned!", NOTIFY_ERROR)
             return
         end
-        if not ply:CanAfford(GW.Config.DoorCost) then
-            GW.Notify(ply, "You cannot afford this door ($" .. GW.Config.DoorCost .. ")!", NOTIFY_ERROR)
+        local cost = (GRID.Config and GRID.Config.DoorCost) or 15
+        if not ply:CanAfford(cost) then
+            GRID.Notify(ply, "You cannot afford this door ($" .. cost .. ")!", NOTIFY_ERROR)
             return
         end
 
-        ply:AddMoney(-GW.Config.DoorCost)
-        ent:SetNWEntity("GW_DoorOwner", ply)
+        ply:AddMoney(-cost)
+        ent:SetNWEntity("GRID_DoorOwner", ply)
         local gang = ply:GetGang()
         local factionTag = (gang ~= "") and gang or ply:GetFaction().id
-        ent:SetNWString("GW_DoorFaction", factionTag)
+        ent:SetNWString("GRID_DoorFaction", factionTag)
 
-        GW.Notify(ply, "Door purchased! Press F2 to manage.", NOTIFY_GENERIC)
+        GRID.Notify(ply, "Door purchased! Press F2 to manage.", NOTIFY_GENERIC)
     elseif action == "sell" then
         if currentOwner ~= ply then return end
-        local refund = math.floor(GW.Config.DoorCost * 0.7)
+        local cost = (GRID.Config and GRID.Config.DoorCost) or 15
+        local refund = math.floor(cost * 0.7)
         ply:AddMoney(refund)
 
-        ent:SetNWEntity("GW_DoorOwner", NULL)
-        ent:SetNWString("GW_DoorFaction", "")
+        ent:SetNWEntity("GRID_DoorOwner", NULL)
+        ent:SetNWString("GRID_DoorFaction", "")
         ent:Fire("unlock", "", 0)
 
-        GW.Notify(ply, "Door sold for +$" .. refund .. "!", NOTIFY_GENERIC)
+        GRID.Notify(ply, "Door sold for +$" .. refund .. "!", NOTIFY_GENERIC)
     end
-end)
+end
 
-function GW.Doors.GetOwnedDoors(ply)
+net.Receive("GRID_DoorAction", HandleDoorAction)
+
+function GRID.Doors.GetOwnedDoors(ply)
     if not IsValid(ply) then return {} end
     local owned = {}
     for _, ent in ipairs(ents.GetAll()) do
-        if ent:isDoor() and ent:GetNWEntity("GW_DoorOwner") == ply then
-            table.insert(owned, ent)
+        if ent:isDoor() then
+            local o = ent:GetNWEntity("GRID_DoorOwner")
+            if o == ply then
+                table.insert(owned, ent)
+            end
         end
     end
     return owned
 end
 
-function GW.Doors.UnownAll(ply)
+function GRID.Doors.UnownAll(ply)
     if not IsValid(ply) then return end
-    for _, door in ipairs(GW.Doors.GetOwnedDoors(ply)) do
-        door:SetNWEntity("GW_DoorOwner", NULL)
-        door:SetNWString("GW_DoorFaction", "")
+    for _, door in ipairs(GRID.Doors.GetOwnedDoors(ply)) do
+        door:SetNWEntity("GRID_DoorOwner", NULL)
+        door:SetNWString("GRID_DoorFaction", "")
         door:Fire("unlock", "", 0)
     end
 end

@@ -1,17 +1,17 @@
 --[[
-    GangWars RP (GWRP) by Toxic
+    GridRP (GRID) by Toxic
     gamemode/shared.lua - Shared Gamemode Entry Point
 --]]
 
-GM.Name = "GangWars RP"
+GM.Name = "GridRP"
 GM.Author = "Toxic"
 GM.Email = ""
 GM.Website = ""
 
 DeriveGamemode("sandbox")
 
-GW = GW or {}
-GW.Version = "2.0.0 (2026)"
+GRID = GRID or {}
+GRID.Version = "2.0.0 (2026)"
 
 -- Core Shared Includes (relative to gamemode/)
 include("core/sh_config.lua")
@@ -25,7 +25,7 @@ include("turf/sh_turf.lua")
 include("crafting/sh_crafting.lua")
 
 function GM:Initialize()
-    print("[GWRP] Initializing GangWars RP by Toxic...")
+    print("[GridRP] Initializing GridRP by Toxic...")
 end
 
 -- Disable sandbox noclip unless admin
@@ -40,7 +40,7 @@ function GM:CanPlayerSuicide(ply)
 end
 
 -- Alias "fists" to GMod's "weapon_fists" for universal compatibility
-hook.Add("Initialize", "GW_RegisterFistsAlias", function()
+hook.Add("Initialize", "GRID_RegisterFistsAlias", function()
     if weapons and weapons.Get and weapons.Register then
         local baseFists = weapons.Get("weapon_fists")
         if baseFists and not weapons.Get("fists") then
@@ -70,6 +70,6 @@ function GM:PlayerSetHandsModel(ply, ent)
     end
 end
 
-hook.Add("PlayerSetHandsModel", "GW_PlayerSetHandsModelHook", function(ply, ent)
+hook.Add("PlayerSetHandsModel", "GRID_PlayerSetHandsModelHook", function(ply, ent)
     return GAMEMODE:PlayerSetHandsModel(ply, ent)
 end)

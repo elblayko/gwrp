@@ -3,13 +3,14 @@
     Author: Toxic
 --]]
 
-GW.Turf = GW.Turf or {}
-GW.Turf.AdminESPEnabled = false
-GW.Turf.SetupFrame = nil
-GW.Turf.SelectedZoneID = nil
-GW.Turf.PreviewRadius = 450
-GW.Turf.PreviewName = "Downtown Plaza"
-GW.AdminActiveTab = "players"
+GRID = GRID or {}
+GRID.Turf = GRID.Turf or {}
+GRID.Turf.AdminESPEnabled = false
+GRID.Turf.SetupFrame = nil
+GRID.Turf.SelectedZoneID = nil
+GRID.Turf.PreviewRadius = 450
+GRID.Turf.PreviewName = "Downtown Plaza"
+GRID.AdminActiveTab = "players"
 
 -- ========================================================
 -- 1. 3D VISUAL ADMIN ESP & PLACEMENT PREVIEW
@@ -29,31 +30,31 @@ local function DrawCircle3D(pos, radius, col, segments)
     end
 end
 
-hook.Add("PostDrawTranslucentRenderables", "GW_TurfAdmin3DESP", function(bDepth, bSkybox)
+hook.Add("PostDrawTranslucentRenderables", "GRID_TurfAdmin3DESP", function(bDepth, bSkybox)
     if bDepth or bSkybox then return end
 
     local ply = LocalPlayer()
     if not IsValid(ply) or not (ply:IsAdmin() or ply:IsSuperAdmin()) then return end
-    if not GW.Turf.AdminESPEnabled then return end
-    if not IsValid(GW.Turf.SetupFrame) or GW.AdminActiveTab ~= "turf" then return end
+    if not GRID.Turf.AdminESPEnabled then return end
+    if not IsValid(GRID.Turf.SetupFrame) or GRID.AdminActiveTab ~= "turf" then return end
 
     -- 1. Draw boundary circle on ground for each placed Gang Pole when in setup menu
-    for id, zone in pairs(GW.Turf.Zones or {}) do
+    for id, zone in pairs(GRID.Turf.Zones or {}) do
         local pos = zone.pos
         local radius = zone.radius or 450
-        local col = GW.GetGangColor(zone.owner)
+        local col = GRID.GetGangColor(zone.owner)
 
         DrawCircle3D(pos, radius, col, 48)
     end
 
     -- 2. Real-Time Holographic Placement Preview
-    if IsValid(GW.Turf.SetupFrame) and GW.AdminActiveTab == "turf" then
+    if IsValid(GRID.Turf.SetupFrame) and GRID.AdminActiveTab == "turf" then
         local tr = (ply.GetEyeTraceNoCursor and ply:GetEyeTraceNoCursor()) or ply:GetEyeTrace()
         if tr.Hit and not tr.HitSky then
             local hitPos = tr.HitPos
             local prevCol = Color(56, 189, 248, 220)
 
-            DrawCircle3D(hitPos, GW.Turf.PreviewRadius, prevCol, 48)
+            DrawCircle3D(hitPos, GRID.Turf.PreviewRadius, prevCol, 48)
             render.DrawLine(hitPos, hitPos + Vector(0, 0, 100), prevCol, true)
 
             local ang = (ply:EyePos() - hitPos):Angle()
@@ -65,8 +66,8 @@ hook.Add("PostDrawTranslucentRenderables", "GW_TurfAdmin3DESP", function(bDepth,
             cam.Start3D2D(hitPos + Vector(0, 0, 110), ang, 0.12)
                 draw.RoundedBox(4, -130, -30, 260, 60, Color(15, 23, 42, 230))
                 draw.RoundedBox(4, -130, -30, 260, 3, prevCol)
-                draw.SimpleText("Flag Pole Placement Preview", "GW_FontSmall", 0, -20, GW.Colors.Gold, TEXT_ALIGN_CENTER)
-                draw.SimpleText(string.format("%s (Radius: %d)", GW.Turf.PreviewName, GW.Turf.PreviewRadius), "GW_FontSmall", 0, 4, GW.Colors.White, TEXT_ALIGN_CENTER)
+                draw.SimpleText("Flag Pole Placement Preview", "GRID_FontSmall", 0, -20, (GRID.Colors and GRID.Colors.Gold) or Color(245, 158, 11), TEXT_ALIGN_CENTER)
+                draw.SimpleText(string.format("%s (Radius: %d)", GRID.Turf.PreviewName, GRID.Turf.PreviewRadius), "GRID_FontSmall", 0, 4, (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252), TEXT_ALIGN_CENTER)
             cam.End3D2D()
         end
     end
@@ -76,16 +77,16 @@ end)
 -- 2. IN-GAME ADMIN & DEBUG DASHBOARD
 -- ========================================================
 
-function GW.Turf.OpenSetupMenu()
-    if IsValid(GW.Turf.SetupFrame) then
-        GW.Turf.SetupFrame:Close()
-        GW.Turf.SetupFrame = nil
+function GRID.Turf.OpenSetupMenu()
+    if IsValid(GRID.Turf.SetupFrame) then
+        GRID.Turf.SetupFrame:Close()
+        GRID.Turf.SetupFrame = nil
         return
     end
 
     local ply = LocalPlayer()
     if not IsValid(ply) or not (ply:IsAdmin() or ply:IsSuperAdmin()) then
-        GW.Notify(ply, "You must be an administrator to access the Admin HUD!", NOTIFY_ERROR)
+        GRID.Notify(ply, "You must be an administrator to access the Admin HUD!", NOTIFY_ERROR)
         return
     end
 
@@ -95,7 +96,7 @@ function GW.Turf.OpenSetupMenu()
     frame:SetTitle("")
     frame:MakePopup()
     frame:ShowCloseButton(true)
-    GW.Turf.SetupFrame = frame
+    GRID.Turf.SetupFrame = frame
 
     frame.Paint = function(s, w, h)
         draw.RoundedBox(8, 0, 0, w, h, Color(11, 15, 25, 252))
@@ -104,10 +105,8 @@ function GW.Turf.OpenSetupMenu()
         surface.DrawLine(0, 52, w, 52)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-        draw.SimpleText("GW Admin & Debug Dashboard", "GW_UI_Title", 20, 12, GW.Colors.White)
-        draw.SimpleText("MariaDB Active | Map: " .. game.GetMap(), "GW_UI_Caption", w - 40, 20, GW.Colors.MoneyGreen, TEXT_ALIGN_RIGHT)
-
-
+        draw.SimpleText("GridRP Admin & Debug Dashboard", "GRID_UI_Title", 20, 12, (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252))
+        draw.SimpleText("Database Active | Map: " .. game.GetMap(), "GRID_UI_Caption", w - 40, 20, (GRID.Colors and GRID.Colors.MoneyGreen) or Color(74, 222, 128), TEXT_ALIGN_RIGHT)
     end
 
     -- Tab Navigation Strip
@@ -128,15 +127,15 @@ function GW.Turf.OpenSetupMenu()
     }
 
     local function SwitchTab(tabId)
-        GW.AdminActiveTab = tabId
+        GRID.AdminActiveTab = tabId
         contentPanel:Clear()
 
         if tabId == "players" then
-            GW.Turf.RenderPlayerDebug(contentPanel)
+            GRID.Turf.RenderPlayerDebug(contentPanel)
         elseif tabId == "turf" then
-            GW.Turf.RenderTurfTab(contentPanel)
+            GRID.Turf.RenderTurfTab(contentPanel)
         elseif tabId == "spawners" then
-            GW.Turf.RenderSpawnersTab(contentPanel)
+            GRID.Turf.RenderSpawnersTab(contentPanel)
         end
     end
 
@@ -147,14 +146,14 @@ function GW.Turf.OpenSetupMenu()
         btn:SetSize(220, 36)
         btn:SetText("")
         btn.Paint = function(s, w, h)
-            local isActive = (GW.AdminActiveTab == t.id)
+            local isActive = (GRID.AdminActiveTab == t.id)
             local bg = isActive and Color(30, 41, 59, 255) or (s:IsHovered() and Color(24, 32, 47, 180) or Color(15, 23, 42, 140))
             draw.RoundedBox(6, 0, 0, w, h, bg)
             if isActive then
                 draw.RoundedBox(2, 0, h - 3, w, 3, Color(6, 182, 212))
             end
             local textCol = isActive and Color(248, 250, 252) or Color(148, 163, 184)
-            draw.SimpleText(t.name, "GW_UI_Btn", w / 2, h / 2, textCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(t.name, "GRID_UI_Btn", w / 2, h / 2, textCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
         btn.DoClick = function()
             SwitchTab(t.id)
@@ -162,14 +161,14 @@ function GW.Turf.OpenSetupMenu()
         btnX = btnX + 228
     end
 
-    SwitchTab(GW.AdminActiveTab or "players")
+    SwitchTab(GRID.AdminActiveTab or "players")
 end
 
 -- ========================================================
 -- TAB 1: PLAYER MANAGEMENT & ECONOMY DEBUG
 -- ========================================================
 
-function GW.Turf.RenderPlayerDebug(parent)
+function GRID.Turf.RenderPlayerDebug(parent)
     local contW, contH = parent:GetWide(), parent:GetTall()
 
     -- Left: Searchable Player List
@@ -186,7 +185,7 @@ function GW.Turf.RenderPlayerDebug(parent)
     txtSearch:SetPos(10, 10)
     txtSearch:SetSize(400, 32)
     txtSearch:SetPlaceholderText("Search online players...")
-    txtSearch:SetFont("GW_UI_Body")
+    txtSearch:SetFont("GRID_UI_Body")
 
     local playerList = vgui.Create("DListView", listPanel)
     playerList:SetPos(10, 48)
@@ -236,7 +235,7 @@ function GW.Turf.RenderPlayerDebug(parent)
             local lbl = vgui.Create("DLabel", actionPanel)
             lbl:Dock(FILL)
             lbl:SetText("Select a player from the list to view and edit properties.")
-            lbl:SetFont("GW_UI_Header")
+            lbl:SetFont("GRID_UI_Header")
             lbl:SetContentAlignment(5)
             lbl:SetTextColor(Color(148, 163, 184))
             return
@@ -248,16 +247,16 @@ function GW.Turf.RenderPlayerDebug(parent)
         local pGang = selectedPlayer:GetGang()
         local pLvl = selectedPlayer.GetLevel and selectedPlayer:GetLevel() or 1
         local pXP = selectedPlayer.GetXP and selectedPlayer:GetXP() or 0
-        local pReqXP = GW.GetRequiredXP and GW.GetRequiredXP(pLvl) or (pLvl * 100)
+        local pReqXP = GRID.GetRequiredXP and GRID.GetRequiredXP(pLvl) or (pLvl * 100)
 
         local topInfo = vgui.Create("DPanel", actionPanel)
         topInfo:Dock(TOP)
         topInfo:SetTall(64)
         topInfo.Paint = function(s, w, h)
             draw.RoundedBox(6, 10, 10, w - 20, h - 14, Color(24, 32, 47, 240))
-            draw.SimpleText(pNick, "GW_UI_Header", 20, 18, Color(248, 250, 252))
+            draw.SimpleText(pNick, "GRID_UI_Header", 20, 18, Color(248, 250, 252))
             local subInfo = string.format("%s  |  Level %d (%s/%s XP)  |  Wallet: $%s  |  Gang: %s", pSteam, pLvl, string.Comma(pXP), string.Comma(pReqXP), string.Comma(pMoney), (pGang ~= "" and pGang or "None"))
-            draw.SimpleText(subInfo, "GW_UI_Caption", 20, 38, Color(148, 163, 184))
+            draw.SimpleText(subInfo, "GRID_UI_Caption", 20, 38, Color(148, 163, 184))
         end
 
         local scroll = vgui.Create("DScrollPanel", actionPanel)
@@ -271,7 +270,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         secLevel:SetTall(110)
         secLevel.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(24, 32, 47, 180))
-            draw.SimpleText("Leveling & Progression Control", "GW_UI_Sub", 14, 10, Color(251, 191, 36))
+            draw.SimpleText("Leveling & Progression Control", "GRID_UI_Sub", 14, 10, Color(251, 191, 36))
         end
 
         local txtLevel = vgui.Create("DTextEntry", secLevel)
@@ -279,7 +278,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         txtLevel:SetSize(110, 32)
         txtLevel:SetText(tostring(pLvl))
         txtLevel:SetNumeric(true)
-        txtLevel:SetFont("GW_UI_Body")
+        txtLevel:SetFont("GRID_UI_Body")
 
         local btnSetLevel = vgui.Create("DButton", secLevel)
         btnSetLevel:SetPos(132, 34)
@@ -287,7 +286,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnSetLevel:SetText("Set Level")
         btnSetLevel.DoClick = function()
             local lvl = tonumber(txtLevel:GetText()) or 1
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_level")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(lvl, 16)
@@ -300,7 +299,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnLvl1:SetSize(42, 32)
         btnLvl1:SetText("Lv 1")
         btnLvl1.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_level")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(1, 16)
@@ -313,7 +312,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnLvl10:SetSize(46, 32)
         btnLvl10:SetText("Lv 10")
         btnLvl10.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_level")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(10, 16)
@@ -326,7 +325,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnLvl25:SetSize(46, 32)
         btnLvl25:SetText("Lv 25")
         btnLvl25.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_level")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(25, 16)
@@ -339,7 +338,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnLvl50:SetSize(46, 32)
         btnLvl50:SetText("Lv 50")
         btnLvl50.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_level")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(50, 16)
@@ -352,7 +351,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnAdd100XP:SetSize(90, 28)
         btnAdd100XP:SetText("+ 100 XP")
         btnAdd100XP.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("add_xp")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(100, 32)
@@ -365,7 +364,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnAdd500XP:SetSize(90, 28)
         btnAdd500XP:SetText("+ 500 XP")
         btnAdd500XP.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("add_xp")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(500, 32)
@@ -378,7 +377,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnAdd2500XP:SetSize(100, 28)
         btnAdd2500XP:SetText("+ 2,500 XP")
         btnAdd2500XP.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("add_xp")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(2500, 32)
@@ -391,7 +390,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnAdd10kXP:SetSize(110, 28)
         btnAdd10kXP:SetText("+ 10,000 XP")
         btnAdd10kXP.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("add_xp")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(10000, 32)
@@ -406,7 +405,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         secMoney:SetTall(110)
         secMoney.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(24, 32, 47, 180))
-            draw.SimpleText("Wallet & Economy Control", "GW_UI_Sub", 14, 10, Color(74, 222, 128))
+            draw.SimpleText("Wallet & Economy Control", "GRID_UI_Sub", 14, 10, Color(74, 222, 128))
         end
 
         local txtMoney = vgui.Create("DTextEntry", secMoney)
@@ -414,7 +413,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         txtMoney:SetSize(180, 32)
         txtMoney:SetText(tostring(pMoney))
         txtMoney:SetNumeric(true)
-        txtMoney:SetFont("GW_UI_Body")
+        txtMoney:SetFont("GRID_UI_Body")
 
         local btnSetMoney = vgui.Create("DButton", secMoney)
         btnSetMoney:SetPos(202, 34)
@@ -422,7 +421,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnSetMoney:SetText("Set Wallet ($)")
         btnSetMoney.DoClick = function()
             local amt = tonumber(txtMoney:GetText()) or 0
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_money")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(amt, 32)
@@ -435,7 +434,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnAdd10k:SetSize(90, 28)
         btnAdd10k:SetText("+ $10,000")
         btnAdd10k.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("add_money")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(10000, 32)
@@ -448,7 +447,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnAdd100k:SetSize(90, 28)
         btnAdd100k:SetText("+ $100,000")
         btnAdd100k.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("add_money")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(100000, 32)
@@ -461,7 +460,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnResetMoney:SetSize(116, 28)
         btnResetMoney:SetText("Reset ($1,000)")
         btnResetMoney.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_money")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(1000, 32)
@@ -476,14 +475,15 @@ function GW.Turf.RenderPlayerDebug(parent)
         secJob:SetTall(110)
         secJob.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(24, 32, 47, 180))
-            draw.SimpleText("Career & Gang Assignment", "GW_UI_Sub", 14, 10, Color(56, 189, 248))
+            draw.SimpleText("Career & Gang Assignment", "GRID_UI_Sub", 14, 10, Color(56, 189, 248))
         end
 
         local comboJob = vgui.Create("DComboBox", secJob)
         comboJob:SetPos(14, 34)
         comboJob:SetSize(220, 30)
         comboJob:SetValue(selectedPlayer:GetJobData() and selectedPlayer:GetJobData().name or "Citizen")
-        for jId, jData in pairs(GW.Jobs or {}) do
+        local availableJobs = GRID.Jobs or {}
+        for jId, jData in pairs(availableJobs) do
             comboJob:AddChoice(jData.name, jId)
         end
 
@@ -494,7 +494,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnSetJob.DoClick = function()
             local _, jId = comboJob:GetSelected()
             if jId then
-                net.Start("GW_AdminDebugAction")
+                net.Start("GRID_AdminDebugAction")
                     net.WriteString("set_job")
                     net.WriteEntity(selectedPlayer)
                     net.WriteString(jId)
@@ -514,7 +514,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnSetGang:SetSize(90, 28)
         btnSetGang:SetText("Set Gang")
         btnSetGang.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_gang")
                 net.WriteEntity(selectedPlayer)
                 net.WriteString(txtGang:GetText())
@@ -527,7 +527,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnClearGang:SetSize(94, 28)
         btnClearGang:SetText("Clear Gang")
         btnClearGang.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_gang")
                 net.WriteEntity(selectedPlayer)
                 net.WriteString("")
@@ -542,7 +542,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         secVitals:SetTall(100)
         secVitals.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(24, 32, 47, 180))
-            draw.SimpleText("Health, Armor & Immortality", "GW_UI_Sub", 14, 10, Color(245, 158, 11))
+            draw.SimpleText("Health, Armor & Immortality", "GRID_UI_Sub", 14, 10, Color(245, 158, 11))
         end
 
         local btnHeal = vgui.Create("DButton", secVitals)
@@ -550,7 +550,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnHeal:SetSize(110, 28)
         btnHeal:SetText("Heal (100 HP)")
         btnHeal.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_health")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(100, 32)
@@ -562,7 +562,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnArmor:SetSize(110, 28)
         btnArmor:SetText("Set 100% Armor")
         btnArmor.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("set_armor")
                 net.WriteEntity(selectedPlayer)
                 net.WriteInt(100, 32)
@@ -574,7 +574,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnGod:SetSize(120, 28)
         btnGod:SetText("Toggle Godmode")
         btnGod.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("godmode")
                 net.WriteEntity(selectedPlayer)
             net.SendToServer()
@@ -585,7 +585,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnRespawn:SetSize(140, 26)
         btnRespawn:SetText("Respawn / Revive")
         btnRespawn.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("respawn")
                 net.WriteEntity(selectedPlayer)
             net.SendToServer()
@@ -598,7 +598,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         secTele:SetTall(75)
         secTele.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(24, 32, 47, 180))
-            draw.SimpleText("Spatial Teleportation", "GW_UI_Sub", 14, 10, Color(168, 85, 247))
+            draw.SimpleText("Spatial Teleportation", "GRID_UI_Sub", 14, 10, Color(168, 85, 247))
         end
 
         local btnGoto = vgui.Create("DButton", secTele)
@@ -606,7 +606,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnGoto:SetSize(140, 28)
         btnGoto:SetText("Teleport To (Goto)")
         btnGoto.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("goto")
                 net.WriteEntity(selectedPlayer)
             net.SendToServer()
@@ -617,7 +617,7 @@ function GW.Turf.RenderPlayerDebug(parent)
         btnBring:SetSize(140, 28)
         btnBring:SetText("Bring Player Here")
         btnBring.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("bring")
                 net.WriteEntity(selectedPlayer)
             net.SendToServer()
@@ -636,7 +636,7 @@ end
 -- TAB 2: TURF & FLAG POLES SETUP
 -- ========================================================
 
-function GW.Turf.RenderTurfTab(parent)
+function GRID.Turf.RenderTurfTab(parent)
     local contW, contH = parent:GetWide(), parent:GetTall()
 
     -- Top Profile Action Bar
@@ -652,7 +652,7 @@ function GW.Turf.RenderTurfTab(parent)
     btnSave:SetPos(8, 5)
     btnSave:SetText("Save to MariaDB")
     btnSave.DoClick = function()
-        net.Start("GW_AdminTurfAction")
+        net.Start("GRID_AdminTurfAction")
             net.WriteString("save")
         net.SendToServer()
     end
@@ -662,7 +662,7 @@ function GW.Turf.RenderTurfTab(parent)
     btnReload:SetPos(166, 5)
     btnReload:SetText("Reload from MariaDB")
     btnReload.DoClick = function()
-        net.Start("GW_AdminTurfAction")
+        net.Start("GRID_AdminTurfAction")
             net.WriteString("reload")
         net.SendToServer()
     end
@@ -674,7 +674,7 @@ function GW.Turf.RenderTurfTab(parent)
     btnClear.DoClick = function()
         Derma_Query("Are you sure you want to remove all gang poles from this map?", "Confirm Clear",
             "Yes, Clear All", function()
-                net.Start("GW_AdminTurfAction")
+                net.Start("GRID_AdminTurfAction")
                     net.WriteString("clear")
                 net.SendToServer()
             end,
@@ -685,10 +685,10 @@ function GW.Turf.RenderTurfTab(parent)
     local chkESP = vgui.Create("DCheckBoxLabel", topBar)
     chkESP:SetPos(490, 10)
     chkESP:SetText("Enable 3D Admin ESP Rings")
-    chkESP:SetValue(GW.Turf.AdminESPEnabled)
+    chkESP:SetValue(GRID.Turf.AdminESPEnabled)
     chkESP:SizeToContents()
     function chkESP:OnChange(val)
-        GW.Turf.AdminESPEnabled = val
+        GRID.Turf.AdminESPEnabled = val
     end
 
     -- Left: Placed Poles List
@@ -707,17 +707,17 @@ function GW.Turf.RenderTurfTab(parent)
     propPanel:SetSize(contW - 436, contH - 48)
     propPanel.Paint = function(s, w, h)
         draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
-        draw.SimpleText("Flag Pole Placement & Settings", "GW_UI_Header", 16, 16, GW.Colors.White)
-        draw.SimpleText("Territory Name:", "GW_UI_Caption", 16, 52, GW.Colors.Muted)
-        draw.SimpleText("Initial Faction / Gang Owner:", "GW_UI_Caption", 16, 114, GW.Colors.Muted)
+        draw.SimpleText("Flag Pole Placement & Settings", "GRID_UI_Header", 16, 16, (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252))
+        draw.SimpleText("Territory Name:", "GRID_UI_Caption", 16, 52, (GRID.Colors and GRID.Colors.Muted) or Color(148, 163, 184))
+        draw.SimpleText("Initial Faction / Gang Owner:", "GRID_UI_Caption", 16, 114, (GRID.Colors and GRID.Colors.Muted) or Color(148, 163, 184))
     end
 
     local txtName = vgui.Create("DTextEntry", propPanel)
     txtName:SetPos(16, 72)
     txtName:SetSize(360, 30)
-    txtName:SetText(GW.Turf.PreviewName)
+    txtName:SetText(GRID.Turf.PreviewName)
     txtName.OnChange = function(s)
-        GW.Turf.PreviewName = s:GetText()
+        GRID.Turf.PreviewName = s:GetText()
     end
 
     local comboOwner = vgui.Create("DComboBox", propPanel)
@@ -728,7 +728,7 @@ function GW.Turf.RenderTurfTab(parent)
 
     -- Add known gang options
     local addedGangs = {}
-    for _, z in pairs(GW.Turf.Zones or {}) do
+    for _, z in pairs(GRID.Turf.Zones or {}) do
         if z.owner and z.owner ~= "" and z.owner ~= "neutral" and z.owner ~= "police" and not addedGangs[z.owner] then
             addedGangs[z.owner] = true
             comboOwner:AddChoice("Gang: " .. z.owner, z.owner)
@@ -749,20 +749,20 @@ function GW.Turf.RenderTurfTab(parent)
     sliderRadius:SetMin(200)
     sliderRadius:SetMax(1200)
     sliderRadius:SetDecimals(0)
-    sliderRadius:SetValue(GW.Turf.PreviewRadius)
+    sliderRadius:SetValue(GRID.Turf.PreviewRadius)
     sliderRadius.OnValueChanged = function(s, val)
-        GW.Turf.PreviewRadius = math.Round(val)
+        GRID.Turf.PreviewRadius = math.Round(val)
     end
 
     local function PopulatePoles()
         if not IsValid(listPoles) then return end
         listPoles:Clear()
-        for id, zone in pairs(GW.Turf.Zones or {}) do
+        for id, zone in pairs(GRID.Turf.Zones or {}) do
             listPoles:AddLine(id, zone.name, zone.radius, zone.owner or "neutral")
         end
     end
     PopulatePoles()
-    GW.Turf.RefreshSetupMenu = PopulatePoles
+    GRID.Turf.RefreshSetupMenu = PopulatePoles
 
     local btnCreate = vgui.Create("DButton", propPanel)
     btnCreate:SetPos(16, 236)
@@ -771,7 +771,7 @@ function GW.Turf.RenderTurfTab(parent)
     btnCreate.DoClick = function()
         local tr = (LocalPlayer().GetEyeTraceNoCursor and LocalPlayer():GetEyeTraceNoCursor()) or LocalPlayer():GetEyeTrace()
         if not tr.Hit or tr.HitSky then
-            GW.Notify(LocalPlayer(), "Cannot place gang pole: Crosshair is not pointing at a valid surface!", NOTIFY_ERROR)
+            GRID.Notify(LocalPlayer(), "Cannot place gang pole: Crosshair is not pointing at a valid surface!", NOTIFY_ERROR)
             return
         end
 
@@ -785,11 +785,11 @@ function GW.Turf.RenderTurfTab(parent)
             poleName = "New Territory"
         end
 
-        net.Start("GW_AdminTurfAction")
+        net.Start("GRID_AdminTurfAction")
             net.WriteString("add")
             net.WriteString(poleName)
             net.WriteVector(tr.HitPos)
-            net.WriteUInt(GW.Turf.PreviewRadius or 450, 16)
+            net.WriteUInt(GRID.Turf.PreviewRadius or 450, 16)
             net.WriteString(ownerVal)
         net.SendToServer()
 
@@ -803,8 +803,8 @@ function GW.Turf.RenderTurfTab(parent)
     btnUpdate:SetSize(360, 32)
     btnUpdate:SetText("Update Selected Pole (Name, Radius, Owner)")
     btnUpdate.DoClick = function()
-        if not GW.Turf.SelectedZoneID then
-            GW.Notify(LocalPlayer(), "Please select a gang pole from the list first!", NOTIFY_ERROR)
+        if not GRID.Turf.SelectedZoneID then
+            GRID.Notify(LocalPlayer(), "Please select a gang pole from the list first!", NOTIFY_ERROR)
             return
         end
 
@@ -813,9 +813,9 @@ function GW.Turf.RenderTurfTab(parent)
         if ownerVal == "Neutral (Unclaimed)" then ownerVal = "neutral" end
         if ownerVal == "Police / SWAT" then ownerVal = "police" end
 
-        net.Start("GW_AdminTurfAction")
+        net.Start("GRID_AdminTurfAction")
             net.WriteString("edit")
-            net.WriteUInt(GW.Turf.SelectedZoneID, 8)
+            net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
             net.WriteString(txtName:GetText())
             net.WriteVector(Vector(0, 0, 0))
             net.WriteUInt(sliderRadius:GetValue(), 16)
@@ -832,13 +832,13 @@ function GW.Turf.RenderTurfTab(parent)
     btnTeleport:SetSize(176, 34)
     btnTeleport:SetText("Teleport to Pole")
     btnTeleport.DoClick = function()
-        if not GW.Turf.SelectedZoneID then
-            GW.Notify(LocalPlayer(), "Please select a gang pole from the list first!", NOTIFY_ERROR)
+        if not GRID.Turf.SelectedZoneID then
+            GRID.Notify(LocalPlayer(), "Please select a gang pole from the list first!", NOTIFY_ERROR)
             return
         end
-        net.Start("GW_AdminTurfAction")
+        net.Start("GRID_AdminTurfAction")
             net.WriteString("teleport")
-            net.WriteUInt(GW.Turf.SelectedZoneID, 8)
+            net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
         net.SendToServer()
     end
 
@@ -847,16 +847,16 @@ function GW.Turf.RenderTurfTab(parent)
     btnDelete:SetSize(176, 34)
     btnDelete:SetText("Delete Selected Pole")
     btnDelete.DoClick = function()
-        if not GW.Turf.SelectedZoneID then
-            GW.Notify(LocalPlayer(), "Please select a gang pole from the list first!", NOTIFY_ERROR)
+        if not GRID.Turf.SelectedZoneID then
+            GRID.Notify(LocalPlayer(), "Please select a gang pole from the list first!", NOTIFY_ERROR)
             return
         end
-        net.Start("GW_AdminTurfAction")
+        net.Start("GRID_AdminTurfAction")
             net.WriteString("remove")
-            net.WriteUInt(GW.Turf.SelectedZoneID, 8)
+            net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
         net.SendToServer()
 
-        GW.Turf.SelectedZoneID = nil
+        GRID.Turf.SelectedZoneID = nil
         timer.Simple(0.2, function()
             if IsValid(listPoles) then PopulatePoles() end
         end)
@@ -864,8 +864,8 @@ function GW.Turf.RenderTurfTab(parent)
 
     listPoles.OnRowSelected = function(s, index, pnl)
         local id = tonumber(pnl:GetColumnText(1))
-        GW.Turf.SelectedZoneID = id
-        local zone = GW.Turf.Zones and GW.Turf.Zones[id]
+        GRID.Turf.SelectedZoneID = id
+        local zone = GRID.Turf.Zones and GRID.Turf.Zones[id]
         if zone then
             txtName:SetText(zone.name)
             sliderRadius:SetValue(zone.radius)
@@ -884,7 +884,7 @@ end
 -- TAB 3: GAME LOOP & SPAWNERS DEBUG
 -- ========================================================
 
-function GW.Turf.RenderSpawnersTab(parent)
+function GRID.Turf.RenderSpawnersTab(parent)
     local contW, contH = parent:GetWide(), parent:GetTall()
 
     local scroll = vgui.Create("DScrollPanel", parent)
@@ -899,7 +899,7 @@ function GW.Turf.RenderSpawnersTab(parent)
         draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
         surface.SetDrawColor(30, 41, 59, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-        draw.SimpleText("Economy Cycle Triggers", "GW_UI_Header", 16, 12, Color(74, 222, 128))
+        draw.SimpleText("Economy Cycle Triggers", "GRID_UI_Header", 16, 12, Color(74, 222, 128))
     end
 
     local btnPayday = vgui.Create("DButton", secCycle)
@@ -907,7 +907,7 @@ function GW.Turf.RenderSpawnersTab(parent)
     btnPayday:SetSize(220, 36)
     btnPayday:SetText("Trigger Payday Cycle Now")
     btnPayday.DoClick = function()
-        net.Start("GW_AdminDebugAction")
+        net.Start("GRID_AdminDebugAction")
             net.WriteString("trigger_payday")
         net.SendToServer()
     end
@@ -917,7 +917,7 @@ function GW.Turf.RenderSpawnersTab(parent)
     btnDivs:SetSize(230, 36)
     btnDivs:SetText("Trigger Turf Dividends Now")
     btnDivs.DoClick = function()
-        net.Start("GW_AdminDebugAction")
+        net.Start("GRID_AdminDebugAction")
             net.WriteString("trigger_dividends")
         net.SendToServer()
     end
@@ -931,14 +931,14 @@ function GW.Turf.RenderSpawnersTab(parent)
         draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
         surface.SetDrawColor(30, 41, 59, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-        draw.SimpleText("Test Entity Spawners (Crosshair Placement)", "GW_UI_Header", 16, 12, Color(56, 189, 248))
+        draw.SimpleText("Test Entity Spawners (Crosshair Placement)", "GRID_UI_Header", 16, 12, Color(56, 189, 248))
     end
 
     local spawners = {
-        { name = "Money Printer", class = "gw_printer_bronze" },
-        { name = "Silver Money Printer", class = "gw_printer_silver" },
-        { name = "Diamond Money Printer", class = "gw_printer_diamond" },
-        { name = "$10,000 Cash Stack", class = "gw_cash_stack" }
+        { name = "Money Printer", class = "grid_printer_bronze" },
+        { name = "Silver Money Printer", class = "grid_printer_silver" },
+        { name = "Diamond Money Printer", class = "grid_printer_diamond" },
+        { name = "$10,000 Cash Stack", class = "grid_cash_stack" }
     }
 
     local sx = 16
@@ -948,7 +948,7 @@ function GW.Turf.RenderSpawnersTab(parent)
         btn:SetSize(185, 38)
         btn:SetText(sp.name)
         btn.DoClick = function()
-            net.Start("GW_AdminDebugAction")
+            net.Start("GRID_AdminDebugAction")
                 net.WriteString("spawn_entity")
                 net.WriteString(sp.class)
             net.SendToServer()

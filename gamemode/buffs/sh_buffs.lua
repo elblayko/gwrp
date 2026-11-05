@@ -3,8 +3,9 @@
     Author: Toxic
 --]]
 
-GW.Buffs = GW.Buffs or {}
-GW.Buffs.Registry = GW.Buffs.Registry or {}
+GRID = GRID or {}
+GRID.Buffs = GRID.Buffs or {}
+GRID.Buffs.Registry = GRID.Buffs.Registry or {}
 
 -- ========================================================
 -- REGISTRY API
@@ -13,9 +14,9 @@ GW.Buffs.Registry = GW.Buffs.Registry or {}
 --- Registers a new buff or debuff definition into the framework.
 -- @param buffId (string) Unique identifier for the buff
 -- @param data (table) Specification definition
-function GW.Buffs.Register(buffId, data)
+function GRID.Buffs.Register(buffId, data)
     if not buffId or buffId == "" then
-        error("[GWRP-Buffs] Attempted to register buff with invalid ID!", 2)
+        error("[GridRP-Buffs] Attempted to register buff with invalid ID!", 2)
         return
     end
 
@@ -46,24 +47,24 @@ function GW.Buffs.Register(buffId, data)
     data.OnRemoved = data.OnRemoved or function(ply, instance, reason) end
     data.ModifySpeed = data.ModifySpeed or nil
 
-    GW.Buffs.Registry[buffId] = data
+    GRID.Buffs.Registry[buffId] = data
 end
 
 --- Retrieves a buff definition from the registry.
 -- @param buffId (string) Unique identifier
 -- @return table|nil
-function GW.Buffs.Get(buffId)
-    return GW.Buffs.Registry[buffId]
+function GRID.Buffs.Get(buffId)
+    return GRID.Buffs.Registry[buffId]
 end
 
 --- Returns all registered buff specifications.
 -- @return table
-function GW.Buffs.GetAll()
-    return GW.Buffs.Registry
+function GRID.Buffs.GetAll()
+    return GRID.Buffs.Registry
 end
 
 --- Convenience Wrapper: Apply a buff to a player.
-function GW.Buffs.Apply(ply, buffId, duration, customData, initialStacks)
+function GRID.Buffs.Apply(ply, buffId, duration, customData, initialStacks)
     if IsValid(ply) and ply.AddBuff then
         return ply:AddBuff(buffId, duration, customData, initialStacks)
     end
@@ -71,7 +72,7 @@ function GW.Buffs.Apply(ply, buffId, duration, customData, initialStacks)
 end
 
 --- Convenience Wrapper: Remove a buff from a player.
-function GW.Buffs.Remove(ply, buffId, reason)
+function GRID.Buffs.Remove(ply, buffId, reason)
     if IsValid(ply) and ply.RemoveBuff then
         return ply:RemoveBuff(buffId, reason)
     end
@@ -86,7 +87,7 @@ local meta = FindMetaTable("Player")
 if meta then
     --- Returns table of all active buff instances on the player.
     function meta:GetBuffs()
-        return self.GW_ActiveBuffs or {}
+        return self.GRID_ActiveBuffs or {}
     end
 
     --- Checks if the player currently has the specified buff active.
@@ -120,7 +121,7 @@ if meta then
         local buffs = self:GetBuffs()
 
         for buffId, inst in pairs(buffs) do
-            local def = GW.Buffs.Get(buffId)
+            local def = GRID.Buffs.Get(buffId)
             if def and def.ModifySpeed then
                 local mod = def.ModifySpeed(self, inst)
                 if isnumber(mod) then
@@ -151,7 +152,7 @@ if meta then
     -- ========================================================
 
     function meta:IsWanted()
-        return self:GetNWBool("GW_IsWanted", false) or self:HasBuff("wanted")
+        return self:GetNWBool("GRID_IsWanted", false) or self:HasBuff("wanted")
     end
 
     function meta:isWanted()
@@ -159,10 +160,10 @@ if meta then
     end
 
     function meta:IsRaidTarget()
-        return self:GetNWBool("GW_IsRaidTarget", false)
+        return self:GetNWBool("GRID_IsRaidTarget", false)
     end
 
     function meta:GetWantedReason()
-        return self:GetNWString("GW_WantedReason", "Criminal Activity")
+        return self:GetNWString("GRID_WantedReason", "Criminal Activity")
     end
 end

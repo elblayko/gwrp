@@ -1,21 +1,22 @@
 --[[
     cl_inventory.lua - Client-Side Inventory Synchronization & Net Action Handlers
-    Author: Toxic
+    Author: Toxic & Antigravity
 --]]
 
-GW.Inventory = GW.Inventory or {}
-GW.Inventory.ClientItems = {}
-GW.Inventory.ClientBags = { bag1 = "", bag2 = "", bag3 = "", bag4 = "" }
-GW.Inventory.Slots = {}
+GRID = GRID or {}
+GRID.Inventory = GRID.Inventory or {}
+GRID.Inventory.ClientItems = {}
+GRID.Inventory.ClientBags = { bag1 = "", bag2 = "", bag3 = "", bag4 = "" }
+GRID.Inventory.Slots = {}
 
 -- ========================================================
 -- NETWORK SYNC RECEIVER (SLOTS & BAGS)
 -- ========================================================
 
-net.Receive("GW_SyncInventory", function()
+local function HandleSyncInventory()
     local count = net.ReadUInt(16)
-    GW.Inventory.ClientItems = {}
-    GW.Inventory.Slots = {}
+    GRID.Inventory.ClientItems = {}
+    GRID.Inventory.Slots = {}
 
     for i = 1, count do
         local id = net.ReadUInt(32)
@@ -36,11 +37,11 @@ net.Receive("GW_SyncInventory", function()
             item_data = util.JSONToTable(rawData) or {}
         }
 
-        table.insert(GW.Inventory.ClientItems, itemEntry)
-        GW.Inventory.Slots[bagIndex .. "_" .. slotIndex] = itemEntry
+        table.insert(GRID.Inventory.ClientItems, itemEntry)
+        GRID.Inventory.Slots[bagIndex .. "_" .. slotIndex] = itemEntry
     end
 
-    GW.Inventory.ClientBags = {
+    GRID.Inventory.ClientBags = {
         bag1 = net.ReadString(),
         bag2 = net.ReadString(),
         bag3 = net.ReadString(),
@@ -48,25 +49,28 @@ net.Receive("GW_SyncInventory", function()
     }
 
     -- Refresh Bag Window if open
-    if GW.UI and GW.UI.RefreshBag then
-        GW.UI.RefreshBag()
+    local ui = GRID.UI
+    if ui and ui.RefreshBag then
+        ui.RefreshBag()
     end
 
     -- If F4 menu is open on inventory tab, refresh it
-    if IsValid(GW.UI.F4Frame) and GW.UI.ActiveF4Tab == "inventory" then
-        if GW.UI.RefreshInventoryTab then
-            GW.UI.RefreshInventoryTab()
-        elseif IsValid(GW.UI.CurrentContentPanel) then
-            GW.UI.CurrentContentPanel:Clear()
-            GW.UI.RenderContentTab(GW.UI.CurrentContentPanel, "inventory", GW.UI.F4Frame)
+    if ui and IsValid(ui.F4Frame) and ui.ActiveF4Tab == "inventory" then
+        if ui.RefreshInventoryTab then
+            ui.RefreshInventoryTab()
+        elseif IsValid(ui.CurrentContentPanel) then
+            ui.CurrentContentPanel:Clear()
+            ui.RenderContentTab(ui.CurrentContentPanel, "inventory", ui.F4Frame)
         end
     end
 
-    hook.Run("GW_InventorySynced")
-end)
+    hook.Run("GRID_InventorySynced")
+end
 
-function GW.Inventory.MoveSlot(fromBag, fromSlot, toBag, toSlot)
-    net.Start("GW_MoveInventorySlot")
+net.Receive("GRID_SyncInventory", HandleSyncInventory)
+
+function GRID.Inventory.MoveSlot(fromBag, fromSlot, toBag, toSlot)
+    net.Start("GRID_MoveInventorySlot")
         net.WriteUInt(fromBag, 8)
         net.WriteUInt(fromSlot, 8)
         net.WriteUInt(toBag, 8)
@@ -74,59 +78,63 @@ function GW.Inventory.MoveSlot(fromBag, fromSlot, toBag, toSlot)
     net.SendToServer()
 end
 
-function GW.Inventory.DropSlot(bagIndex, slotIndex)
-    net.Start("GW_DropInventorySlot")
+function GRID.Inventory.DropSlot(bagIndex, slotIndex)
+    net.Start("GRID_DropInventorySlot")
         net.WriteUInt(bagIndex, 8)
         net.WriteUInt(slotIndex, 8)
     net.SendToServer()
 end
 
-function GW.Inventory.UseSlot(bagIndex, slotIndex)
-    net.Start("GW_UseInventorySlot")
+function GRID.Inventory.UseSlot(bagIndex, slotIndex)
+    net.Start("GRID_UseInventorySlot")
         net.WriteUInt(bagIndex, 8)
         net.WriteUInt(slotIndex, 8)
     net.SendToServer()
 end
 
-function GW.Inventory.DropItem(rowId)
-    net.Start("GW_DropInventoryItem")
+function GRID.Inventory.DropItem(rowId)
+    net.Start("GRID_DropInventoryItem")
         net.WriteUInt(rowId, 32)
     net.SendToServer()
 end
 
-function GW.Inventory.UseItem(rowId)
-    net.Start("GW_UseInventoryItem")
+function GRID.Inventory.UseItem(rowId)
+    net.Start("GRID_UseInventoryItem")
         net.WriteUInt(rowId, 32)
     net.SendToServer()
 end
 
 -- Shortcuts: /inv, /inventory, /bag, console "inventory", console "bag"
 concommand.Add("inventory", function()
-    if GW.UI and GW.UI.ToggleBag then
-        GW.UI.ToggleBag()
-    else
-        GW.UI.ActiveF4Tab = "inventory"
-        GW.UI.ToggleF4Menu()
+    local ui = GRID.UI
+    if ui and ui.ToggleBag then
+        ui.ToggleBag()
+    elseif ui then
+        ui.ActiveF4Tab = "inventory"
+        ui.ToggleF4Menu()
     end
 end)
 
 concommand.Add("inv", function()
-    if GW.UI and GW.UI.ToggleBag then
-        GW.UI.ToggleBag()
-    else
-        GW.UI.ActiveF4Tab = "inventory"
-        GW.UI.ToggleF4Menu()
+    local ui = GRID.UI
+    if ui and ui.ToggleBag then
+        ui.ToggleBag()
+    elseif ui then
+        ui.ActiveF4Tab = "inventory"
+        ui.ToggleF4Menu()
     end
 end)
 
 concommand.Add("bag", function()
-    if GW.UI and GW.UI.ToggleBag then
-        GW.UI.ToggleBag()
+    local ui = GRID.UI
+    if ui and ui.ToggleBag then
+        ui.ToggleBag()
     end
 end)
 
 concommand.Add("bags", function()
-    if GW.UI and GW.UI.ToggleBag then
-        GW.UI.ToggleBag()
+    local ui = GRID.UI
+    if ui and ui.ToggleBag then
+        ui.ToggleBag()
     end
 end)
