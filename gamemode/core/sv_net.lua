@@ -1,6 +1,8 @@
 --[[
     sv_net.lua - Centralized Network Protocol & Rate Limiter
---]]
+    Author: GW Core Team
+    Namespace: GW / gw_
+]]
 
 util.AddNetworkString("GW_Notification")
 util.AddNetworkString("GW_PlayerDied")
@@ -49,14 +51,28 @@ GW.NetLimits = GW.NetLimits or {}
 function GW.CheckRateLimit(ply, action, maxPerSec)
     local id = ply:SteamID() .. "_" .. action
     local now = CurTime()
-    GW.NetLimits[id] = GW.NetLimits[id] or { count = 0, reset = now + 1 }
+    GW.NetLimits[id] = GW.NetLimits[id] or { count = 0, reset = now + 1, warned = false }
 
     if now > GW.NetLimits[id].reset then
         GW.NetLimits[id].count = 1
         GW.NetLimits[id].reset = now + 1
+        GW.NetLimits[id].warned = false
         return true
     end
 
     GW.NetLimits[id].count = GW.NetLimits[id].count + 1
-    return GW.NetLimits[id].count <= maxPerSec
+    if GW.NetLimits[id].count > maxPerSec then
+        if not GW.NetLimits[id].warned then
+            GW.NetLimits[id].warned = true
+            if GW.Telemetry and GW.Telemetry.LogAnomaly then
+                GW.Telemetry.LogAnomaly(ply:SteamID(), "NET_RATE_LIMIT_EXCEEDED", {
+                    action = action,
+                    count = GW.NetLimits[id].count,
+                    max = maxPerSec
+                })
+            end
+        end
+        return false
+    end
+    return true
 end

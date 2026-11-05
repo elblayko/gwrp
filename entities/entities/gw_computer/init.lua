@@ -45,6 +45,8 @@ function ENT:Initialize()
 
     self.BotnetWANKey = ""
     self.BotnetCyclesCompleted = 0
+    self.BotnetBuffer = 0
+    self:SetNWInt("GW_BotnetBuffer", 0)
 
     -- Wiremod Support
     if WireLib then
@@ -226,7 +228,8 @@ function ENT:BotnetCycle()
     local yield, totalPrinters = self:CalculateBotnetYield(operator)
     self:SetBotnetYield(yield)
 
-    operator:AddMoney(yield)
+    self.BotnetBuffer = (self.BotnetBuffer or 0) + yield
+    self:SetNWInt("GW_BotnetBuffer", self.BotnetBuffer)
     local newTotal = (self:GetBotnetTotalEarned() or 0) + yield
     self:SetBotnetTotalEarned(newTotal)
     self.BotnetCyclesCompleted = (self.BotnetCyclesCompleted or 0) + 1
@@ -278,6 +281,8 @@ function ENT:StartBotnet(ply)
 
     self.BotnetWANKey = wanKey
     self.BotnetCyclesCompleted = 0
+    self.BotnetBuffer = 0
+    self:SetNWInt("GW_BotnetBuffer", 0)
     self:SetBotnetOperator(ply)
     self:SetBotnetActive(true)
 
@@ -344,6 +349,10 @@ function ENT:Use(activator, caller)
 end
 
 function ENT:OnRemove()
+    if (self.BotnetBuffer or 0) > 0 and GW.Economy and GW.Economy.SpawnCashStack then
+        GW.Economy.SpawnCashStack(self:GetPos() + Vector(0, 0, 15), self.BotnetBuffer)
+        self.BotnetBuffer = 0
+    end
     self:DisconnectFromSwitch()
 
     if WireLib then
@@ -1417,6 +1426,10 @@ net.Receive("GW_RunComputerCommand", function(len, ply)
                 computer:StopBotnet(nil)
                 table.insert(responseLines,
                     { text = "[+] Cloud Botnet C2 daemon gracefully terminated.", color = "green" })
+                -- Check if pending buffer exists when stopped
+                if (computer.BotnetBuffer or 0) > 0 then
+                    table.insert(responseLines, { text = string.format("    Pending Buffer          : +$%s (Type 'botnet collect' to withdraw)", string.Comma(computer.BotnetBuffer)), color = "yellow" })
+                end
                 table.insert(responseLines,
                     {
                         text = string.format("    Completed Attack Cycles : %d  |  Total Session Siphoned : $%s",
@@ -1425,6 +1438,23 @@ net.Receive("GW_RunComputerCommand", function(len, ply)
                     })
             end
         else
+            if arg1 == "collect" or arg1 == "withdraw" or arg1 == "claim" then
+                local pending = computer.BotnetBuffer or 0
+                if pending <= 0 then
+                    table.insert(responseLines, { text = "[-] No siphoned funds pending in terminal buffer ($0).", color = "yellow" })
+                else
+                    computer.BotnetBuffer = 0
+                    computer:SetNWInt("GW_BotnetBuffer", 0)
+                    ply:AddMoney(pending)
+                    table.insert(responseLines, { text = string.format("[+] Withdrew +$%s from Botnet C2 buffer directly to your wallet!", string.Comma(pending)), color = "green" })
+                    GW.Notify(ply, string.format("Collected +$%s from Botnet C2 buffer!", string.Comma(pending)), NOTIFY_GENERIC)
+                    if GW.Telemetry and GW.Telemetry.Log then
+                        GW.Telemetry.Log("ECONOMY", "BOTNET_COLLECT", ply:SteamID(), "", pending, {})
+                    end
+                end
+                return
+            end
+
             -- Default: status & help
             computer:RefreshBotnetState()
             local isActive = computer:GetBotnetActive()

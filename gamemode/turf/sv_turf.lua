@@ -12,7 +12,7 @@ end
 function GW.Turf.SaveMapProfile()
     local mapName = game.GetMap()
 
-    -- 1. Primary Persistence: Save directly to SQLite
+    -- 1. Primary Persistence: Save directly to MariaDB via stored procedures
     if GW.Database and GW.Database.SaveTurfZones then
         GW.Database.SaveTurfZones(mapName, GW.Turf.Zones)
     end
@@ -34,7 +34,7 @@ function GW.Turf.SaveMapProfile()
 
     local json = util.TableToJSON(serializable, true)
     file.Write(GW.Turf.GetProfilePath(), json)
-    print(string.format("[GWRP-Turf] Saved %d turf zones to SQLite & JSON profile for '%s'.", #serializable, mapName))
+    print(string.format("[GW-Turf] Saved %d turf zones to MariaDB & JSON profile for '%s'.", #serializable, mapName))
     return true
 end
 
@@ -42,11 +42,11 @@ function GW.Turf.LoadMapProfile()
     local mapKey = string.lower(game.GetMap())
     GW.Turf.Zones = {}
 
-    -- 1. Try loading from SQLite database first
+    -- 1. Try loading from MariaDB database first
     local dbZones = GW.Database and GW.Database.LoadTurfZones and GW.Database.LoadTurfZones(mapKey)
     if dbZones and table.Count(dbZones) > 0 then
         GW.Turf.Zones = dbZones
-        print(string.format("[GWRP-Turf] Loaded %d turf zones from SQLite for map '%s'.", table.Count(dbZones), mapKey))
+        print(string.format("[GW-Turf] Loaded %d turf zones from MariaDB for map '%s'.", table.Count(dbZones), mapKey))
         return
     end
 

@@ -1,8 +1,9 @@
 --[[
     entities/entities/gw_clinic_pod/init.lua
-    GWRP Clinical Triage Pod Server Logic
-    Author: Toxic
---]]
+    GangWars Clinical Triage Pod Server Logic
+    Author: GW Core Team
+    Namespace: GW / gw_
+]]
 
 AddCSLuaFile("cl_init.lua")
 AddCSLuaFile("shared.lua")
@@ -67,6 +68,9 @@ function ENT:Use(activator, caller)
             self:SetVaultCash(0)
             activator:EmitSound("ambient/levels/labs/coinslot1.wav", 65, 100)
             GW.Notify(activator, string.format("Emptied Clinic Vault Reserves: +$%d collected!", vault), NOTIFY_GENERIC)
+            if GW.Telemetry and GW.Telemetry.Log then
+                GW.Telemetry.Log("ECONOMY", "CLINIC_VAULT_COLLECT", activator:SteamID(), "", vault, {})
+            end
             return
         else
             GW.Notify(activator, "Clinic Vault Reserves are currently empty ($0).", NOTIFY_HINT)
@@ -97,6 +101,14 @@ net.Receive("GW_Clinic_PurchaseTreatment", function(len, ply)
         return
     end
 
+    local owner = pod:GetOwnerPlayer()
+
+    -- Anti-Exploit Rule: Block pharmacist owners from self-purchasing treatments from their own kiosk
+    if ply == owner then
+        GW.Notify(ply, "Pharmacists cannot purchase medical treatments from their own clinic pod!", NOTIFY_ERROR)
+        return
+    end
+
     local treatDef = GW.ClinicTreatments and GW.ClinicTreatments[treatId]
     if not treatDef then return end
 
@@ -108,18 +120,22 @@ net.Receive("GW_Clinic_PurchaseTreatment", function(len, ply)
     -- Process payment
     ply:AddMoney(-treatDef.cost)
 
-    local owner = pod:GetOwnerPlayer()
     local isDoc = pod:GetDoctorOnDuty()
 
-    -- 80% Direct Deposit to Pharmacist, 20% to Pod Vault
-    local ownerCut = math.floor(treatDef.cost * 0.80)
-    local vaultCut = treatDef.cost - ownerCut
+    -- 8% Medical Supply Sales Tax Anti-Inflation Sink
+    local taxRate = GW.Config.VendorSalesTaxPct or 0.08
+    local salesTax = math.floor(treatDef.cost * taxRate)
+    local netRevenue = treatDef.cost - salesTax
+
+    -- 80% Direct Deposit to Pharmacist, 20% to Pod Physical Vault
+    local ownerCut = math.floor(netRevenue * 0.80)
+    local vaultCut = netRevenue - ownerCut
 
     if IsValid(owner) and owner:IsPlayer() then
         owner:AddMoney(ownerCut)
         GW.Notify(owner,
-            string.format("[CLINIC] %s received %s ($%d)! +$%d earned.", ply:Nick(), treatDef.name, treatDef.cost,
-                ownerCut), NOTIFY_GENERIC, 6)
+            string.format("[CLINIC] %s received %s ($%d)! +$%d earned (Tax: -$%d).", ply:Nick(), treatDef.name, treatDef.cost,
+                ownerCut, salesTax), NOTIFY_GENERIC, 6)
         owner:EmitSound("ambient/levels/labs/coinslot1.wav", 55, 110)
     end
 
@@ -128,6 +144,15 @@ net.Receive("GW_Clinic_PurchaseTreatment", function(len, ply)
 
     -- Apply treatment
     treatDef.Apply(ply, isDoc)
+
+    if GW.Telemetry and GW.Telemetry.Log then
+        GW.Telemetry.Log("TRADE", "CLINIC_TREATMENT", ply:SteamID(), IsValid(owner) and owner:SteamID() or "", treatDef.cost, {
+            treatment = treatId,
+            tax = salesTax,
+            owner_cut = ownerCut,
+            vault_cut = vaultCut
+        })
+    end
 
     -- Triage effect at pod
     local ed = EffectData()

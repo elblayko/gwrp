@@ -38,7 +38,9 @@ AddCSLuaFile("ui/cl_deathscreen.lua")
 -- Server Includes
 include("shared.lua")
 include("core/sh_networking.lua")
+include("core/sv_db_config.lua")
 include("core/sv_database.lua")
+include("core/sv_telemetry.lua")
 include("core/sv_net.lua")
 include("buffs/sh_buffs.lua")
 include("buffs/sh_buff_definitions.lua")
@@ -88,6 +90,28 @@ function GM:PlayerInitialSpawn(ply)
 end
 
 function GM:PlayerDisconnected(ply)
+    -- Flush pending combat skirmish buffer
+    if GW.Telemetry and GW.Telemetry.FlushCombat then
+        GW.Telemetry.FlushCombat(ply)
+    end
+
+    -- Despawn active money-generating entities and job deployables on disconnect
+    for _, ent in ipairs(ents.GetAll()) do
+        if IsValid(ent) then
+            local isOwner = (ent.GW_Owner == ply) or (ent:GetNWEntity("GW_Owner") == ply) or (ent.PurchaserSteamID == ply:SteamID())
+            if isOwner then
+                local c = ent:GetClass()
+                if string.StartWith(c, "gw_printer_") or c == "gw_resource_machine" or c == "gw_clinic_pod" or c == "gw_computer" or c == "gw_shipment" or c == "gw_network_switch" or c == "gw_wan_uplink" then
+                    ent:Remove()
+                end
+            end
+        end
+    end
+
+    -- Unown all session-based purchased doors
+    if GW.Doors and GW.Doors.UnownAll then
+        GW.Doors.UnownAll(ply)
+    end
     if GW.Database and GW.Database.SavePlayer then
         GW.Database.SavePlayer(ply)
     end
@@ -218,6 +242,9 @@ function GM:PlayerCanPickupWeapon(ply, wep)
 end
 
 function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
+    if GW.Telemetry and GW.Telemetry.FlushCombat and oldWep ~= newWep then
+        GW.Telemetry.FlushCombat(ply)
+    end
     if not IsValid(ply) or not IsValid(newWep) then return end
     local class = newWep:GetClass()
 
@@ -236,6 +263,31 @@ function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
 end
 
 function GM:PlayerDeath(victim, inflictor, attacker)
+    -- Flush pending combat telemetry
+    if GW.Telemetry and GW.Telemetry.FlushCombat then
+        GW.Telemetry.FlushCombat(victim)
+        if IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim then
+            GW.Telemetry.FlushCombat(attacker)
+        end
+    end
+
+    -- Server-Authoritative Durability Shock Wear on Death
+    local activeWep = victim:GetActiveWeapon()
+    if IsValid(activeWep) and activeWep.GetDurability and activeWep.SetDurability then
+        activeWep:SetDurability(math.max(0, activeWep:GetDurability() - 15))
+    end
+
+    -- Dynamic Anti-Inflation Resuscitation Fee (Hybrid Base + Wealth %)
+    if GW.Economy and GW.Economy.CalculateDynamicFee then
+        local hospFee = GW.Economy.CalculateDynamicFee(victim, GW.Config.HospitalFeeBase or 50, GW.Config.HospitalFeeWealthPct or 0.015)
+        if hospFee > 0 and victim:CanAfford(hospFee) then
+            victim:AddMoney(-hospFee)
+            GW.Notify(victim, string.format("Emergency Medical Resuscitation Fee: -$%d", hospFee), NOTIFY_ERROR)
+            if GW.Telemetry and GW.Telemetry.Log then
+                GW.Telemetry.Log("ECONOMY", "HOSPITAL_FEE", victim:SteamID(), "", hospFee, {})
+            end
+        end
+    end
     -- Rapid Dispatch: Patrol Officers respawn in 5s, baseline for all other roles is 30s
     local defaultSecs = (GW.Config and GW.Config.DefaultRespawnTime) or 30
     local policeSecs = (GW.Config and GW.Config.PoliceRespawnTime) or 5

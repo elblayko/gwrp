@@ -77,7 +77,16 @@ function SWEP:PrimaryAttack()
     ply:SetAnimation(PLAYER_ATTACK1)
 
     -- Step 1: Nothing selected yet -> Select first entity
+    if not SERVER then return end
     if not IsValid(self.SelectedEntity) then
+        self.SelectedEntity = ent
+        self:SetNWEntity("GW_WireSrc", ent)
+        ply:EmitSound("buttons/button14.wav", 65, 110)
+        local label = (ent:GetClass() == "gw_network_switch") and "Network Switch" or (ent.PrintName or "Printer")
+        GW.Notify(ply, "Selected " .. label .. ". Now click the second device to link.", NOTIFY_GENERIC)
+        return
+    end
+    if false and not IsValid(self.SelectedEntity) then
         self.SelectedEntity = ent
         if SERVER then
             self:SetNWEntity("GW_WireSrc", ent)

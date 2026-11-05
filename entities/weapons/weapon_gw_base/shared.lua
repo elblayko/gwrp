@@ -1,12 +1,14 @@
 --[[
     entities/weapons/weapon_gw_base/shared.lua
-    GWRP Gun Base
---]]
+    GangWars Gun Base with Server-Authoritative Durability & In-Memory Combat Telemetry
+    Author: GW Core Team
+    Namespace: GW / gw_
+]]
 
 AddCSLuaFile()
 
 SWEP.PrintName = "GW Base"
-SWEP.Author = "Toxic"
+SWEP.Author = "GW Core Team"
 SWEP.Instructions = "Primary: Shoot\nSecondary: Iron Sights\nReload: Reload"
 SWEP.Category = "GangWars RP"
 
@@ -52,17 +54,24 @@ SWEP.IronSightsFOV = 0.8
 
 function SWEP:SetupDataTables()
     self:NetworkVar("Bool", 0, "Ironsights")
+    self:NetworkVar("Int", 0, "Durability")
 end
 
 function SWEP:Initialize()
     self:SetHoldType(self.HoldType or "pistol")
     self:SetIronsights(false)
+    if self:GetDurability() <= 0 then
+        self:SetDurability(100)
+    end
 end
 
 function SWEP:Deploy()
     self:SetHoldType(self.HoldType or "pistol")
     self:SetIronsights(false)
     self.IronSightsProgress = 0
+    if self:GetDurability() <= 0 then
+        self:SetDurability(100)
+    end
     return true
 end
 
@@ -71,7 +80,31 @@ function SWEP:PrimaryAttack()
     if not IsValid(ply) then return end
     if not self:CanPrimaryAttack() then return end
 
-    self:SetNextPrimaryFire(CurTime() + self.Primary.Delay)
+    -- Server-side Fire Rate Anti-Cheat Validation
+    local cur = CurTime()
+    if SERVER and self.LastPrimaryAttackTime and (cur - self.LastPrimaryAttackTime) < (self.Primary.Delay * 0.8) then
+        if GW.Telemetry and GW.Telemetry.LogAnomaly then
+            GW.Telemetry.LogAnomaly(ply:SteamID(), "FIRE_RATE_ANOMALY", {
+                weapon = self:GetClass(),
+                delta = cur - self.LastPrimaryAttackTime,
+                expected = self.Primary.Delay
+            })
+        end
+    end
+    self.LastPrimaryAttackTime = cur
+
+    -- Low Durability Misfire Check (Under 20% durability has a chance to misfire / jam)
+    local durability = self:GetDurability()
+    if durability < 20 and math.random(1, 100) <= (25 - durability) then
+        self:EmitSound("weapons/pistol/pistol_empty.wav", 65, 90)
+        self:SetNextPrimaryFire(cur + 0.6)
+        if CLIENT and ply == LocalPlayer() then
+            surface.PlaySound("weapons/pistol/pistol_empty.wav")
+        end
+        return
+    end
+
+    self:SetNextPrimaryFire(cur + self.Primary.Delay)
 
     local isIron = self:GetIronsights()
     local spread = isIron and (self.Primary.Spread * 0.5) or self.Primary.Spread
@@ -81,7 +114,13 @@ function SWEP:PrimaryAttack()
     self:ShootBullet(self.Primary.Damage, self.Primary.NumberofShots, spread)
     self:TakePrimaryAmmo(self.Primary.TakeAmmo)
 
-    local yawKick = util.SharedRandom("GW_RecoilYaw", -recoil * 0.5, recoil * 0.5)
+    -- In-Memory RAM Combat Skirmish Record
+    if SERVER and GW.Telemetry and GW.Telemetry.RecordShot then
+        GW.Telemetry.RecordShot(ply, self)
+    end
+
+    -- Deterministic seeded recoil with CurTime() seed variation
+    local yawKick = util.SharedRandom("GW_RecoilYaw", -recoil * 0.5, recoil * 0.5, math.floor(CurTime() * 100))
     ply:ViewPunch(Angle(-recoil, yawKick, 0))
 end
 
@@ -95,7 +134,6 @@ function SWEP:ShootBullet(dmg, numBullets, aimcone)
     local ply = self:GetOwner()
     if not IsValid(ply) then return end
 
-    -- Include ViewPunchAngles so shots always align with the camera and crosshair during recoil
     local aimDir = (ply:EyeAngles() + ply:GetViewPunchAngles()):Forward()
 
     local bullet = {}
@@ -109,7 +147,11 @@ function SWEP:ShootBullet(dmg, numBullets, aimcone)
     bullet.AmmoType = self.Primary.Ammo
 
     bullet.Callback = function(att, tr, dmginfo)
-        -- Can add custom hit effects or damage mod here
+        if SERVER and IsValid(tr.Entity) and (tr.Entity:IsPlayer() or tr.Entity:IsNPC()) then
+            if GW.Telemetry and GW.Telemetry.RecordHit then
+                GW.Telemetry.RecordHit(ply, tr.Entity, self, dmginfo:GetDamage(), tr.HitGroup)
+            end
+        end
     end
 
     ply:FireBullets(bullet)
@@ -125,12 +167,32 @@ function SWEP:Reload()
 
     if self:DefaultReload(ACT_VM_RELOAD) then
         self:SetIronsights(false)
+
+        -- Durability Wear per Reload
+        if SERVER then
+            local wear = GW.Config.WeaponWearPerReload or 4
+            local curDur = self:GetDurability()
+            self:SetDurability(math.max(0, curDur - wear))
+
+            -- Flush skirmish buffer upon reload
+            if GW.Telemetry and GW.Telemetry.FlushCombat then
+                GW.Telemetry.FlushCombat(ply)
+            end
+        end
     end
 end
 
 function SWEP:Holster()
     self:SetIronsights(false)
     self.IronSightsProgress = 0
+
+    if SERVER then
+        local ply = self:GetOwner()
+        if IsValid(ply) and GW.Telemetry and GW.Telemetry.FlushCombat then
+            GW.Telemetry.FlushCombat(ply)
+        end
+    end
+
     return true
 end
 
@@ -176,6 +238,11 @@ if CLIENT then
         surface.DrawLine(x + gap, y, x + len + gap, y)
         surface.DrawLine(x, y - len - gap, x, y - gap)
         surface.DrawLine(x, y + gap, x, y + len + gap)
+
+        -- Durability indicator
+        local dur = self:GetDurability() or 100
+        local durCol = dur > 50 and Color(74, 222, 128, 180) or (dur > 20 and Color(245, 158, 11, 180) or Color(239, 68, 68, 220))
+        draw.SimpleText(string.format("COND: %d%%", dur), "GW_HUD_Small", x, y + 25, durCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     function SWEP:GetViewModelPosition(pos, ang)

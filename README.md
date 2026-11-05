@@ -25,7 +25,7 @@ GangWars RP is a Garry's Mod roleplay gamemode built around three competing grou
 ## Features
 
 - **17 jobs across 3 factions**, with level gates and per-job slot limits.
-- **Player-run gangs** with SQLite-backed rosters, ranks, invites and private gang chat.
+- **Player-run gangs** with MariaDB-backed rosters, ranks, invites and private gang chat.
 - **Turf warfare**: flag poles with timed captures and periodic dividends, per-map zone profiles and an admin setup tool.
 - **Economy**: salary paydays, dropped cash, an F4 shop with job/level restrictions and retail markups, and purchasable doors.
 - **Money printers** with a heat model, a venting timing minigame, hardware modules (undervolt / overclock) and police confiscation.
@@ -35,7 +35,7 @@ GangWars RP is a Garry's Mod roleplay gamemode built around three competing grou
 - **Inventory**: a 16-slot backpack plus four equippable bags, with quality tiers.
 - **Buff/debuff engine**: persistent, stackable effects (healing, speed, wanted, poison and more).
 - **Leveling**: levels 1–50 on an MMO-style XP curve.
-- **Persistence**: SQLite with parameterized queries, ACID transactions and automatic column migrations.
+- **Persistence**: Production MariaDB (via mysqloo v9) with 100% Stored Procedures for writes, Analytical Views for reads, in-memory RAM caching, range-partitioned telemetry, and automatic SQLite development fallback.
 - **Optional Wiremod** outputs on printers, switches and computers.
 
 ---
@@ -53,7 +53,9 @@ GangWars RP is a Garry's Mod roleplay gamemode built around three competing grou
    ```
    +gamemode gangwarsrp +map rp_downtown_v4c_v2
    ```
-3. On first boot the gamemode creates its SQLite tables and, if the map has a built-in template, seeds the turf zones.
+3. Import the MariaDB schema from `sql/gw_mariadb_schema.sql` into your database (`mysql -u root -p gw < sql/gw_mariadb_schema.sql`).
+   Configure database credentials in `garrysmod/data/gw/database.json` or startup ConVars (`+gw_db_host 127.0.0.1 +gw_db_user root +gw_db_password secret +gw_db_database gw`).
+   If running locally without the `mysqloo` binary module, the gamemode will automatically fallback to SQLite emulation for development.
 4. Grant yourself admin (`admin` or `superadmin` user group) to use setup tools.
 
 > Entities and weapons live in `entities/` inside the gamemode folder and are loaded with the gamemode.

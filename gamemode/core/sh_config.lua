@@ -10,6 +10,21 @@ GW.Config.PaydayInterval = 90    -- seconds between salary ticks
 GW.Config.DropMoneyOnDeathMax = 75
 GW.Config.GangCreationCost = 200 -- cost to register a new player gang
 
+-- Dynamic Anti-Inflation Sinks (Hybrid Base + Wealth %)
+GW.Config.HospitalFeeBase = 50
+GW.Config.HospitalFeeWealthPct = 0.015       -- 1.5% of player wallet deducted on respawn
+GW.Config.PropertyUpkeepBase = 15          -- Baseline upkeep per payday for landlords
+GW.Config.PropertyUpkeepPerDoor = 5        -- Additional upkeep per owned door
+GW.Config.PropertyUpkeepWealthPct = 0.005   -- 0.5% wealth tax per payday for property owners
+GW.Config.GangVaultUpkeepThreshold = 5000  -- Vaults above $5,000 pay syndication tax
+GW.Config.GangVaultUpkeepPct = 0.02         -- 2% vault sink per payday
+GW.Config.VendorSalesTaxPct = 0.08         -- 8% non-refundable sales tax on kiosk purchases
+
+-- Job Switching & Weapon Durability
+GW.Config.JobChangeCooldown = 900          -- 15 minutes cooldown before changing jobs again
+GW.Config.WeaponWearPerReload = 4          -- Durability lost per combat reload (100 -> 0)
+GW.Config.EnableDebugShop = false          -- Gated strictly to superadmins only when true
+
 -- Respawn Times
 GW.Config.DefaultRespawnTime = 30 -- Baseline respawn time for all players (seconds)
 GW.Config.PoliceRespawnTime = 5   -- Rapid dispatch respawn for base police officer (seconds)

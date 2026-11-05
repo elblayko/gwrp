@@ -128,6 +128,18 @@ function GW.Inventory.PickupEntity(ply, ent)
 
     -- 3. Money Printers
     if class == "gw_printer_bronze" or class == "gw_printer_silver" or class == "gw_printer_diamond" then
+        local temp = ent.GetTemperature and ent:GetTemperature() or 20
+        if temp > 35 then
+            GW.Notify(ply, string.format("Printer is too hot to pocket (%d°C)! Allow it to cool below 35°C.", temp), NOTIFY_ERROR)
+            ply:EmitSound("common/warning.wav", 65, 100)
+            return false
+        end
+
+        if ply.HasDebuff and ply:HasDebuff("wanted") then
+            GW.Notify(ply, "Cannot pocket contraband while wanted by police!", NOTIFY_ERROR)
+            ply:EmitSound("common/warning.wav", 65, 100)
+            return false
+        end
         if ent.DisconnectFromSwitch then ent:DisconnectFromSwitch() end
         local itemData = {
             storedCash = ent:GetStoredCash() or 0,
@@ -206,6 +218,11 @@ function GW.Inventory.PickupEntity(ply, ent)
 
     -- 4. Wholesale Weapon Shipments
     if class == "gw_shipment" then
+        GW.Notify(ply, "Weapon shipments are world-bound retail kiosks and cannot be stored in bags!", NOTIFY_ERROR)
+        ply:EmitSound("common/warning.wav", 65, 100)
+        return false
+    end
+    if false and class == "gw_shipment" then
         local itemData = {
             weaponClass = ent:GetWeaponClass() or "weapon_gw_glock",
             weaponName = ent:GetWeaponName() or "Weapons",
@@ -329,6 +346,20 @@ net.Receive("GW_DropInventorySlot", function(len, ply)
         end
 
     elseif itemType == "printer" or itemType == "switch" or itemId == "gw_resource_machine" then
+        if itemType == "printer" then
+            local maxPrinters = GW.Config.MaxPrintersPerPlayer or 4
+            local curPrinters = 0
+            for _, p in ipairs(ents.GetAll()) do
+                local pc = p:GetClass()
+                if (pc == "gw_printer_bronze" or pc == "gw_printer_silver" or pc == "gw_printer_diamond") and ((p.GetOwnerPlayer and p:GetOwnerPlayer() == ply) or p.OwnerPlayer == ply or p.GW_Owner == ply) then
+                    curPrinters = curPrinters + 1
+                end
+            end
+            if curPrinters >= maxPrinters then
+                GW.Notify(ply, string.format("Cannot deploy: you have reached the maximum allowed active printers (%d/%d)!", curPrinters, maxPrinters), NOTIFY_ERROR)
+                return
+            end
+        end
         spawnedEnt = ents.Create(itemId)
         if IsValid(spawnedEnt) then
             spawnedEnt:SetPos(spawnPos)
@@ -478,6 +509,20 @@ net.Receive("GW_UseInventorySlot", function(len, ply)
         end
 
     elseif itemType == "printer" or itemType == "shipment" or itemType == "switch" or itemType == "module" then
+        if itemType == "printer" then
+            local maxPrinters = GW.Config.MaxPrintersPerPlayer or 4
+            local curPrinters = 0
+            for _, p in ipairs(ents.GetAll()) do
+                local pc = p:GetClass()
+                if (pc == "gw_printer_bronze" or pc == "gw_printer_silver" or pc == "gw_printer_diamond") and ((p.GetOwnerPlayer and p:GetOwnerPlayer() == ply) or p.OwnerPlayer == ply or p.GW_Owner == ply) then
+                    curPrinters = curPrinters + 1
+                end
+            end
+            if curPrinters >= maxPrinters then
+                GW.Notify(ply, string.format("Cannot deploy: you have reached the maximum allowed active printers (%d/%d)!", curPrinters, maxPrinters), NOTIFY_ERROR)
+                return
+            end
+        end
         -- Quick-deploy to ground
         local rawData = util.JSONToTable(targetRow.item_data or "{}") or {}
         local tr = ply:GetEyeTrace()

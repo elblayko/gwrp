@@ -64,3 +64,23 @@ net.Receive("GW_DoorAction", function(len, ply)
         GW.Notify(ply, "Door sold for +$" .. refund .. "!", NOTIFY_GENERIC)
     end
 end)
+
+function GW.Doors.GetOwnedDoors(ply)
+    if not IsValid(ply) then return {} end
+    local owned = {}
+    for _, ent in ipairs(ents.GetAll()) do
+        if ent:isDoor() and ent:GetNWEntity("GW_DoorOwner") == ply then
+            table.insert(owned, ent)
+        end
+    end
+    return owned
+end
+
+function GW.Doors.UnownAll(ply)
+    if not IsValid(ply) then return end
+    for _, door in ipairs(GW.Doors.GetOwnedDoors(ply)) do
+        door:SetNWEntity("GW_DoorOwner", NULL)
+        door:SetNWString("GW_DoorFaction", "")
+        door:Fire("unlock", "", 0)
+    end
+end

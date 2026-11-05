@@ -104,8 +104,10 @@ function GW.Turf.OpenSetupMenu()
         surface.DrawLine(0, 52, w, 52)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-        draw.SimpleText("GWRP Admin & Debug Dashboard", "GW_UI_Title", 20, 12, GW.Colors.White)
-        draw.SimpleText("SQLite Active | Map: " .. game.GetMap(), "GW_UI_Caption", w - 40, 20, GW.Colors.MoneyGreen, TEXT_ALIGN_RIGHT)
+        draw.SimpleText("GW Admin & Debug Dashboard", "GW_UI_Title", 20, 12, GW.Colors.White)
+        draw.SimpleText("MariaDB Active | Map: " .. game.GetMap(), "GW_UI_Caption", w - 40, 20, GW.Colors.MoneyGreen, TEXT_ALIGN_RIGHT)
+
+
     end
 
     -- Tab Navigation Strip
@@ -648,7 +650,7 @@ function GW.Turf.RenderTurfTab(parent)
     local btnSave = vgui.Create("DButton", topBar)
     btnSave:SetSize(150, 28)
     btnSave:SetPos(8, 5)
-    btnSave:SetText("Save to SQLite")
+    btnSave:SetText("Save to MariaDB")
     btnSave.DoClick = function()
         net.Start("GW_AdminTurfAction")
             net.WriteString("save")
@@ -658,7 +660,7 @@ function GW.Turf.RenderTurfTab(parent)
     local btnReload = vgui.Create("DButton", topBar)
     btnReload:SetSize(150, 28)
     btnReload:SetPos(166, 5)
-    btnReload:SetText("Reload from SQLite")
+    btnReload:SetText("Reload from MariaDB")
     btnReload.DoClick = function()
         net.Start("GW_AdminTurfAction")
             net.WriteString("reload")
