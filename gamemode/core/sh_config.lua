@@ -5,25 +5,25 @@
 GRID.Config = GRID.Config or {}
 
 -- Economy
-GRID.Config.StartingMoney = 250
+GRID.Config.StartingMoney = 1000
 GRID.Config.PaydayInterval = 90    -- seconds between salary ticks
 GRID.Config.DropMoneyOnDeathMax = 75
 GRID.Config.GangCreationCost = 200 -- cost to register a new player gang
 
 -- Dynamic Anti-Inflation Sinks (Hybrid Base + Wealth %)
 GRID.Config.HospitalFeeBase = 50
-GRID.Config.HospitalFeeWealthPct = 0.015       -- 1.5% of player wallet deducted on respawn
-GRID.Config.PropertyUpkeepBase = 15          -- Baseline upkeep per payday for landlords
-GRID.Config.PropertyUpkeepPerDoor = 5        -- Additional upkeep per owned door
-GRID.Config.PropertyUpkeepWealthPct = 0.005   -- 0.5% wealth tax per payday for property owners
-GRID.Config.GangVaultUpkeepThreshold = 5000  -- Vaults above $5,000 pay syndication tax
-GRID.Config.GangVaultUpkeepPct = 0.02         -- 2% vault sink per payday
-GRID.Config.VendorSalesTaxPct = 0.08         -- 8% non-refundable sales tax on kiosk purchases
+GRID.Config.HospitalFeeWealthPct = 0.015    -- 1.5% of player wallet deducted on respawn
+GRID.Config.PropertyUpkeepBase = 15         -- Baseline upkeep per payday for landlords
+GRID.Config.PropertyUpkeepPerDoor = 5       -- Additional upkeep per owned door
+GRID.Config.PropertyUpkeepWealthPct = 0.005 -- 0.5% wealth tax per payday for property owners
+GRID.Config.GangVaultUpkeepThreshold = 5000 -- Vaults above $5,000 pay syndication tax
+GRID.Config.GangVaultUpkeepPct = 0.02       -- 2% vault sink per payday
+GRID.Config.VendorSalesTaxPct = 0.08        -- 8% non-refundable sales tax on kiosk purchases
 
 -- Job Switching & Weapon Durability
-GRID.Config.JobChangeCooldown = 900          -- 15 minutes cooldown before changing jobs again
-GRID.Config.WeaponWearPerReload = 4          -- Durability lost per combat reload (100 -> 0)
-GRID.Config.EnableDebugShop = false          -- Gated strictly to superadmins only when true
+GRID.Config.JobChangeCooldown = 900 -- 15 minutes cooldown before changing jobs again
+GRID.Config.WeaponWearPerReload = 4 -- Durability lost per combat reload (100 -> 0)
+GRID.Config.EnableDebugShop = false -- Gated strictly to superadmins only when true
 
 -- Respawn Times
 GRID.Config.DefaultRespawnTime = 30 -- Baseline respawn time for all players (seconds)
