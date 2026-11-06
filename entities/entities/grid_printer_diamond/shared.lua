@@ -1,9 +1,10 @@
 --[[
     entities/entities/grid_printer_diamond/shared.lua
+    GridRP Diamond Money Printer (Tier 3)
 --]]
 
 ENT.Type = "anim"
-ENT.Base = "grid_printer_bronze"
+ENT.Base = "grid_printer_base"
 ENT.PrintName = "Diamond Money Printer"
 ENT.Author = "Toxic"
 ENT.Spawnable = true

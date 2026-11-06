@@ -169,9 +169,9 @@ function GRID.Inventory.PickupEntity(ply, ent)
     end
 
     -- 3.5 Network Switch Appliance
-    if class == "grid_network_switch" then
+    if class == "grid_network_switch_4p" or class == "grid_network_switch_7p" or ent.IsNetworkSwitch then
         if ent.DisconnectAll then ent:DisconnectAll() end
-        local storeClass = "grid_network_switch"
+        local storeClass = class
         local added = GRID.Database.AddInventoryItem(ply:SteamID(), storeClass, "switch", 1, {})
         if not added then
             GRID.Notify(ply, "Your bags are full! Equip extra bags or drop items.", NOTIFY_ERROR)

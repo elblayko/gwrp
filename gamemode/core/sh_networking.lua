@@ -39,8 +39,9 @@ end
 -- Helper to check if entity is a network switch
 local function isSwitch(dev)
     if not IsValid(dev) then return false end
+    if dev.IsNetworkSwitch then return true end
     local c = dev:GetClass()
-    return c == "grid_network_switch"
+    return c == "grid_network_switch" or string.StartWith(c, "grid_network_switch")
 end
 
 -- Traverses and retrieves all active devices within the broadcast domain of a switch (including SFP-uplinked switches)
@@ -59,7 +60,7 @@ function GRID.Network.GetBroadcastDomain(switchEnt, visited)
     -- 1. The Switch itself (Default Gateway)
     table.insert(devices, {
         entity = switchEnt,
-        name = switchEnt.PrintName or "L3 Network Switch (2-Cu + 2-SFP)",
+        name = switchEnt.PrintName or "L3 Network Switch",
         type = "switch",
         ip = GRID.Network.GetGatewayIP(switchEnt),
         mac = GRID.Network.FormatMAC(switchEnt, subnet, 1),
@@ -71,15 +72,18 @@ function GRID.Network.GetBroadcastDomain(switchEnt, visited)
         }
     })
 
-    -- 2. Connected Devices across the copper switch ports (1..3)
-    for portNum = 1, 3 do
+    -- 2. Dynamically scan all configured switch ports
+    local portDefs = switchEnt.GetPortDefinitions and switchEnt:GetPortDefinitions() or {}
+    local totalPorts = math.max(#portDefs, (switchEnt.GetPortCount and switchEnt:GetPortCount()) or 4)
+
+    for portNum = 1, totalPorts do
         local portData = switchEnt.Ports and switchEnt.Ports[portNum]
         if portData then
-            local dev = portData.device or portData.printer
+            local dev = portData.device or portData.printer or portData.switch
             if IsValid(dev) then
                 local devClass = dev:GetClass()
                 if isSwitch(dev) then
-                    -- Interconnected switch trunk on SFP Combo Port 3
+                    -- Interconnected switch trunk across this port
                     if not visited[dev] then
                         local trunkedDevices = GRID.Network.GetBroadcastDomain(dev, visited)
                         for _, devData in ipairs(trunkedDevices) do
@@ -134,7 +138,7 @@ function GRID.Network.GetBroadcastDomain(switchEnt, visited)
                         local isOnline = dev.GetIsOnline and dev:GetIsOnline()
                         local peers = dev.GetLinkedPeerCount and dev:GetLinkedPeerCount() or 0
                         local key = dev.GetEncryptionKey and dev:GetEncryptionKey() or "NONE"
-                        local portSpeed = (portNum == 3) and "10G SFP" or "1G Copper"
+                        local portSpeed = portData.is10G and "10G SFP" or "1G Copper"
                         table.insert(services, {
                             port = 443,
                             proto = "tcp",
@@ -160,18 +164,6 @@ function GRID.Network.GetBroadcastDomain(switchEnt, visited)
                         services = services
                     })
                 end
-            end
-        end
-    end
-
-    -- 3. Interconnected Switches via SFP Optical Trunk (Port 4)
-    local sfpData = switchEnt.Ports and switchEnt.Ports[4]
-    if sfpData then
-        local uplink = sfpData.device or sfpData.switch
-        if isSwitch(uplink) and not visited[uplink] then
-            local trunkedDevices = GRID.Network.GetBroadcastDomain(uplink, visited)
-            for _, devData in ipairs(trunkedDevices) do
-                table.insert(devices, devData)
             end
         end
     end

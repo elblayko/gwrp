@@ -101,7 +101,7 @@ function GM:PlayerDisconnected(ply)
             local isOwner = (ent.GRID_Owner == ply) or (ent:GetNWEntity("GRID_Owner") == ply) or (ent.PurchaserSteamID == ply:SteamID())
             if isOwner then
                 local c = ent:GetClass()
-                if string.StartWith(c, "grid_printer_") or c == "grid_resource_machine" or c == "grid_clinic_pod" or c == "grid_computer" or c == "grid_shipment" or c == "grid_network_switch" or c == "grid_wan_uplink" then
+                if string.StartWith(c, "grid_printer_") or c == "grid_resource_machine" or c == "grid_clinic_pod" or c == "grid_computer" or c == "grid_shipment" or string.StartWith(c, "grid_network_switch") or ent.IsNetworkSwitch or c == "grid_wan_uplink" then
                     ent:Remove()
                 end
             end

@@ -514,10 +514,22 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                 local nameW = surface.GetTextSize(entName)
                 local badgeW = surface.GetTextSize(qName) + 16
 
-                -- Up-Close Raycast UI: Layer-3 Network Switch
-                if ent:GetClass() == "grid_network_switch" then
-                    local cardW = 380
-                    local cardH = 96
+                -- Up-Close Raycast UI: Layer-3 Network Switch (Modular 4-Port / 7-Port+)
+                if ent.IsNetworkSwitch or ent:GetClass() == "grid_network_switch" or string.StartWith(ent:GetClass(), "grid_network_switch") then
+                    local defs = ent.GetPortDefinitions and ent:GetPortDefinitions()
+                    if not defs or #defs == 0 then
+                        defs = {
+                            { id = 1, type = "copper", name = "Port 1" },
+                            { id = 2, type = "copper", name = "Port 2" },
+                            { id = 3, type = "combo",  name = "Port 3" },
+                            { id = 4, type = "sfp",    name = "Port 4" }
+                        }
+                    end
+
+                    local numPorts = #defs
+                    local isMultiRow = numPorts > 4
+                    local cardW = isMultiRow and 470 or 380
+                    local cardH = isMultiRow and 124 or 96
                     local cardX = tagX - cardW / 2
 
                     draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
@@ -531,59 +543,102 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     draw.SimpleText(entName, "GRID_UI_Badge", cardX + badgeW + 16, tagY + 16, Color(248, 250, 252),
                         TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-                    -- 4 Ports Status Row: Ports 1..2 (Copper), Port 3 (SFP Combo 10G/1G), Port 4 (Dedicated SFP 10G)
-                    local p1 = ent.GetPort1Active and ent:GetPort1Active()
-                    local p2 = ent.GetPort2Active and ent:GetPort2Active()
-                    local p3 = ent.GetPort3Active and ent:GetPort3Active()
-                    local p3Is10G = ent.GetPort3Is10G and ent:GetPort3Is10G()
-                    local p4 = ent.GetPort4Active and ent:GetPort4Active()
+                    -- Dynamic Port Status Grid
+                    local activeCount = 0
+                    if not isMultiRow then
+                        -- Single row layout (<= 4 ports)
+                        local portW = math.floor((cardW - 20 - (numPorts - 1) * 6) / numPorts)
+                        local portH = 24
+                        local portY = tagY + 34
 
-                    local portW = 86
-                    local portH = 24
-                    local portY = tagY + 34
-                    local ports = {
-                        { name = "P1", active = p1, x = cardX + 10,  isSFP = false, is10G = false,   isCombo = false },
-                        { name = "P2", active = p2, x = cardX + 101, isSFP = false, is10G = false,   isCombo = false },
-                        { name = "P3", active = p3, x = cardX + 192, isSFP = true,  is10G = p3Is10G, isCombo = true },
-                        { name = "P4", active = p4, x = cardX + 283, isSFP = true,  is10G = true,    isCombo = false }
-                    }
+                        for idx, def in ipairs(defs) do
+                            local ptId = def.id or idx
+                            local active = ent.IsPortActive and ent:IsPortActive(ptId)
+                            local is10G = ent.IsPort10G and ent:IsPort10G(ptId)
+                            if active then activeCount = activeCount + 1 end
 
-                    for _, pt in ipairs(ports) do
-                        local bg, col, txt
-                        if pt.isCombo then
-                            if pt.active then
-                                bg = pt.is10G and Color(6, 182, 212, 35) or Color(16, 185, 129, 35)
-                                col = pt.is10G and Color(56, 189, 248) or Color(52, 211, 153)
-                                txt = pt.is10G and "P3: 10G" or "P3: 1G Cu"
+                            local ptX = cardX + 10 + (idx - 1) * (portW + 6)
+                            local bg, col, txt
+
+                            if def.type == "combo" then
+                                if active then
+                                    bg = is10G and Color(6, 182, 212, 35) or Color(16, 185, 129, 35)
+                                    col = is10G and Color(56, 189, 248) or Color(52, 211, 153)
+                                    txt = is10G and string.format("P%d: 10G", ptId) or string.format("P%d: 1G Cu", ptId)
+                                else
+                                    bg = Color(30, 41, 59, 140)
+                                    col = Color(100, 116, 139)
+                                    txt = string.format("P%d: COMBO", ptId)
+                                end
+                            elseif def.type == "sfp" then
+                                bg = active and Color(6, 182, 212, 35) or Color(30, 41, 59, 140)
+                                col = active and Color(56, 189, 248) or Color(100, 116, 139)
+                                txt = active and string.format("P%d: 10G", ptId) or string.format("P%d: SFP", ptId)
                             else
-                                bg = Color(30, 41, 59, 140)
-                                col = Color(100, 116, 139)
-                                txt = "P3: COMBO"
+                                bg = active and Color(16, 185, 129, 35) or Color(30, 41, 59, 140)
+                                col = active and Color(52, 211, 153) or Color(148, 163, 184)
+                                txt = active and string.format("P%d: LINK", ptId) or string.format("P%d: OPEN", ptId)
                             end
-                        elseif pt.isSFP then
-                            bg = pt.active and Color(6, 182, 212, 35) or Color(30, 41, 59, 140)
-                            col = pt.active and Color(56, 189, 248) or Color(100, 116, 139)
-                            txt = pt.active and "P4: 10G" or "P4: SFP"
-                        else
-                            bg = pt.active and Color(16, 185, 129, 35) or Color(30, 41, 59, 140)
-                            col = pt.active and Color(52, 211, 153) or Color(148, 163, 184)
-                            txt = pt.active and (pt.name .. ": LINK") or (pt.name .. ": OPEN")
-                        end
 
-                        draw.RoundedBox(4, pt.x, portY, portW, portH, bg)
-                        surface.SetDrawColor(col.r, col.g, col.b, 160)
-                        surface.DrawOutlinedRect(pt.x, portY, portW, portH, 1)
-                        draw.SimpleText(txt, "GRID_UI_Caption", pt.x + portW / 2, portY + 12, col, TEXT_ALIGN_CENTER,
-                            TEXT_ALIGN_CENTER)
+                            draw.RoundedBox(4, ptX, portY, portW, portH, bg)
+                            surface.SetDrawColor(col.r, col.g, col.b, 160)
+                            surface.DrawOutlinedRect(ptX, portY, portW, portH, 1)
+                            draw.SimpleText(txt, "GRID_UI_Caption", ptX + portW / 2, portY + 12, col, TEXT_ALIGN_CENTER,
+                                TEXT_ALIGN_CENTER)
+                        end
+                    else
+                        -- Multi-row layout (5+ ports, e.g. 7-port switch)
+                        local cols = math.ceil(numPorts / 2)
+                        local portW = math.floor((cardW - 24 - (cols - 1) * 6) / cols)
+                        local portH = 22
+
+                        for idx, def in ipairs(defs) do
+                            local ptId = def.id or idx
+                            local active = ent.IsPortActive and ent:IsPortActive(ptId)
+                            local is10G = ent.IsPort10G and ent:IsPort10G(ptId)
+                            if active then activeCount = activeCount + 1 end
+
+                            local row = (idx <= cols) and 0 or 1
+                            local colIdx = (idx <= cols) and (idx - 1) or (idx - cols - 1)
+                            local ptX = cardX + 12 + colIdx * (portW + 6)
+                            local ptY = tagY + 32 + row * (portH + 5)
+
+                            local bg, col, txt
+                            if def.type == "combo" then
+                                if active then
+                                    bg = is10G and Color(6, 182, 212, 35) or Color(16, 185, 129, 35)
+                                    col = is10G and Color(56, 189, 248) or Color(52, 211, 153)
+                                    txt = is10G and string.format("P%d: 10G", ptId) or string.format("P%d: 1G Cu", ptId)
+                                else
+                                    bg = Color(30, 41, 59, 140)
+                                    col = Color(100, 116, 139)
+                                    txt = string.format("P%d: COMBO", ptId)
+                                end
+                            elseif def.type == "sfp" then
+                                bg = active and Color(6, 182, 212, 35) or Color(30, 41, 59, 140)
+                                col = active and Color(56, 189, 248) or Color(100, 116, 139)
+                                txt = active and string.format("P%d: 10G", ptId) or string.format("P%d: SFP", ptId)
+                            else
+                                bg = active and Color(16, 185, 129, 35) or Color(30, 41, 59, 140)
+                                col = active and Color(52, 211, 153) or Color(148, 163, 184)
+                                txt = active and string.format("P%d: LINK", ptId) or string.format("P%d: OPEN", ptId)
+                            end
+
+                            draw.RoundedBox(4, ptX, ptY, portW, portH, bg)
+                            surface.SetDrawColor(col.r, col.g, col.b, 160)
+                            surface.DrawOutlinedRect(ptX, ptY, portW, portH, 1)
+                            draw.SimpleText(txt, "GRID_UI_Caption", ptX + portW / 2, ptY + 11, col, TEXT_ALIGN_CENTER,
+                                TEXT_ALIGN_CENTER)
+                        end
                     end
 
-                    -- Hardware Status Row
-                    local p3Status = p3 and (p3Is10G and "P3: 10G SFP Mode" or "P3: 1G Copper Mode") or
-                        "P3: SFP Combo Open"
-                    local p4Status = p4 and "P4: 10G Uplink UP" or "P4: 10G Uplink Open"
-                    local linksTxt = string.format("%s | %s", p3Status, p4Status)
+                    -- Bottom Status Summary Row
+                    local subnet = ent.GetSubnetID and ent:GetSubnetID() or 1
+                    local summaryY = isMultiRow and (tagY + 104) or (tagY + 75)
+                    local linksTxt = string.format("%d/%d Ports Active  •  Subnet: 192.168.%d.0/24  •  Gateway: 192.168.%d.1",
+                        activeCount, numPorts, subnet, subnet)
 
-                    draw.SimpleText(linksTxt, "GRID_UI_Caption", cardX + cardW / 2, tagY + 75, Color(203, 213, 225),
+                    draw.SimpleText(linksTxt, "GRID_UI_Caption", cardX + cardW / 2, summaryY, Color(203, 213, 225),
                         TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
                 -- Up-Close Raycast UI: Satellite WAN Uplink Gateway

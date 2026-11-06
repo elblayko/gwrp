@@ -1,9 +1,10 @@
 --[[
     entities/entities/grid_printer_silver/shared.lua
+    GridRP Silver Money Printer (Tier 2)
 --]]
 
 ENT.Type = "anim"
-ENT.Base = "grid_printer_bronze"
+ENT.Base = "grid_printer_base"
 ENT.PrintName = "Silver Money Printer"
 ENT.Author = "Toxic"
 ENT.Spawnable = true

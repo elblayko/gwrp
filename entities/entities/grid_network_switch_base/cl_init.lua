@@ -1,6 +1,7 @@
 --[[
-    entities/entities/grid_network_switch/cl_init.lua
-    GridRP 4-Port Layer-3 Network Switch Client Logic
+    entities/entities/grid_network_switch_base/cl_init.lua
+    GridRP Layer-3 Modular Network Switch Abstract Base Client Logic
+    Author: Toxic
 --]]
 
 include("shared.lua")
@@ -11,3 +12,4 @@ function ENT:Draw()
     self:DrawModel()
     render.SetColorModulation(1, 1, 1)
 end
+

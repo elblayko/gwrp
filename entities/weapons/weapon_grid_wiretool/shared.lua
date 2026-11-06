@@ -42,10 +42,17 @@ function SWEP:Initialize()
     self.SelectedEntity = nil
 end
 
+local function IsSwitch(ent)
+    if not IsValid(ent) then return false end
+    if ent.IsNetworkSwitch then return true end
+    local c = ent:GetClass()
+    return c == "grid_network_switch" or string.StartWith(c, "grid_network_switch")
+end
+
 local function IsValidNetworkTarget(ent)
     if not IsValid(ent) then return false end
+    if IsSwitch(ent) then return true end
     local class = ent:GetClass()
-    if class == "grid_network_switch" then return true end
     if string.StartWith(class, "grid_printer_") or ent.PrintAmount ~= nil then
         return true
     end
@@ -82,7 +89,7 @@ function SWEP:PrimaryAttack()
         self.SelectedEntity = ent
         self:SetNWEntity("GRID_WireSrc", ent)
         ply:EmitSound("buttons/button14.wav", 65, 110)
-        local label = (ent:GetClass() == "grid_network_switch") and "Network Switch" or (ent.PrintName or "Printer")
+        local label = IsSwitch(ent) and (ent.PrintName or "Network Switch") or (ent.PrintName or "Printer")
         GRID.Notify(ply, "Selected " .. label .. ". Now click the second device to link.", NOTIFY_GENERIC)
         return
     end
@@ -91,7 +98,7 @@ function SWEP:PrimaryAttack()
         if SERVER then
             self:SetNWEntity("GRID_WireSrc", ent)
             ply:EmitSound("buttons/button14.wav", 65, 110)
-            local label = (ent:GetClass() == "grid_network_switch") and "Network Switch" or (ent.PrintName or "Printer")
+            local label = IsSwitch(ent) and (ent.PrintName or "Network Switch") or (ent.PrintName or "Printer")
             GRID.Notify(ply, "Selected " .. label .. ". Now click the second device to link.", NOTIFY_GENERIC)
         end
         return
@@ -109,10 +116,10 @@ function SWEP:PrimaryAttack()
         return
     end
 
-    local isSwitch1 = (ent1:GetClass() == "grid_network_switch")
-    local isSwitch2 = (ent2:GetClass() == "grid_network_switch")
+    local isSwitch1 = IsSwitch(ent1)
+    local isSwitch2 = IsSwitch(ent2)
 
-    -- Case A: Switch-to-Switch interconnection via SFP 10G Ports (Port 4 or Port 3)
+    -- Case A: Switch-to-Switch interconnection via SFP / Trunk Ports
     if isSwitch1 and isSwitch2 then
         local maxFiberDist = GRID.Config.MaxFiberCableLength or 800
         if ent1:GetPos():DistToSqr(ent2:GetPos()) > (maxFiberDist * maxFiberDist) then
@@ -124,11 +131,11 @@ function SWEP:PrimaryAttack()
         end
 
         if SERVER then
-            local port1 = ent1.GetAvailableSwitchPort and ent1:GetAvailableSwitchPort() or (ent1.Ports[4] == nil and 4 or (ent1.Ports[3] == nil and 3 or nil))
-            local port2 = ent2.GetAvailableSwitchPort and ent2:GetAvailableSwitchPort() or (ent2.Ports[4] == nil and 4 or (ent2.Ports[3] == nil and 3 or nil))
+            local port1 = ent1.GetAvailableSwitchPort and ent1:GetAvailableSwitchPort()
+            local port2 = ent2.GetAvailableSwitchPort and ent2:GetAvailableSwitchPort()
 
             if not port1 then
-                GRID.Notify(ply, "First switch SFP ports (Ports 3 and 4) are both in use!", NOTIFY_ERROR)
+                GRID.Notify(ply, string.format("%s has no available SFP/Combo ports for uplink!", ent1.PrintName or "First switch"), NOTIFY_ERROR)
                 ply:EmitSound("buttons/button10.wav", 65, 100)
                 self.SelectedEntity = nil
                 self:SetNWEntity("GRID_WireSrc", NULL)
@@ -136,7 +143,7 @@ function SWEP:PrimaryAttack()
             end
 
             if not port2 then
-                GRID.Notify(ply, "Second switch SFP ports (Ports 3 and 4) are both in use!", NOTIFY_ERROR)
+                GRID.Notify(ply, string.format("%s has no available SFP/Combo ports for uplink!", ent2.PrintName or "Second switch"), NOTIFY_ERROR)
                 ply:EmitSound("buttons/button10.wav", 65, 100)
                 self.SelectedEntity = nil
                 self:SetNWEntity("GRID_WireSrc", NULL)
@@ -197,16 +204,17 @@ function SWEP:PrimaryAttack()
     end
 
     if SERVER then
-        local port = sw.GetAvailablePort and sw:GetAvailablePort(pr) or (sw.GetAvailableCopperPort and sw:GetAvailableCopperPort() or 1)
+        local port = sw.GetAvailablePort and sw:GetAvailablePort(pr) or (sw.GetAvailableCopperPort and sw:GetAvailableCopperPort())
         if not port then
-            GRID.Notify(ply, "Switch device ports are full (Ports 1-3 occupied)! Port 4 is dedicated to 10G switch uplinks.", NOTIFY_ERROR)
+            GRID.Notify(ply, string.format("All suitable ports on %s are occupied!", sw.PrintName or "Switch"), NOTIFY_ERROR)
             ply:EmitSound("buttons/button10.wav", 65, 100)
             self.SelectedEntity = nil
             self:SetNWEntity("GRID_WireSrc", NULL)
             return
         end
 
-        local is10G = (port == 3 and isWAN)
+        local portDef = sw.GetPortDefinition and sw:GetPortDefinition(port)
+        local is10G = (portDef and (portDef.type == "sfp" or (portDef.type == "combo" and isWAN)))
         local ropeCol = is10G and Color(0, 220, 255) or Color(205, 127, 50)
         local ropeWidth = is10G and 1.4 or 1.6
 
@@ -222,21 +230,24 @@ function SWEP:PrimaryAttack()
         )
 
         local connectFunc = sw.ConnectDevice or sw.ConnectPrinter
-        local success, assignedOrErr, assignedIP, assignedIs10G = connectFunc(sw, pr, rope)
+        local success, assignedOrErr, assignedIP, assignedIs10G = connectFunc(sw, pr, rope, port)
         if success then
             sw:EmitSound("ambient/energy/zap1.wav", 70, 115)
             pr:EmitSound("buttons/button9.wav", 70, 100)
             local ipInfo = assignedIP and (" (IP: " .. assignedIP .. ")") or ""
             local effInfo = (pr.PrintAmount ~= nil or string.find(pr:GetClass(), "printer") or pr:GetClass() == "grid_resource_machine") and string.format(" [%d%% eff]", pr.GetEfficiency and pr:GetEfficiency() or 60) or ""
 
+            local assignedDef = sw.GetPortDefinition and sw:GetPortDefinition(assignedOrErr)
             local modeTag
-            if assignedOrErr == 3 then
-                modeTag = assignedIs10G and " [Port 3: 10G SFP]" or " [Port 3: 1G Copper SFP]"
+            if assignedIs10G then
+                modeTag = string.format(" [Port %d: 10G SFP]", assignedOrErr)
+            elseif assignedDef and assignedDef.type == "combo" then
+                modeTag = string.format(" [Port %d: 1G Copper SFP]", assignedOrErr)
             else
                 modeTag = string.format(" [Copper Port %d]", assignedOrErr)
             end
 
-            GRID.Notify(ply, string.format("Linked %s to Switch%s%s%s!", pr.PrintName or "Device", modeTag, effInfo, ipInfo), NOTIFY_GENERIC)
+            GRID.Notify(ply, string.format("Linked %s to %s%s%s%s!", pr.PrintName or "Device", sw.PrintName or "Switch", modeTag, effInfo, ipInfo), NOTIFY_GENERIC)
         else
             if IsValid(rope) then rope:Remove() end
             GRID.Notify(ply, assignedOrErr or "Failed to connect", NOTIFY_ERROR)
@@ -265,10 +276,10 @@ function SWEP:SecondaryAttack()
     ply:SetAnimation(PLAYER_ATTACK1)
 
     if SERVER then
-        if ent:GetClass() == "grid_network_switch" then
+        if IsSwitch(ent) then
             ent:DisconnectAll()
             ent:EmitSound("physics/metal/metal_box_impact_bullet1.wav", 65, 100)
-            GRID.Notify(ply, "Disconnected all copper cables from switch.", NOTIFY_GENERIC)
+            GRID.Notify(ply, string.format("Disconnected all cables from %s.", ent.PrintName or "switch"), NOTIFY_GENERIC)
         else
             if ent.DisconnectFromSwitch then
                 ent:DisconnectFromSwitch()
@@ -319,8 +330,8 @@ if CLIENT then
 
         -- If an entity is currently selected, draw indicator line/beam
         if IsValid(srcEnt) then
-            local isSrcSwitch = (srcEnt:GetClass() == "grid_network_switch")
-            local isTargetSwitch = IsValid(ent) and (ent:GetClass() == "grid_network_switch")
+            local isSrcSwitch = IsSwitch(srcEnt)
+            local isTargetSwitch = IsValid(ent) and IsSwitch(ent)
             local isFiber = isSrcSwitch and isTargetSwitch
 
             local lineColor = isFiber and Color(0, 220, 255, 220) or Color(205, 127, 50, 200)

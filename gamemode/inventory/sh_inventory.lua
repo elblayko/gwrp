@@ -140,7 +140,7 @@ GRID.Inventory.Items = {
     },
 
     -- 2. Money Printers & Networking Appliances
-    ["grid_network_switch"] = {
+    ["grid_network_switch_4p"] = {
         name = "L3 Network Switch (2-Cu + 2-SFP)",
         type = "switch",
         subType = "Network Appliance",
@@ -148,6 +148,15 @@ GRID.Inventory.Items = {
         model = "models/props_lab/reciever01a.mdl",
         desc = "Layer-3 hardware switch featuring 2 dedicated copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink.",
         stats = "2x Copper + 2x SFP (Combo + Uplink) | Layer-3 Switch"
+    },
+    ["grid_network_switch_7p"] = {
+        name = "Enterprise L3 Switch (5-Cu + 2-SFP)",
+        type = "switch",
+        subType = "Enterprise Switch",
+        quality = 4, -- Epic
+        model = "models/props_lab/reciever01a.mdl",
+        desc = "High-density enterprise Layer-3 switch featuring 5 dedicated copper ports, Port 6 SFP combo (10G/1G), and Port 7 dedicated 10G SFP uplink transceiver.",
+        stats = "5x Copper + 2x SFP (Combo + Uplink) | Layer-3 Enterprise Switch"
     },
     ["grid_wan_uplink"] = {
         name = "Satellite WAN Uplink",

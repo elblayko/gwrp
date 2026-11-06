@@ -69,7 +69,8 @@ GRID.Config.EntityQualities = {
     ["grid_printer_bronze"] = { quality = 1, subType = "Passive Fabricator", stats = "Yield: $12 / 60s" },
     ["grid_printer_silver"] = { quality = 2, subType = "Commercial Fabricator", stats = "Yield: $30 / 60s" },
     ["grid_printer_diamond"] = { quality = 3, subType = "Industrial Fabricator", stats = "Yield: $75 / 60s" },
-    ["grid_network_switch"] = { quality = 2, subType = "Network Appliance", stats = "2x Cu + 2x SFP (10G/Cu Combo + 10G Uplink) | L3 Layer" },
+    ["grid_network_switch_4p"] = { quality = 2, subType = "Network Appliance", stats = "2x Cu + 2x SFP (10G/Cu Combo + 10G Uplink) | L3 Layer" },
+    ["grid_network_switch_7p"] = { quality = 4, subType = "Enterprise Switch", stats = "5x Cu + 1x Combo + 1x SFP (10G Uplink) | L3 Enterprise" },
     ["grid_computer"] = { quality = 3, subType = "Cyber Appliance", stats = "Layer-3 Terminal | Cloud Botnet C2" },
     ["grid_wan_uplink"] = { quality = 3, subType = "Wireless Gateway", stats = "Cloud Botnet Gateway | WPA3 L3 Mesh" },
     ["grid_module_undervolt"] = { quality = 3, subType = "Hardware Upgrade", stats = "+400% Lifespan | -75% Heat" },
@@ -406,10 +407,20 @@ GRID.ShopItems = {
         level = 2,
         cost = 120,
         type = "entity",
-        class = "grid_network_switch",
+        class = "grid_network_switch_4p",
         category = "networking",
         desc =
         "Layer-3 hardware switch featuring 2 copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink."
+    },
+    ["entity_network_switch_7p"] = {
+        name = "Enterprise L3 Switch (5-Cu + 2-SFP)",
+        level = 4,
+        cost = 240,
+        type = "entity",
+        class = "grid_network_switch_7p",
+        category = "networking",
+        desc =
+        "High-density enterprise Layer-3 switch featuring 5 dedicated copper ports, Port 6 SFP combo (10G/1G), and Port 7 dedicated 10G SFP uplink transceiver."
     },
     ["entity_computer"] = {
         name = "Personal Computer",
