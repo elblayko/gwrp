@@ -1162,11 +1162,12 @@ function GRID.Auction.RenderMyListingsTab(parent)
                 bx = bx + bw + 6
             end
 
-            local pX = w - 260
+            local hasCancel = GRID.Auction.IsTerminalSession and (inst.current_bid == 0)
+            local priceRightX = hasCancel and (w - 130) or (w - 20)
             local curB = inst.current_bid > 0 and inst.current_bid or inst.start_bid
-            draw.SimpleText("Current Bid: $" .. string.Comma(curB), "GRID_UI_Sub", pX, 22, Color(248, 250, 252))
+            draw.SimpleText("Current Bid: $" .. string.Comma(curB), "GRID_UI_Sub", priceRightX, 22, Color(248, 250, 252), TEXT_ALIGN_RIGHT)
             if inst.buyout_price > 0 then
-                draw.SimpleText("Buyout: $" .. string.Comma(inst.buyout_price), "GRID_UI_Sub", pX, 44, Color(74, 222, 128))
+                draw.SimpleText("Buyout: $" .. string.Comma(inst.buyout_price), "GRID_UI_Sub", priceRightX, 44, Color(74, 222, 128), TEXT_ALIGN_RIGHT)
             end
         end
 
@@ -1176,7 +1177,7 @@ function GRID.Auction.RenderMyListingsTab(parent)
             btnCancel:SetPos(card:GetWide() - 114, 25)
             btnCancel:SetText("")
             card.PerformLayout = function(s, w, h)
-                btnCancel:SetPos(w - 114, 25)
+                btnCancel:SetPos(w - 114, math.floor((h - 34) / 2))
             end
             btnCancel.Paint = function(s, w, h)
                 local isHov = s:IsHovered()
