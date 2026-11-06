@@ -137,14 +137,6 @@ function GM:ShutDown()
     print("[GridRP] All player, gang, and turf records committed to SQLite.")
 end
 
-function GM:PlayerSpawnSENT(ply, name)
-    if IsValid(ply) and (ply:IsAdmin() or ply:IsSuperAdmin()) then
-        return true
-    end
-    if not ply:CheckLimit("sents") then return false end
-    return true
-end
-
 function GM:PlayerSpawn(ply)
     ply:UnSpectate()
     player_manager.SetPlayerClass(ply, "player_sandbox")

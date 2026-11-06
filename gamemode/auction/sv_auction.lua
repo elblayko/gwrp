@@ -105,7 +105,8 @@ net.Receive("GRID_Auction_CreateListing", function(len, ply)
         return
     end
 
-    local invID = net.ReadUInt(32)
+    local bagIndex = net.ReadUInt(8)
+    local slotIndex = net.ReadUInt(8)
     local startBid = net.ReadUInt(32)
     local buyoutPrice = net.ReadUInt(32)
     local durationHours = net.ReadUInt(8)
@@ -124,13 +125,19 @@ net.Receive("GRID_Auction_CreateListing", function(len, ply)
         durationHours = 24
     end
 
+    local item = GRID.Database.GetInventorySlot(ply:SteamID(), bagIndex, slotIndex)
+    if not item then
+        GRID.Notify(ply, "The selected item was not found in your inventory!", NOTIFY_ERROR)
+        return
+    end
+
     local deposit = GRID.Auction.CalculateDeposit(startBid, durationHours)
     if ply:GetMoney() < deposit then
         GRID.Notify(ply, string.format("Insufficient funds! Required listing deposit: $%s", string.Comma(deposit)), NOTIFY_ERROR)
         return
     end
 
-    GRID.Database.CreateAuction(ply:SteamID(), ply:Nick(), invID, startBid, buyoutPrice, durationHours, deposit, function(success, status, aucID)
+    GRID.Database.CreateAuction(ply:SteamID(), ply:Nick(), bagIndex, slotIndex, startBid, buyoutPrice, durationHours, deposit, function(success, status, aucID)
         if not IsValid(ply) then return end
         if success then
             ply:AddMoney(-deposit)

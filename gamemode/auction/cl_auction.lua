@@ -971,7 +971,8 @@ function GRID.Auction.RenderCreateTab(parent)
             end
 
             net.Start("GRID_Auction_CreateListing")
-            net.WriteUInt(selectedInvItem.id, 32)
+            net.WriteUInt(selectedInvItem.bag_index or 0, 8)
+            net.WriteUInt(selectedInvItem.slot_index or 1, 8)
             net.WriteUInt(sBid, 32)
             net.WriteUInt(bPrice, 32)
             net.WriteUInt(curDuration, 8)
@@ -996,7 +997,7 @@ function GRID.Auction.RenderCreateTab(parent)
         btn:SetText("")
 
         btn.Paint = function(s, w, h)
-            local isSel = (selectedInvItem and selectedInvItem.id == item.id)
+            local isSel = (selectedInvItem and selectedInvItem.bag_index == item.bag_index and selectedInvItem.slot_index == item.slot_index)
             local isHov = s:IsHovered()
             draw.RoundedBox(6, 0, 0, w, h, isSel and Color(30, 41, 59, 255) or (isHov and Color(24, 32, 47, 200) or Color(17, 24, 39, 160)))
             if isSel then
