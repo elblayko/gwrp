@@ -47,13 +47,11 @@ end)
 -- 3. Network Handlers
 -- --------------------------------------------------------
 
--- A. Request Active Listings
-net.Receive("GRID_Auction_RequestListings", function(len, ply)
-    if not IsValid(ply) then return end
-    if not GRID.CheckRateLimit(ply, "auction_req_listings", 3) then return end
-
+function GRID.Auction.SendListings(target)
     GRID.Database.GetActiveAuctions(function(rows)
-        if not IsValid(ply) then return end
+        rows = rows or {}
+        if target and not IsValid(target) then return end
+
         net.Start("GRID_Auction_SendListings")
         net.WriteUInt(#rows, 16)
         for _, r in ipairs(rows) do
@@ -74,8 +72,21 @@ net.Receive("GRID_Auction_RequestListings", function(len, ply)
             net.WriteUInt(tonumber(r.buyout_price) or 0, 32)
             net.WriteUInt(tonumber(r.expires_at_unix) or 0, 32)
         end
-        net.Send(ply)
+
+        if target then
+            net.Send(target)
+        else
+            net.Broadcast()
+        end
     end)
+end
+
+-- A. Request Active Listings
+net.Receive("GRID_Auction_RequestListings", function(len, ply)
+    if not IsValid(ply) then return end
+    if not GRID.CheckRateLimit(ply, "auction_req_listings", 3) then return end
+
+    GRID.Auction.SendListings(ply)
 end)
 
 -- B. Request Market Metrics
@@ -152,6 +163,9 @@ net.Receive("GRID_Auction_CreateListing", function(len, ply)
             if GRID.Inventory and GRID.Inventory.Sync then
                 GRID.Inventory.Sync(ply)
             end
+
+            -- Sync updated active listings
+            GRID.Auction.SendListings(ply)
         else
             if status == "ERR_MAX_LISTINGS" then
                 GRID.Notify(ply, "You have reached the maximum of 10 active auction listings!", NOTIFY_ERROR)
@@ -255,6 +269,7 @@ net.Receive("GRID_Auction_Cancel", function(len, ply)
         if success then
             GRID.Notify(ply, "Auction cancelled. The listing deposit was forfeited, and the item was returned to your Collection Box.", NOTIFY_GENERIC)
             ply:EmitSound("buttons/button19.wav", 60, 100)
+            GRID.Auction.SendListings(ply)
         else
             if status == "ERR_HAS_BIDS" then
                 GRID.Notify(ply, "Cannot cancel auction: An active bid already exists on this item!", NOTIFY_ERROR)

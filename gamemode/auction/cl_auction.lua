@@ -1037,51 +1037,130 @@ function GRID.Auction.RenderCreateTab(parent)
                 return
             end
 
+            if not selectedInvItem then return end
+
+            local mySteamID = LocalPlayer():SteamID()
+            local myCount = 0
+            for _, a in ipairs(GRID.Auction.Listings or {}) do
+                if a.seller_steamid == mySteamID then myCount = myCount + 1 end
+            end
+            if myCount >= (GRID.Auction.MaxListingsPerPlayer or 10) then
+                Derma_Message("You have reached the maximum of 10 active auction listings!", "Listing Limit", "OK")
+                return
+            end
+
+            local postedItem = selectedInvItem
+            local bagIdx = postedItem.bag_index or 0
+            local slotIdx = postedItem.slot_index or 1
+
             net.Start("GRID_Auction_CreateListing")
-            net.WriteUInt(selectedInvItem.bag_index or 0, 8)
-            net.WriteUInt(selectedInvItem.slot_index or 1, 8)
+            net.WriteUInt(bagIdx, 8)
+            net.WriteUInt(slotIdx, 8)
             net.WriteUInt(sBid, 32)
             net.WriteUInt(bPrice, 32)
             net.WriteUInt(curDuration, 8)
             net.SendToServer()
 
+            -- 1. Remove the item immediately from the client inventory data
+            if GRID.Inventory and GRID.Inventory.ClientItems then
+                for idx, itm in ipairs(GRID.Inventory.ClientItems) do
+                    if itm.bag_index == bagIdx and itm.slot_index == slotIdx then
+                        table.remove(GRID.Inventory.ClientItems, idx)
+                        break
+                    end
+                end
+            end
+            if GRID.Inventory and GRID.Inventory.Slots then
+                GRID.Inventory.Slots[bagIdx .. "_" .. slotIdx] = nil
+            end
+
+            -- 2. Increment "My auctions" count by immediately registering the new listing in client active listings
+            GRID.Auction.Listings = GRID.Auction.Listings or {}
+            local rawItemData = postedItem.item_data
+            if type(rawItemData) == "table" then
+                rawItemData = util.TableToJSON(rawItemData)
+            end
+            table.insert(GRID.Auction.Listings, 1, {
+                auction_id = 0,
+                seller_steamid = mySteamID,
+                seller_name = LocalPlayer():Nick(),
+                item_id = postedItem.item_id,
+                item_type = postedItem.item_type or "generic",
+                amount = tonumber(postedItem.amount) or 1,
+                item_data = rawItemData or "{}",
+                start_bid = sBid,
+                current_bid = 0,
+                high_bidder_name = "",
+                buyout_price = bPrice,
+                expires_at_unix = os.time() + (curDuration * 3600)
+            })
+
+            -- 3. Clear selection, re-populate left pane bag list, and reset form
             selectedInvItem = nil
             RefreshListingForm()
+            if GRID.Auction.RefreshBagItems then
+                GRID.Auction.RefreshBagItems()
+            end
         end
     end
 
     -- Populate Bag Items in Left Pane
-    local playerItems = GRID.Inventory and GRID.Inventory.ClientItems or {}
-    for _, item in ipairs(playerItems) do
-        local def = GRID.Inventory and GRID.Inventory.Items and GRID.Inventory.Items[item.item_id]
-        local itemName = def and def.name or item.item_id
-        local qualCol = GRID.Inventory and GRID.Inventory.GetQualityColor and GRID.Inventory.GetQualityColor(def and def.quality or 1) or Color(248, 250, 252)
+    local function PopulateBagItems()
+        if not IsValid(invScroll) then return end
+        invScroll:Clear()
 
-        local btn = invScroll:Add("DButton")
-        btn:Dock(TOP)
-        btn:DockMargin(0, 0, 0, 6)
-        btn:SetTall(52)
-        btn:SetText("")
+        local playerItems = GRID.Inventory and GRID.Inventory.ClientItems or {}
+        local hasItems = false
 
-        btn.Paint = function(s, w, h)
-            local isSel = (selectedInvItem and selectedInvItem.bag_index == item.bag_index and selectedInvItem.slot_index == item.slot_index)
-            local isHov = s:IsHovered()
-            draw.RoundedBox(6, 0, 0, w, h, isSel and Color(30, 41, 59, 255) or (isHov and Color(24, 32, 47, 200) or Color(17, 24, 39, 160)))
-            if isSel then
-                draw.RoundedBox(2, 0, 6, 4, h - 12, Color(6, 182, 212))
+        for _, item in ipairs(playerItems) do
+            hasItems = true
+            local def = GRID.Inventory and GRID.Inventory.Items and GRID.Inventory.Items[item.item_id]
+            local itemName = def and def.name or item.item_id
+            local qualCol = GRID.Inventory and GRID.Inventory.GetQualityColor and GRID.Inventory.GetQualityColor(def and def.quality or 1) or Color(248, 250, 252)
+
+            local btn = invScroll:Add("DButton")
+            btn:Dock(TOP)
+            btn:DockMargin(0, 0, 0, 6)
+            btn:SetTall(52)
+            btn:SetText("")
+
+            btn.Paint = function(s, w, h)
+                local isSel = (selectedInvItem and selectedInvItem.bag_index == item.bag_index and selectedInvItem.slot_index == item.slot_index)
+                local isHov = s:IsHovered()
+                draw.RoundedBox(6, 0, 0, w, h, isSel and Color(30, 41, 59, 255) or (isHov and Color(24, 32, 47, 200) or Color(17, 24, 39, 160)))
+                if isSel then
+                    draw.RoundedBox(2, 0, 6, 4, h - 12, Color(6, 182, 212))
+                end
+
+                draw.RoundedBox(3, 12, 14, 6, 6, qualCol)
+                draw.SimpleText(itemName, "GRID_UI_Sub", 26, 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(string.format("Bag %d | Slot %d", item.bag_index or 0, item.slot_index or 1), "GRID_UI_Caption", 26, 36, Color(148, 163, 184))
             end
 
-            draw.RoundedBox(3, 12, 14, 6, 6, qualCol)
-            draw.SimpleText(itemName, "GRID_UI_Sub", 26, 16, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText(string.format("Bag %d | Slot %d", item.bag_index or 0, item.slot_index or 1), "GRID_UI_Caption", 26, 36, Color(148, 163, 184))
+            btn.DoClick = function()
+                selectedInvItem = item
+                RefreshListingForm()
+            end
         end
 
-        btn.DoClick = function()
-            selectedInvItem = item
-            RefreshListingForm()
+        if not hasItems then
+            local empty = invScroll:Add("DLabel")
+            empty:Dock(TOP)
+            empty:DockMargin(16, 24, 16, 0)
+            empty:SetFont("GRID_UI_Caption")
+            empty:SetTextColor(Color(148, 163, 184))
+            empty:SetText("No items found in your bag.")
+            empty:SetContentAlignment(5)
         end
     end
 
+    GRID.Auction.RefreshBagItems = function()
+        if IsValid(invScroll) then
+            PopulateBagItems()
+        end
+    end
+
+    PopulateBagItems()
     RefreshListingForm()
 end
 
@@ -1194,6 +1273,16 @@ function GRID.Auction.RenderMyListingsTab(parent)
                         net.Start("GRID_Auction_Cancel")
                         net.WriteUInt(inst.auction_id, 32)
                         net.SendToServer()
+
+                        for idx, a in ipairs(GRID.Auction.Listings or {}) do
+                            if a.auction_id == inst.auction_id then
+                                table.remove(GRID.Auction.Listings, idx)
+                                break
+                            end
+                        end
+                        if GRID.Auction.RefreshCurrentTab then
+                            GRID.Auction.RefreshCurrentTab()
+                        end
                     end,
                     "Keep Auction", function() end
                 )
@@ -1316,3 +1405,13 @@ function GRID.Auction.RenderCollectionTab(parent)
         end
     end
 end
+
+-- --------------------------------------------------------
+-- 9. Automatic Inventory Sync Integration
+-- --------------------------------------------------------
+
+hook.Add("GRID_InventorySynced", "GRID_Auction_SyncBag", function()
+    if IsValid(GRID.Auction.MainFrame) and GRID.Auction.ActiveTab == "create" and GRID.Auction.RefreshBagItems then
+        GRID.Auction.RefreshBagItems()
+    end
+end)
