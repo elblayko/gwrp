@@ -161,6 +161,23 @@ PARTITION BY RANGE (unix_ts) (
     PARTITION p_future  VALUES LESS THAN MAXVALUE
 );
 
+-- Persistent Map Entities
+CREATE TABLE IF NOT EXISTS grid_map_entities (
+    spawn_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    map_name VARCHAR(64) NOT NULL,
+    class_name VARCHAR(64) NOT NULL,
+    pos_x FLOAT NOT NULL,
+    pos_y FLOAT NOT NULL,
+    pos_z FLOAT NOT NULL,
+    ang_p FLOAT NOT NULL,
+    ang_y FLOAT NOT NULL,
+    ang_r FLOAT NOT NULL,
+    placed_by VARCHAR(20) NOT NULL,
+    custom_data JSON DEFAULT NULL,
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_map_name (map_name)
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;
+
 -- --------------------------------------------------------
 -- 2. Analytical & Dashboard Views (100% Analytical Reads)
 -- --------------------------------------------------------
@@ -320,6 +337,10 @@ SELECT
     END), 0) AS sold_volume_24h
 FROM grid_auctions a
 GROUP BY a.item_id;
+
+CREATE OR REPLACE VIEW v_grid_map_spawns AS
+SELECT spawn_id, map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data
+FROM grid_map_entities;
 
 -- --------------------------------------------------------
 -- 3. Stored Procedures (100% Writes via MariaDB Procedures)
@@ -1250,6 +1271,43 @@ BEGIN
     END LOOP;
 
     CLOSE cur;
+END$$
+
+-- Persistent Map Entities Procedures
+CREATE OR REPLACE PROCEDURE grid_save_map_entity(
+    IN p_spawn_id INT UNSIGNED,
+    IN p_map VARCHAR(64),
+    IN p_class VARCHAR(64),
+    IN p_x FLOAT, IN p_y FLOAT, IN p_z FLOAT,
+    IN p_p FLOAT, IN p_yaw FLOAT, IN p_r FLOAT,
+    IN p_admin_sid VARCHAR(20),
+    IN p_custom_data JSON
+)
+BEGIN
+    IF p_spawn_id > 0 THEN
+        UPDATE grid_map_entities
+        SET pos_x = p_x, pos_y = p_y, pos_z = p_z,
+            ang_p = p_p, ang_y = p_yaw, ang_r = p_r,
+            custom_data = COALESCE(p_custom_data, custom_data)
+        WHERE spawn_id = p_spawn_id;
+        SELECT p_spawn_id AS spawn_id;
+    ELSE
+        INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data)
+        VALUES (p_map, p_class, p_x, p_y, p_z, p_p, p_yaw, p_r, p_admin_sid, p_custom_data);
+        SELECT LAST_INSERT_ID() AS spawn_id;
+    END IF;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_delete_map_entity(IN p_spawn_id INT UNSIGNED)
+BEGIN
+    DELETE FROM grid_map_entities WHERE spawn_id = p_spawn_id;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_copy_map_spawns(IN p_old_map VARCHAR(64), IN p_new_map VARCHAR(64))
+BEGIN
+    INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data)
+    SELECT p_new_map, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data
+    FROM grid_map_entities WHERE map_name = p_old_map;
 END$$
 
 DELIMITER ;

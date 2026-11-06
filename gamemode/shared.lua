@@ -24,6 +24,7 @@ include("factions/sh_factions.lua")
 include("turf/sh_turf.lua")
 include("crafting/sh_crafting.lua")
 include("core/sh_scavenge_config.lua")
+include("mapspawns/sh_map_spawns.lua")
 
 function GM:Initialize()
     print("[GridRP] Initializing GridRP by Juicebox...")

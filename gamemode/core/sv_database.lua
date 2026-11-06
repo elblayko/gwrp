@@ -328,6 +328,29 @@ GRID.Database.MariaDBDirectProcedures = {
     grid_set_setting = function(p, run)
         run(GRID.Database.FormatQuery("INSERT INTO grid_settings (`key`, `val`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `val` = VALUES(`val`);", p))
     end,
+    grid_save_map_entity = function(p, run)
+        local spawnId = tonumber(p[1]) or 0
+        if spawnId > 0 then
+            run(GRID.Database.FormatQuery(
+                "UPDATE grid_map_entities SET pos_x = ?, pos_y = ?, pos_z = ?, ang_p = ?, ang_y = ?, ang_r = ?, custom_data = COALESCE(?, custom_data) WHERE spawn_id = ?;",
+                { p[4], p[5], p[6], p[7], p[8], p[9], p[11], spawnId }
+            ))
+        else
+            run(GRID.Database.FormatQuery(
+                "INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                { p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11] }
+            ))
+        end
+    end,
+    grid_delete_map_entity = function(p, run)
+        run(GRID.Database.FormatQuery("DELETE FROM grid_map_entities WHERE spawn_id = ?;", { p[1] }))
+    end,
+    grid_copy_map_spawns = function(p, run)
+        run(GRID.Database.FormatQuery(
+            "INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data) SELECT ?, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data FROM grid_map_entities WHERE map_name = ?;",
+            { p[2], p[1] }
+        ))
+    end,
 }
 
 -- Direct MariaDB SQL queries for views, used if the DB user lacks CREATE VIEW privileges or if SQLite is active.
@@ -339,6 +362,7 @@ GRID.Database.DirectViews = {
     v_map_turfs = "grid_turfs",
     v_settings = "grid_settings",
     v_auction_metrics = "(SELECT a.item_id, MIN(CASE WHEN a.status = 'ACTIVE' AND a.buyout_price > 0 THEN a.buyout_price ELSE NULL END) AS min_active_buyout, COUNT(CASE WHEN a.status = 'ACTIVE' THEN 1 ELSE NULL END) AS active_listings_count, ROUND(AVG(CASE WHEN a.status = 'SOLD' AND a.closed_at_unix >= (strftime('%s', 'now') - 604800) THEN MAX(a.current_bid, a.buyout_price) ELSE NULL END)) AS avg_sale_price_7d, COALESCE(SUM(CASE WHEN a.status = 'SOLD' AND a.closed_at_unix >= (strftime('%s', 'now') - 86400) THEN a.amount ELSE 0 END), 0) AS sold_volume_24h FROM grid_auctions a GROUP BY a.item_id) AS v_auction_metrics",
+    v_grid_map_spawns = "grid_map_entities",
 }
 
 -- SQLite has no stored procedures (no CALL). Emulate the ones needed for local dev.
@@ -367,6 +391,27 @@ GRID.Database.SQLiteProcedures = {
     grid_save_player_buff = "INSERT OR REPLACE INTO grid_player_buffs (steamid, buff_id, duration, remaining, stacks, applied_at, expires_at_unix, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?);",
     grid_delete_player_buff = "DELETE FROM grid_player_buffs WHERE steamid = ? AND buff_id = ?;",
     grid_clear_player_buffs = "DELETE FROM grid_player_buffs WHERE steamid = ?;",
+    grid_save_map_entity = function(p)
+        local spawnId = tonumber(p[1]) or 0
+        if spawnId > 0 then
+            return GRID.Database.FormatQuery(
+                "UPDATE grid_map_entities SET pos_x = ?, pos_y = ?, pos_z = ?, ang_p = ?, ang_y = ?, ang_r = ?, custom_data = COALESCE(?, custom_data) WHERE spawn_id = ?;",
+                { p[4], p[5], p[6], p[7], p[8], p[9], p[11], spawnId }
+            )
+        else
+            return GRID.Database.FormatQuery(
+                "INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
+                { p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11] }
+            )
+        end
+    end,
+    grid_delete_map_entity = "DELETE FROM grid_map_entities WHERE spawn_id = ?;",
+    grid_copy_map_spawns = function(p)
+        return GRID.Database.FormatQuery(
+            "INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data) SELECT ?, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data FROM grid_map_entities WHERE map_name = ?;",
+            { p[2], p[1] }
+        )
+    end,
 }
 GRID.Database.SQLiteWarned = GRID.Database.SQLiteWarned or {}
 
@@ -597,7 +642,23 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             claimed TINYINT(1) NOT NULL DEFAULT 0,
             claimed_at_unix INT UNSIGNED NULL,
             INDEX idx_collection_claim (steamid, claimed)
-        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]]
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_map_entities (
+            spawn_id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            map_name VARCHAR(64) NOT NULL,
+            class_name VARCHAR(64) NOT NULL,
+            pos_x FLOAT NOT NULL,
+            pos_y FLOAT NOT NULL,
+            pos_z FLOAT NOT NULL,
+            ang_p FLOAT NOT NULL,
+            ang_y FLOAT NOT NULL,
+            ang_r FLOAT NOT NULL,
+            placed_by VARCHAR(20) NOT NULL,
+            custom_data JSON DEFAULT NULL,
+            updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            INDEX idx_map_name (map_name)
+        ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;]]
     }
 
     local viewDDLs = {
@@ -655,7 +716,10 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
                     ELSE 0 
                 END), 0) AS sold_volume_24h
             FROM grid_auctions a
-            GROUP BY a.item_id;]]
+            GROUP BY a.item_id;]],
+        [[CREATE OR REPLACE VIEW v_grid_map_spawns AS
+            SELECT spawn_id, map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data
+            FROM grid_map_entities;]]
     }
 
     local procDDLs = {
@@ -1146,6 +1210,36 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
                 END IF;
             END LOOP;
             CLOSE cur;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_save_map_entity(
+            IN p_spawn_id INT UNSIGNED,
+            IN p_map VARCHAR(64),
+            IN p_class VARCHAR(64),
+            IN p_x FLOAT, IN p_y FLOAT, IN p_z FLOAT,
+            IN p_p FLOAT, IN p_yaw FLOAT, IN p_r FLOAT,
+            IN p_admin_sid VARCHAR(20),
+            IN p_custom_data JSON
+        ) BEGIN
+            IF p_spawn_id > 0 THEN
+                UPDATE grid_map_entities
+                SET pos_x = p_x, pos_y = p_y, pos_z = p_z,
+                    ang_p = p_p, ang_y = p_yaw, ang_r = p_r,
+                    custom_data = COALESCE(p_custom_data, custom_data)
+                WHERE spawn_id = p_spawn_id;
+                SELECT p_spawn_id AS spawn_id;
+            ELSE
+                INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data)
+                VALUES (p_map, p_class, p_x, p_y, p_z, p_p, p_yaw, p_r, p_admin_sid, p_custom_data);
+                SELECT LAST_INSERT_ID() AS spawn_id;
+            END IF;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_delete_map_entity(IN p_spawn_id INT UNSIGNED) BEGIN
+            DELETE FROM grid_map_entities WHERE spawn_id = p_spawn_id;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_copy_map_spawns(IN p_old_map VARCHAR(64), IN p_new_map VARCHAR(64)) BEGIN
+            INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data)
+            SELECT p_new_map, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data
+            FROM grid_map_entities WHERE map_name = p_old_map;
         END]]
     }
 
@@ -1324,6 +1418,20 @@ function GRID.Database.InitSQLiteFallback()
             created_at_unix INTEGER,
             claimed INTEGER DEFAULT 0,
             claimed_at_unix INTEGER
+        );
+        CREATE TABLE IF NOT EXISTS grid_map_entities (
+            spawn_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            map_name TEXT NOT NULL,
+            class_name TEXT NOT NULL,
+            pos_x REAL NOT NULL,
+            pos_y REAL NOT NULL,
+            pos_z REAL NOT NULL,
+            ang_p REAL NOT NULL,
+            ang_y REAL NOT NULL,
+            ang_r REAL NOT NULL,
+            placed_by TEXT NOT NULL,
+            custom_data TEXT DEFAULT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
     ]])
 
@@ -2693,4 +2801,75 @@ function GRID.Database.ProcessAuctionExpirations(callback)
         if callback then callback() end
     end)
 end
+
+-- ========================================================
+-- 10. PERSISTENT MAP ENTITIES (GRID.MapSpawns)
+-- ========================================================
+
+function GRID.Database.SaveMapEntity(spawnId, mapName, className, pos, ang, adminSid, customData, callback, errback)
+    spawnId = tonumber(spawnId) or 0
+    local customJson = customData and (istable(customData) and util.TableToJSON(customData) or tostring(customData)) or nil
+    local params = {
+        spawnId,
+        string.lower(mapName),
+        className,
+        pos.x, pos.y, pos.z,
+        ang.p, ang.y, ang.r,
+        adminSid or "CONSOLE",
+        customJson
+    }
+
+    GRID.Database.CallProcedure("grid_save_map_entity", params, function(rows)
+        local newId = spawnId
+        if rows and rows[1] and rows[1].spawn_id then
+            newId = tonumber(rows[1].spawn_id) or newId
+        elseif (not newId or newId == 0) and GRID.Database.UseSQLiteFallback then
+            local lastRow = sql.QueryRow("SELECT last_insert_rowid() AS spawn_id;")
+            if lastRow and lastRow.spawn_id then
+                newId = tonumber(lastRow.spawn_id) or newId
+            end
+        end
+        if callback then callback(newId) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID MapSpawns DB ERROR] SaveMapEntity failed: %s\n", tostring(err)))
+        if errback then errback(err) end
+    end)
+end
+
+function GRID.Database.DeleteMapEntity(spawnId, callback, errback)
+    spawnId = tonumber(spawnId) or 0
+    if spawnId <= 0 then
+        if callback then callback() end
+        return
+    end
+
+    GRID.Database.CallProcedure("grid_delete_map_entity", { spawnId }, function()
+        if callback then callback() end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID MapSpawns DB ERROR] DeleteMapEntity failed for ID %d: %s\n", spawnId, tostring(err)))
+        if errback then errback(err) end
+    end)
+end
+
+function GRID.Database.LoadMapEntities(mapName, callback, errback)
+    local mapKey = string.lower(mapName)
+    GRID.Database.QueryView("v_grid_map_spawns", "map_name = ?", { mapKey }, function(rows)
+        if callback then callback(rows or {}) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID MapSpawns DB ERROR] LoadMapEntities failed for map '%s': %s\n", mapKey, tostring(err)))
+        if errback then errback(err) end
+    end)
+end
+
+function GRID.Database.CopyMapEntities(oldMap, newMap, callback, errback)
+    local oldKey = string.lower(oldMap)
+    local newKey = string.lower(newMap)
+    GRID.Database.CallProcedure("grid_copy_map_spawns", { oldKey, newKey }, function(data)
+        if callback then callback(data) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID MapSpawns DB ERROR] CopyMapEntities failed from '%s' to '%s': %s\n", oldKey, newKey, tostring(err)))
+        if errback then errback(err) end
+    end)
+end
+
 
