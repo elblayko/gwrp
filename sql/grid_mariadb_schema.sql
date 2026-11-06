@@ -96,6 +96,47 @@ CREATE TABLE IF NOT EXISTS grid_player_buffs (
     PRIMARY KEY (steamid, buff_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Auction House Tables
+CREATE TABLE IF NOT EXISTS grid_auctions (
+    auction_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    seller_steamid VARCHAR(20) NOT NULL,
+    seller_name VARCHAR(64) NOT NULL,
+    item_id VARCHAR(64) NOT NULL,
+    item_type VARCHAR(32) NOT NULL DEFAULT 'generic',
+    amount INT UNSIGNED NOT NULL DEFAULT 1,
+    item_data JSON NULL,
+    start_bid BIGINT UNSIGNED NOT NULL,
+    current_bid BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    high_bidder_steamid VARCHAR(20) NULL,
+    high_bidder_name VARCHAR(64) NULL,
+    buyout_price BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    deposit_amount BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    status ENUM('ACTIVE', 'SOLD', 'EXPIRED', 'CANCELLED') NOT NULL DEFAULT 'ACTIVE',
+    duration_hours TINYINT UNSIGNED NOT NULL DEFAULT 24,
+    created_at_unix INT UNSIGNED NOT NULL,
+    expires_at_unix INT UNSIGNED NOT NULL,
+    closed_at_unix INT UNSIGNED NULL,
+    INDEX idx_auction_status_expires (status, expires_at_unix),
+    INDEX idx_auction_item (item_id, status),
+    INDEX idx_auction_seller (seller_steamid, status),
+    INDEX idx_auction_bidder (high_bidder_steamid, status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS grid_auction_collection (
+    collection_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    steamid VARCHAR(20) NOT NULL,
+    item_id VARCHAR(64) NOT NULL,
+    item_type VARCHAR(32) NOT NULL DEFAULT 'generic',
+    amount INT UNSIGNED NOT NULL DEFAULT 1,
+    item_data JSON NULL,
+    source_reason ENUM('WON_AUCTION', 'EXPIRED_AUCTION', 'CANCELLED_AUCTION') NOT NULL,
+    source_auction_id BIGINT UNSIGNED NOT NULL,
+    created_at_unix INT UNSIGNED NOT NULL,
+    claimed TINYINT(1) NOT NULL DEFAULT 0,
+    claimed_at_unix INT UNSIGNED NULL,
+    INDEX idx_collection_claim (steamid, claimed)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- High-Performance Telemetry Table (Compound B-Trees + Monthly Range Partitioning)
 CREATE TABLE IF NOT EXISTS grid_telemetry (
     log_id BIGINT UNSIGNED AUTO_INCREMENT,
@@ -258,6 +299,27 @@ SELECT
 FROM grid_telemetry
 WHERE category = 'COMBAT'
 GROUP BY action_type;
+
+-- Streamlined Market Statistics View per Base Item
+CREATE OR REPLACE VIEW v_auction_metrics AS
+SELECT 
+    a.item_id,
+    MIN(CASE WHEN a.status = 'ACTIVE' AND a.buyout_price > 0 THEN a.buyout_price ELSE NULL END) AS min_active_buyout,
+    COUNT(CASE WHEN a.status = 'ACTIVE' THEN 1 ELSE NULL END) AS active_listings_count,
+    ROUND(AVG(CASE 
+        WHEN a.status = 'SOLD' 
+         AND a.closed_at_unix >= (UNIX_TIMESTAMP() - 604800) 
+        THEN GREATEST(a.current_bid, a.buyout_price) 
+        ELSE NULL 
+    END)) AS avg_sale_price_7d,
+    COALESCE(SUM(CASE 
+        WHEN a.status = 'SOLD' 
+         AND a.closed_at_unix >= (UNIX_TIMESTAMP() - 86400) 
+        THEN a.amount 
+        ELSE 0 
+    END), 0) AS sold_volume_24h
+FROM grid_auctions a
+GROUP BY a.item_id;
 
 -- --------------------------------------------------------
 -- 3. Stored Procedures (100% Writes via MariaDB Procedures)
@@ -730,6 +792,464 @@ BEGIN
     INSERT INTO grid_settings (`key`, `val`)
     VALUES (p_key, p_val)
     ON DUPLICATE KEY UPDATE `val` = p_val;
+END$$
+
+-- --------------------------------------------------------
+-- Auction House Stored Procedures
+-- --------------------------------------------------------
+
+CREATE OR REPLACE PROCEDURE grid_auction_create(
+    IN p_seller_steamid VARCHAR(20),
+    IN p_seller_name VARCHAR(64),
+    IN p_inv_id BIGINT UNSIGNED,
+    IN p_start_bid BIGINT UNSIGNED,
+    IN p_buyout_price BIGINT UNSIGNED,
+    IN p_duration_hours TINYINT UNSIGNED,
+    IN p_deposit_amount BIGINT UNSIGNED,
+    IN p_now_unix INT UNSIGNED,
+    OUT p_out_status VARCHAR(32),
+    OUT p_out_auction_id BIGINT UNSIGNED
+)
+BEGIN
+    DECLARE v_active_count INT DEFAULT 0;
+    DECLARE v_item_id VARCHAR(64);
+    DECLARE v_item_type VARCHAR(32);
+    DECLARE v_amount INT;
+    DECLARE v_item_data JSON;
+    DECLARE v_seller_money BIGINT DEFAULT 0;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_out_status = 'ERROR_SQL';
+        SET p_out_auction_id = 0;
+    END;
+
+    START TRANSACTION;
+
+    SELECT COUNT(*) INTO v_active_count
+    FROM grid_auctions
+    WHERE seller_steamid = p_seller_steamid AND status = 'ACTIVE';
+
+    IF v_active_count >= 10 THEN
+        SET p_out_status = 'ERR_MAX_LISTINGS';
+        SET p_out_auction_id = 0;
+        ROLLBACK;
+    ELSE
+        SELECT money INTO v_seller_money
+        FROM grid_players
+        WHERE steamid = p_seller_steamid
+        FOR UPDATE;
+
+        IF v_seller_money < p_deposit_amount THEN
+            SET p_out_status = 'ERR_INSUFFICIENT_FUNDS';
+            SET p_out_auction_id = 0;
+            ROLLBACK;
+        ELSE
+            SELECT item_id, item_type, amount, item_data
+            INTO v_item_id, v_item_type, v_amount, v_item_data
+            FROM grid_inventory
+            WHERE id = p_inv_id AND steamid = p_seller_steamid
+            FOR UPDATE;
+
+            IF v_item_id IS NULL THEN
+                SET p_out_status = 'ERR_ITEM_NOT_FOUND';
+                SET p_out_auction_id = 0;
+                ROLLBACK;
+            ELSE
+                DELETE FROM grid_inventory WHERE id = p_inv_id;
+
+                UPDATE grid_players
+                SET money = money - p_deposit_amount
+                WHERE steamid = p_seller_steamid;
+
+                INSERT INTO grid_auctions (
+                    seller_steamid, seller_name, item_id, item_type, amount, item_data,
+                    start_bid, current_bid, buyout_price, deposit_amount, status,
+                    duration_hours, created_at_unix, expires_at_unix
+                ) VALUES (
+                    p_seller_steamid, p_seller_name, v_item_id, v_item_type, v_amount, v_item_data,
+                    p_start_bid, 0, p_buyout_price, p_deposit_amount, 'ACTIVE',
+                    p_duration_hours, p_now_unix, p_now_unix + (p_duration_hours * 3600)
+                );
+
+                SET p_out_auction_id = LAST_INSERT_ID();
+                SET p_out_status = 'SUCCESS';
+
+                INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, numeric_value, metadata)
+                VALUES (p_now_unix, 'ECONOMY', 'AUCTION_LIST', p_seller_steamid, p_deposit_amount, JSON_OBJECT('item_id', v_item_id, 'auction_id', p_out_auction_id, 'buyout', p_buyout_price, 'start_bid', p_start_bid));
+
+                COMMIT;
+            END IF;
+        END IF;
+    END IF;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_auction_bid(
+    IN p_auction_id BIGINT UNSIGNED,
+    IN p_bidder_steamid VARCHAR(20),
+    IN p_bidder_name VARCHAR(64),
+    IN p_bid_amount BIGINT UNSIGNED,
+    IN p_now_unix INT UNSIGNED,
+    OUT p_out_status VARCHAR(32)
+)
+BEGIN
+    DECLARE v_seller_steamid VARCHAR(20);
+    DECLARE v_status VARCHAR(16);
+    DECLARE v_expires_at_unix INT UNSIGNED;
+    DECLARE v_start_bid BIGINT UNSIGNED;
+    DECLARE v_current_bid BIGINT UNSIGNED;
+    DECLARE v_buyout_price BIGINT UNSIGNED;
+    DECLARE v_prev_bidder VARCHAR(20);
+    DECLARE v_bidder_money BIGINT;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_out_status = 'ERROR_SQL';
+    END;
+
+    START TRANSACTION;
+
+    SELECT seller_steamid, status, expires_at_unix, start_bid, current_bid, buyout_price, high_bidder_steamid
+    INTO v_seller_steamid, v_status, v_expires_at_unix, v_start_bid, v_current_bid, v_buyout_price, v_prev_bidder
+    FROM grid_auctions
+    WHERE auction_id = p_auction_id
+    FOR UPDATE;
+
+    IF v_status IS NULL OR v_status != 'ACTIVE' THEN
+        SET p_out_status = 'ERR_NOT_ACTIVE';
+        ROLLBACK;
+    ELSEIF v_expires_at_unix <= p_now_unix THEN
+        SET p_out_status = 'ERR_EXPIRED';
+        ROLLBACK;
+    ELSEIF v_seller_steamid = p_bidder_steamid THEN
+        SET p_out_status = 'ERR_SELF_BID';
+        ROLLBACK;
+    ELSEIF (v_current_bid = 0 AND p_bid_amount < v_start_bid) OR (v_current_bid > 0 AND p_bid_amount <= v_current_bid) THEN
+        SET p_out_status = 'ERR_BID_TOO_LOW';
+        ROLLBACK;
+    ELSE
+        SELECT money INTO v_bidder_money
+        FROM grid_players
+        WHERE steamid = p_bidder_steamid
+        FOR UPDATE;
+
+        IF v_bidder_money < p_bid_amount THEN
+            SET p_out_status = 'ERR_INSUFFICIENT_FUNDS';
+            ROLLBACK;
+        ELSE
+            IF v_prev_bidder IS NOT NULL AND v_prev_bidder != '' AND v_current_bid > 0 THEN
+                UPDATE grid_players
+                SET money = money + v_current_bid
+                WHERE steamid = v_prev_bidder;
+            END IF;
+
+            UPDATE grid_players
+            SET money = money - p_bid_amount
+            WHERE steamid = p_bidder_steamid;
+
+            UPDATE grid_auctions
+            SET current_bid = p_bid_amount,
+                high_bidder_steamid = p_bidder_steamid,
+                high_bidder_name = p_bidder_name
+            WHERE auction_id = p_auction_id;
+
+            SET p_out_status = 'SUCCESS';
+
+            INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
+            VALUES (p_now_unix, 'ECONOMY', 'AUCTION_BID', p_bidder_steamid, v_seller_steamid, p_bid_amount, JSON_OBJECT('auction_id', p_auction_id));
+
+            COMMIT;
+        END IF;
+    END IF;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_auction_buyout(
+    IN p_auction_id BIGINT UNSIGNED,
+    IN p_buyer_steamid VARCHAR(20),
+    IN p_buyer_name VARCHAR(64),
+    IN p_now_unix INT UNSIGNED,
+    OUT p_out_status VARCHAR(32)
+)
+BEGIN
+    DECLARE v_seller_steamid VARCHAR(20);
+    DECLARE v_status VARCHAR(16);
+    DECLARE v_expires_at_unix INT UNSIGNED;
+    DECLARE v_buyout_price BIGINT UNSIGNED;
+    DECLARE v_current_bid BIGINT UNSIGNED;
+    DECLARE v_prev_bidder VARCHAR(20);
+    DECLARE v_deposit_amount BIGINT UNSIGNED;
+    DECLARE v_item_id VARCHAR(64);
+    DECLARE v_item_type VARCHAR(32);
+    DECLARE v_amount INT;
+    DECLARE v_item_data JSON;
+    DECLARE v_buyer_money BIGINT;
+    DECLARE v_tax BIGINT UNSIGNED;
+    DECLARE v_seller_payout BIGINT UNSIGNED;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_out_status = 'ERROR_SQL';
+    END;
+
+    START TRANSACTION;
+
+    SELECT seller_steamid, status, expires_at_unix, buyout_price, current_bid, high_bidder_steamid,
+           deposit_amount, item_id, item_type, amount, item_data
+    INTO v_seller_steamid, v_status, v_expires_at_unix, v_buyout_price, v_current_bid, v_prev_bidder,
+         v_deposit_amount, v_item_id, v_item_type, v_amount, v_item_data
+    FROM grid_auctions
+    WHERE auction_id = p_auction_id
+    FOR UPDATE;
+
+    IF v_status IS NULL OR v_status != 'ACTIVE' THEN
+        SET p_out_status = 'ERR_NOT_ACTIVE';
+        ROLLBACK;
+    ELSEIF v_expires_at_unix <= p_now_unix THEN
+        SET p_out_status = 'ERR_EXPIRED';
+        ROLLBACK;
+    ELSEIF v_buyout_price = 0 THEN
+        SET p_out_status = 'ERR_NO_BUYOUT';
+        ROLLBACK;
+    ELSEIF v_seller_steamid = p_buyer_steamid THEN
+        SET p_out_status = 'ERR_SELF_BUY';
+        ROLLBACK;
+    ELSE
+        SELECT money INTO v_buyer_money
+        FROM grid_players
+        WHERE steamid = p_buyer_steamid
+        FOR UPDATE;
+
+        IF v_buyer_money < v_buyout_price THEN
+            SET p_out_status = 'ERR_INSUFFICIENT_FUNDS';
+            ROLLBACK;
+        ELSE
+            IF v_prev_bidder IS NOT NULL AND v_prev_bidder != '' AND v_current_bid > 0 THEN
+                UPDATE grid_players
+                SET money = money + v_current_bid
+                WHERE steamid = v_prev_bidder;
+            END IF;
+
+            UPDATE grid_players
+            SET money = money - v_buyout_price
+            WHERE steamid = p_buyer_steamid;
+
+            SET v_tax = FLOOR(v_buyout_price * 0.075);
+            SET v_seller_payout = (v_buyout_price - v_tax) + v_deposit_amount;
+
+            UPDATE grid_players
+            SET money = money + v_seller_payout
+            WHERE steamid = v_seller_steamid;
+
+            INSERT INTO grid_auction_collection (
+                steamid, item_id, item_type, amount, item_data,
+                source_reason, source_auction_id, created_at_unix, claimed
+            ) VALUES (
+                p_buyer_steamid, v_item_id, v_item_type, v_amount, v_item_data,
+                'WON_AUCTION', p_auction_id, p_now_unix, 0
+            );
+
+            UPDATE grid_auctions
+            SET status = 'SOLD',
+                closed_at_unix = p_now_unix,
+                high_bidder_steamid = p_buyer_steamid,
+                high_bidder_name = p_buyer_name,
+                current_bid = v_buyout_price
+            WHERE auction_id = p_auction_id;
+
+            SET p_out_status = 'SUCCESS';
+
+            INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
+            VALUES (p_now_unix, 'ECONOMY', 'AUCTION_SALE', p_buyer_steamid, v_seller_steamid, v_tax, JSON_OBJECT('auction_id', p_auction_id, 'item_id', v_item_id, 'buyout', v_buyout_price, 'tax', v_tax, 'payout', v_seller_payout));
+
+            COMMIT;
+        END IF;
+    END IF;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_auction_cancel(
+    IN p_auction_id BIGINT UNSIGNED,
+    IN p_seller_steamid VARCHAR(20),
+    IN p_now_unix INT UNSIGNED,
+    OUT p_out_status VARCHAR(32)
+)
+BEGIN
+    DECLARE v_status VARCHAR(16);
+    DECLARE v_seller_steamid VARCHAR(20);
+    DECLARE v_current_bid BIGINT UNSIGNED;
+    DECLARE v_item_id VARCHAR(64);
+    DECLARE v_item_type VARCHAR(32);
+    DECLARE v_amount INT;
+    DECLARE v_item_data JSON;
+    DECLARE v_deposit_amount BIGINT UNSIGNED;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_out_status = 'ERROR_SQL';
+    END;
+
+    START TRANSACTION;
+
+    SELECT status, seller_steamid, current_bid, item_id, item_type, amount, item_data, deposit_amount
+    INTO v_status, v_seller_steamid, v_current_bid, v_item_id, v_item_type, v_amount, v_item_data, v_deposit_amount
+    FROM grid_auctions
+    WHERE auction_id = p_auction_id
+    FOR UPDATE;
+
+    IF v_status IS NULL OR v_status != 'ACTIVE' THEN
+        SET p_out_status = 'ERR_NOT_ACTIVE';
+        ROLLBACK;
+    ELSEIF v_seller_steamid != p_seller_steamid THEN
+        SET p_out_status = 'ERR_NOT_OWNER';
+        ROLLBACK;
+    ELSEIF v_current_bid > 0 THEN
+        SET p_out_status = 'ERR_HAS_BIDS';
+        ROLLBACK;
+    ELSE
+        INSERT INTO grid_auction_collection (
+            steamid, item_id, item_type, amount, item_data,
+            source_reason, source_auction_id, created_at_unix, claimed
+        ) VALUES (
+            p_seller_steamid, v_item_id, v_item_type, v_amount, v_item_data,
+            'CANCELLED_AUCTION', p_auction_id, p_now_unix, 0
+        );
+
+        UPDATE grid_auctions
+        SET status = 'CANCELLED',
+            closed_at_unix = p_now_unix
+        WHERE auction_id = p_auction_id;
+
+        SET p_out_status = 'SUCCESS';
+
+        INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, numeric_value, metadata)
+        VALUES (p_now_unix, 'ECONOMY', 'AUCTION_CANCEL', p_seller_steamid, v_deposit_amount, JSON_OBJECT('auction_id', p_auction_id, 'deposit_forfeited', v_deposit_amount));
+
+        COMMIT;
+    END IF;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_auction_claim_collection(
+    IN p_collection_id BIGINT UNSIGNED,
+    IN p_steamid VARCHAR(20),
+    IN p_bag_index TINYINT UNSIGNED,
+    IN p_slot_index TINYINT UNSIGNED,
+    IN p_now_unix INT UNSIGNED,
+    OUT p_out_status VARCHAR(32)
+)
+BEGIN
+    DECLARE v_item_id VARCHAR(64);
+    DECLARE v_item_type VARCHAR(32);
+    DECLARE v_amount INT;
+    DECLARE v_item_data JSON;
+    DECLARE v_claimed TINYINT;
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        SET p_out_status = 'ERROR_SQL';
+    END;
+
+    START TRANSACTION;
+
+    SELECT item_id, item_type, amount, item_data, claimed
+    INTO v_item_id, v_item_type, v_amount, v_item_data, v_claimed
+    FROM grid_auction_collection
+    WHERE collection_id = p_collection_id AND steamid = p_steamid
+    FOR UPDATE;
+
+    IF v_item_id IS NULL THEN
+        SET p_out_status = 'ERR_NOT_FOUND';
+        ROLLBACK;
+    ELSEIF v_claimed = 1 THEN
+        SET p_out_status = 'ERR_ALREADY_CLAIMED';
+        ROLLBACK;
+    ELSE
+        INSERT INTO grid_inventory (steamid, bag_index, slot_index, item_id, item_type, amount, item_data)
+        VALUES (p_steamid, p_bag_index, p_slot_index, v_item_id, v_item_type, v_amount, v_item_data);
+
+        UPDATE grid_auction_collection
+        SET claimed = 1,
+            claimed_at_unix = p_now_unix
+        WHERE collection_id = p_collection_id;
+
+        SET p_out_status = 'SUCCESS';
+        COMMIT;
+    END IF;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_auction_process_expirations(
+    IN p_now_unix INT UNSIGNED
+)
+BEGIN
+    DECLARE done INT DEFAULT FALSE;
+    DECLARE v_auc_id BIGINT UNSIGNED;
+    DECLARE v_seller VARCHAR(20);
+    DECLARE v_bidder VARCHAR(20);
+    DECLARE v_bidder_name VARCHAR(64);
+    DECLARE v_cur_bid BIGINT UNSIGNED;
+    DECLARE v_deposit BIGINT UNSIGNED;
+    DECLARE v_item_id VARCHAR(64);
+    DECLARE v_item_type VARCHAR(32);
+    DECLARE v_amount INT;
+    DECLARE v_item_data JSON;
+    DECLARE v_tax BIGINT UNSIGNED;
+    DECLARE v_payout BIGINT UNSIGNED;
+
+    DECLARE cur CURSOR FOR 
+        SELECT auction_id, seller_steamid, high_bidder_steamid, high_bidder_name, current_bid,
+               deposit_amount, item_id, item_type, amount, item_data
+        FROM grid_auctions
+        WHERE status = 'ACTIVE' AND expires_at_unix <= p_now_unix;
+
+    DECLARE CONTINUE HANDLER FOR NOT FOUND SET done = TRUE;
+
+    OPEN cur;
+
+    read_loop: LOOP
+        FETCH cur INTO v_auc_id, v_seller, v_bidder, v_bidder_name, v_cur_bid,
+                       v_deposit, v_item_id, v_item_type, v_amount, v_item_data;
+        IF done THEN
+            LEAVE read_loop;
+        END IF;
+
+        IF v_cur_bid > 0 AND v_bidder IS NOT NULL AND v_bidder != '' THEN
+            SET v_tax = FLOOR(v_cur_bid * 0.075);
+            SET v_payout = (v_cur_bid - v_tax) + v_deposit;
+
+            UPDATE grid_players SET money = money + v_payout WHERE steamid = v_seller;
+
+            INSERT INTO grid_auction_collection (
+                steamid, item_id, item_type, amount, item_data, source_reason, source_auction_id, created_at_unix, claimed
+            ) VALUES (
+                v_bidder, v_item_id, v_item_type, v_amount, v_item_data, 'WON_AUCTION', v_auc_id, p_now_unix, 0
+            );
+
+            UPDATE grid_auctions
+            SET status = 'SOLD', closed_at_unix = p_now_unix
+            WHERE auction_id = v_auc_id;
+
+            INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
+            VALUES (p_now_unix, 'ECONOMY', 'AUCTION_EXPIRE_SOLD', v_bidder, v_seller, v_tax, JSON_OBJECT('auction_id', v_auc_id, 'tax', v_tax, 'payout', v_payout));
+        ELSE
+            INSERT INTO grid_auction_collection (
+                steamid, item_id, item_type, amount, item_data, source_reason, source_auction_id, created_at_unix, claimed
+            ) VALUES (
+                v_seller, v_item_id, v_item_type, v_amount, v_item_data, 'EXPIRED_AUCTION', v_auc_id, p_now_unix, 0
+            );
+
+            UPDATE grid_auctions
+            SET status = 'EXPIRED', closed_at_unix = p_now_unix
+            WHERE auction_id = v_auc_id;
+
+            INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, numeric_value, metadata)
+            VALUES (p_now_unix, 'ECONOMY', 'AUCTION_EXPIRE_UNSOLD', v_seller, v_deposit, JSON_OBJECT('auction_id', v_auc_id, 'deposit_forfeited', v_deposit));
+        END IF;
+    END LOOP;
+
+    CLOSE cur;
 END$$
 
 DELIMITER ;

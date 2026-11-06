@@ -204,7 +204,8 @@ function GRID.UI.ToggleF4Menu()
             header = "ROLES & ASSETS",
             tabs = {
                 { id = "jobs",      title = "Careers & Jobs", badge = table.Count(GRID.Jobs or {}) },
-                { id = "inventory", title = "Inventory",      badge = invBadge }
+                { id = "inventory", title = "Inventory",      badge = invBadge },
+                { id = "auction",   title = "Auction House", badge = "AH" }
             }
         },
         {
@@ -351,6 +352,15 @@ end
 function GRID.UI.RenderContentTab(container, tabId, mainFrame)
     local ply = LocalPlayer()
     local contW, contH = container:GetWide(), container:GetTall()
+
+    if tabId == "auction" then
+        if GRID.Auction and GRID.Auction.RenderBrowseTab then
+            GRID.Auction.IsTerminalSession = false
+            GRID.Auction.RequestSync()
+            GRID.Auction.RenderBrowseTab(container)
+        end
+        return
+    end
 
     -- Search Bar & Category Header (Height: 52px)
     local topBar = vgui.Create("DPanel", container)

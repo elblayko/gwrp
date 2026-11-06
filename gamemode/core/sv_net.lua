@@ -46,6 +46,21 @@ util.AddNetworkString("GRID_RequestGangData")
 util.AddNetworkString("GRID_SendGangData")
 util.AddNetworkString("GRID_GangUIAction")
 
+-- Auction House Network Protocols
+util.AddNetworkString("GRID_Auction_OpenTerminal")
+util.AddNetworkString("GRID_Auction_OpenRemote")
+util.AddNetworkString("GRID_Auction_RequestListings")
+util.AddNetworkString("GRID_Auction_SendListings")
+util.AddNetworkString("GRID_Auction_RequestMetrics")
+util.AddNetworkString("GRID_Auction_SendMetrics")
+util.AddNetworkString("GRID_Auction_CreateListing")
+util.AddNetworkString("GRID_Auction_PlaceBid")
+util.AddNetworkString("GRID_Auction_Buyout")
+util.AddNetworkString("GRID_Auction_Cancel")
+util.AddNetworkString("GRID_Auction_RequestCollection")
+util.AddNetworkString("GRID_Auction_SendCollection")
+util.AddNetworkString("GRID_Auction_ClaimItem")
+
 GRID = GRID or {}
 GRID.NetLimits = GRID.NetLimits or {}
 

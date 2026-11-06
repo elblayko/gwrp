@@ -645,6 +645,49 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
             -- Row 3: Action Prompt
             draw.SimpleText("[E] Access Recycler & Compactor", "GRID_UI_Caption", cardX + 12, tagY + 68,
                 Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        -- Up-Close Raycast UI: Auction House Terminal
+        elseif distSqr <= (180 * 180) and ent:GetClass() == "grid_auction_terminal" then
+            local tagX = ScrW() / 2
+            local tagY = ScrH() / 2 + 36
+
+            local cardW = 340
+            local cardH = 92
+            local cardX = tagX - cardW / 2
+
+            local accentCol = Color(6, 182, 212)
+            local badgeText = "EXCHANGE"
+
+            surface.SetFont("GRID_UI_Badge")
+            local bTextW = surface.GetTextSize(badgeText)
+            local badgeW = bTextW + 16
+
+            -- Card Background
+            draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 200)
+            surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+
+            -- Top Accent Line
+            draw.RoundedBoxEx(8, cardX, tagY, cardW, 3, accentCol, true, true, false, false)
+
+            -- Row 1: Badge + Name
+            draw.RoundedBox(4, cardX + 8, tagY + 8, badgeW, 20, Color(accentCol.r, accentCol.g, accentCol.b, 40))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 160)
+            surface.DrawOutlinedRect(cardX + 8, tagY + 8, badgeW, 20, 1)
+            draw.SimpleText(badgeText, "GRID_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
+
+            draw.SimpleText("Auction House Terminal", "GRID_UI_Badge", cardX + badgeW + 16, tagY + 18,
+                Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+            -- Row 2: Subtitle Info
+            local totalListings = (GRID.Auction and GRID.Auction.Listings) and #GRID.Auction.Listings or 0
+            local subText = string.format("Marketplace Hub  •  %d Active Listings", totalListings)
+            draw.SimpleText(subText, "GRID_FontSmall", cardX + 12, tagY + 44, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+                TEXT_ALIGN_CENTER)
+
+            -- Row 3: Action Prompt
+            draw.SimpleText("[E] Access Auction Terminal", "GRID_UI_Caption", cardX + 12, tagY + 68,
+                Color(74, 222, 128), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         elseif distSqr <= (160 * 160) and ent.HasItemQuality and ent:HasItemQuality() then
             local qData = ent:GetItemQualityData()
             if qData then
