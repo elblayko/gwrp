@@ -554,7 +554,7 @@ function GRID.Auction.RenderInstancesPane(parent, group)
     local statsBar = vgui.Create("DPanel", parent)
     statsBar:Dock(TOP)
     statsBar:DockMargin(12, 0, 12, 12)
-    statsBar:SetTall(52)
+    statsBar:SetTall(64)
 
     local metric = GRID.Auction.Metrics[group.item_id] or {}
     local avg7d = metric.avg_7d and ("$" .. string.Comma(metric.avg_7d)) or "N/A"
@@ -571,15 +571,15 @@ function GRID.Auction.RenderInstancesPane(parent, group)
 
         -- Col 1: Lowest Buyout
         draw.SimpleText("Current Lowest Buyout", "GRID_UI_Caption", 16, 14, Color(148, 163, 184))
-        draw.SimpleText(minBuyout, "GRID_UI_Sub", 16, 34, Color(74, 222, 128))
+        draw.SimpleText(minBuyout, "GRID_UI_Sub", 16, 36, Color(74, 222, 128))
 
         -- Col 2: 7-Day Average Price
         draw.SimpleText("7-Day Market Average", "GRID_UI_Caption", colW + 16, 14, Color(148, 163, 184))
-        draw.SimpleText(avg7d, "GRID_UI_Sub", colW + 16, 34, Color(34, 211, 238))
+        draw.SimpleText(avg7d, "GRID_UI_Sub", colW + 16, 36, Color(34, 211, 238))
 
         -- Col 3: 24-Hour Units Sold
         draw.SimpleText("24-Hour Units Sold", "GRID_UI_Caption", colW * 2 + 16, 14, Color(148, 163, 184))
-        draw.SimpleText(sold24h .. " units", "GRID_UI_Sub", colW * 2 + 16, 34, Color(248, 250, 252))
+        draw.SimpleText(sold24h .. " units", "GRID_UI_Sub", colW * 2 + 16, 36, Color(248, 250, 252))
     end
 
     -- Scrollable List of Instances sorted by Lowest Buyout / Bid
@@ -605,7 +605,7 @@ function GRID.Auction.RenderInstancesPane(parent, group)
         local card = instanceScroll:Add("DPanel")
         card:Dock(TOP)
         card:DockMargin(0, 0, 0, 8)
-        card:SetTall(102)
+        card:SetTall(114)
 
         local badges = GRID.Auction.GetItemAttributeBadges(inst.item_data)
         local timeLeft = GRID.Auction.FormatTimeRemaining(inst.expires_at_unix)
@@ -634,16 +634,16 @@ function GRID.Auction.RenderInstancesPane(parent, group)
             else
                 statusSub = statusSub .. "   •   No Bids Yet"
             end
-            draw.SimpleText(statusSub, "GRID_UI_Caption", 14, 38, hasHighBidder and Color(56, 189, 248) or Color(148, 163, 184))
+            draw.SimpleText(statusSub, "GRID_UI_Caption", 14, 40, hasHighBidder and Color(56, 189, 248) or Color(148, 163, 184))
 
             -- Render Attribute Badges horizontally
             local bx = 14
-            local by = 64
+            local by = 68
             for _, b in ipairs(badges) do
                 surface.SetFont("GRID_UI_Badge")
                 local bw = surface.GetTextSize(b.text) + 14
-                draw.RoundedBox(4, bx, by, bw, 22, b.bg)
-                draw.SimpleText(b.text, "GRID_UI_Badge", bx + bw / 2, by + 11, b.color, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.RoundedBox(4, bx, by, bw, 24, b.bg)
+                draw.SimpleText(b.text, "GRID_UI_Badge", bx + bw / 2, by + 12, b.color, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 bx = bx + bw + 6
             end
 
@@ -655,12 +655,12 @@ function GRID.Auction.RenderInstancesPane(parent, group)
             -- Bid Column
             local bidLabel = (inst.current_bid > 0) and "CURRENT BID" or "STARTING BID"
             draw.SimpleText(bidLabel, "GRID_UI_Caption", bidX + colW / 2, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
-            draw.SimpleText("$" .. string.Comma(curBid), "GRID_UI_Price", bidX + colW / 2, 33, Color(248, 250, 252), TEXT_ALIGN_CENTER)
+            draw.SimpleText("$" .. string.Comma(curBid), "GRID_UI_Price", bidX + colW / 2, 32, Color(248, 250, 252), TEXT_ALIGN_CENTER)
 
             -- Buyout Column (if available)
             if hasBuyout then
                 draw.SimpleText("BUYOUT PRICE", "GRID_UI_Caption", buyoutX + colW / 2, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
-                draw.SimpleText("$" .. string.Comma(inst.buyout_price), "GRID_UI_Price", buyoutX + colW / 2, 33, Color(74, 222, 128), TEXT_ALIGN_CENTER)
+                draw.SimpleText("$" .. string.Comma(inst.buyout_price), "GRID_UI_Price", buyoutX + colW / 2, 32, Color(74, 222, 128), TEXT_ALIGN_CENTER)
             end
         end
 
@@ -724,7 +724,7 @@ function GRID.Auction.RenderInstancesPane(parent, group)
         else
             -- Remote F4 Mode: Visual Notice Pill
             noticePill = vgui.Create("DPanel", card)
-            noticePill:SetSize(hasBuyout and 210 or 100, 30)
+            noticePill:SetSize(hasBuyout and 210 or 100, 32)
             noticePill.Paint = function(s, w, h)
                 draw.RoundedBox(4, 0, 0, w, h, Color(245, 158, 11, 35))
                 surface.SetDrawColor(245, 158, 11, 120)
@@ -740,17 +740,17 @@ function GRID.Auction.RenderInstancesPane(parent, group)
             local bidX = hasBuyout and (w - 224) or (w - 114)
 
             if IsValid(btnBuy) then
-                btnBuy:SetPos(buyoutX, 58)
+                btnBuy:SetPos(buyoutX, 68)
                 btnBuy:SetSize(colW, 32)
             end
             if IsValid(btnBid) then
-                btnBid:SetPos(bidX, 58)
+                btnBid:SetPos(bidX, 68)
                 btnBid:SetSize(colW, 32)
             end
             if IsValid(noticePill) then
                 local pW = hasBuyout and 210 or colW
-                noticePill:SetPos(bidX, 59)
-                noticePill:SetSize(pW, 30)
+                noticePill:SetPos(bidX, 68)
+                noticePill:SetSize(pW, 32)
             end
         end
     end
