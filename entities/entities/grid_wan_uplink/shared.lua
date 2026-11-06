@@ -1,13 +1,13 @@
 --[[
     entities/entities/grid_wan_uplink/shared.lua
     GridRP Encrypted Satellite WAN Uplink
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Satellite WAN Uplink"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = true
 
 ENT.ItemQuality = "rare"

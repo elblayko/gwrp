@@ -1,7 +1,7 @@
 --[[
     gamemode/core/sh_networking.lua
     GridRP Layer 2 / Layer 3 Networking, IP Addressing & Broadcast Domain System
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 GRID.Network = GRID.Network or {}
@@ -67,7 +67,7 @@ function GRID.Network.GetBroadcastDomain(switchEnt, visited)
         port = 0,
         status = "ONLINE",
         services = {
-            { port = 22, proto = "tcp", service = "ssh", version = "GRID-Switch-OS L3.1" },
+            { port = 22, proto = "tcp", service = "ssh",  version = "GRID-Switch-OS L3.1" },
             { port = 80, proto = "tcp", service = "http", version = "Switch Web Console" }
         }
     })
@@ -93,12 +93,15 @@ function GRID.Network.GetBroadcastDomain(switchEnt, visited)
                 else
                     local isPrinter = dev.PrintAmount ~= nil or string.find(devClass, "printer")
                     local isComputer = devClass == "grid_computer" or dev.IsComputer
-                    local isSynthesizer = devClass == "grid_resource_machine" or string.find(devClass, "resource_machine")
+                    local isSynthesizer = devClass == "grid_resource_machine" or
+                    string.find(devClass, "resource_machine")
                     local isUplink = devClass == "grid_wan_uplink" or dev.IsWANUplink
-                    local devType = isPrinter and "printer" or (isComputer and "computer" or (isSynthesizer and "synthesizer" or (isUplink and "wan_uplink" or "device")))
+                    local devType = isPrinter and "printer" or
+                    (isComputer and "computer" or (isSynthesizer and "synthesizer" or (isUplink and "wan_uplink" or "device")))
 
                     local hostId = 10 + portNum
-                    local devIP = (dev.GetIPAddress and dev:GetIPAddress() ~= "") and dev:GetIPAddress() or GRID.Network.FormatIP(subnet, hostId)
+                    local devIP = (dev.GetIPAddress and dev:GetIPAddress() ~= "") and dev:GetIPAddress() or
+                    GRID.Network.FormatIP(subnet, hostId)
                     local devMAC = GRID.Network.FormatMAC(dev, subnet, hostId)
 
                     local services = {}
@@ -143,7 +146,8 @@ function GRID.Network.GetBroadcastDomain(switchEnt, visited)
                             port = 443,
                             proto = "tcp",
                             service = "https",
-                            version = string.format("Satellite WAN Gateway (%s | Key: %s | %s | %d Peers)", portSpeed, key, isOnline and "MESH ONLINE" or "STANDBY", peers)
+                            version = string.format("Satellite WAN Gateway (%s | Key: %s | %s | %d Peers)", portSpeed,
+                                key, isOnline and "MESH ONLINE" or "STANDBY", peers)
                         })
                         table.insert(services, {
                             port = 1194,
@@ -155,7 +159,8 @@ function GRID.Network.GetBroadcastDomain(switchEnt, visited)
 
                     table.insert(devices, {
                         entity = dev,
-                        name = dev.PrintName or (isPrinter and "Money Printer" or (isComputer and "Personal Computer" or (isSynthesizer and "Resource Fabricator" or (isUplink and "Satellite WAN Uplink" or "Network Device")))),
+                        name = dev.PrintName or
+                        (isPrinter and "Money Printer" or (isComputer and "Personal Computer" or (isSynthesizer and "Resource Fabricator" or (isUplink and "Satellite WAN Uplink" or "Network Device")))),
                         type = devType,
                         ip = devIP,
                         mac = devMAC,
@@ -375,7 +380,8 @@ function GRID.Network.GetActiveWANSpectrum(origin, maxDist)
                 local sw = uplink:GetConnectedSwitch()
                 local subnet = IsValid(sw) and (sw.GetSubnetID and sw:GetSubnetID() or 1) or 0
                 local key = uplink:GetEncryptionKey() or "NONE"
-                local bssid = string.format("00:50:C2:%02X:%02X:%02X", (uplink:EntIndex() * 13) % 256, subnet % 256, (uplink:EntIndex() * 7) % 256)
+                local bssid = string.format("00:50:C2:%02X:%02X:%02X", (uplink:EntIndex() * 13) % 256, subnet % 256,
+                    (uplink:EntIndex() * 7) % 256)
                 local channel = ((uplink:EntIndex() * 3) % 11) + 1
 
                 -- Calculate realistic dynamic RSSI based on physical distance (approx -30 dBm up-close to -88 dBm at boundary)
@@ -387,7 +393,8 @@ function GRID.Network.GetActiveWANSpectrum(origin, maxDist)
                     rssi = -1 * math.random(35, 65)
                 end
 
-                local botnetPC = IsValid(sw) and GRID.Network.GetActiveBotnetForSwitch and GRID.Network.GetActiveBotnetForSwitch(sw) or nil
+                local botnetPC = IsValid(sw) and GRID.Network.GetActiveBotnetForSwitch and
+                GRID.Network.GetActiveBotnetForSwitch(sw) or nil
                 local hasBotnet = IsValid(botnetPC)
 
                 table.insert(spectrum, {

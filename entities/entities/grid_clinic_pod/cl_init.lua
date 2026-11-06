@@ -1,7 +1,7 @@
 --[[
     entities/entities/grid_clinic_pod/cl_init.lua
     GridRP Clinical Triage Pod Client & Menu
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 include("shared.lua")
@@ -25,35 +25,38 @@ function ENT:Draw()
     local vaultCash = self:GetVaultCash()
 
     cam.Start3D2D(pos, ang, 0.065)
-        -- Monitor Frame (Deep obsidian slate)
-        draw.RoundedBox(8, -120, -55, 240, 110, Color(11, 15, 25, 240))
-        surface.SetDrawColor(30, 41, 59, 230)
-        surface.DrawOutlinedRect(-120, -55, 240, 110, 1)
+    -- Monitor Frame (Deep obsidian slate)
+    draw.RoundedBox(8, -120, -55, 240, 110, Color(11, 15, 25, 240))
+    surface.SetDrawColor(30, 41, 59, 230)
+    surface.DrawOutlinedRect(-120, -55, 240, 110, 1)
 
-        -- Top Header Accent Line
-        local topCol = isDoc and Color(52, 211, 153) or Color(6, 182, 212)
-        draw.RoundedBoxEx(8, -120, -55, 240, 3, topCol, true, true, false, false)
+    -- Top Header Accent Line
+    local topCol = isDoc and Color(52, 211, 153) or Color(6, 182, 212)
+    draw.RoundedBoxEx(8, -120, -55, 240, 3, topCol, true, true, false, false)
 
-        -- Title & Medical Cross Badge
-        draw.SimpleText("+ CLINICAL TRIAGE POD +", "GRID_UI_Badge", 0, -36, topCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Dr. " .. ownerName, "GRID_UI_Caption", 0, -20, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Title & Medical Cross Badge
+    draw.SimpleText("+ CLINICAL TRIAGE POD +", "GRID_UI_Badge", 0, -36, topCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("Dr. " .. ownerName, "GRID_UI_Caption", 0, -20, Color(148, 163, 184), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
-        -- Status Pill
-        local statusText = isDoc and "● DR. ON DUTY (+50% DURATION)" or "○ AUTONOMOUS CLINIC"
-        local statusCol = isDoc and Color(52, 211, 153) or Color(251, 191, 36)
-        local statusBg = isDoc and Color(16, 185, 129, 35) or Color(245, 158, 11, 30)
+    -- Status Pill
+    local statusText = isDoc and "● DR. ON DUTY (+50% DURATION)" or "○ AUTONOMOUS CLINIC"
+    local statusCol = isDoc and Color(52, 211, 153) or Color(251, 191, 36)
+    local statusBg = isDoc and Color(16, 185, 129, 35) or Color(245, 158, 11, 30)
 
-        draw.RoundedBox(4, -100, -8, 200, 20, statusBg)
-        surface.SetDrawColor(statusCol.r, statusCol.g, statusCol.b, 120)
-        surface.DrawOutlinedRect(-100, -8, 200, 20, 1)
-        draw.SimpleText(statusText, "GRID_UI_Badge", 0, 2, statusCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.RoundedBox(4, -100, -8, 200, 20, statusBg)
+    surface.SetDrawColor(statusCol.r, statusCol.g, statusCol.b, 120)
+    surface.DrawOutlinedRect(-100, -8, 200, 20, 1)
+    draw.SimpleText(statusText, "GRID_UI_Badge", 0, 2, statusCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        -- Bottom Row: Prompt & Vault
-        if ply == owner then
-            draw.SimpleText(string.format("Vault: $%d  •  [E] CLINIC  •  [CTRL+E] WITHDRAW", vaultCash), "GRID_UI_Caption", 0, 34, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        else
-            draw.SimpleText("[E] ACCESS TREATMENT MENU", "GRID_UI_Badge", 0, 34, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        end
+    -- Bottom Row: Prompt & Vault
+    if ply == owner then
+        draw.SimpleText(string.format("Vault: $%d  •  [E] CLINIC  •  [CTRL+E] WITHDRAW", vaultCash), "GRID_UI_Caption", 0,
+            34, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    else
+        draw.SimpleText("[E] ACCESS TREATMENT MENU", "GRID_UI_Badge", 0, 34, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+            TEXT_ALIGN_CENTER)
+    end
     cam.End3D2D()
 end
 
@@ -98,11 +101,13 @@ net.Receive("GRID_OpenClinicMenu", function()
         surface.DrawOutlinedRect(20, 14, 58, 20, 1)
         draw.SimpleText("CLINIC", "GRID_UI_Badge", 49, 24, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        draw.SimpleText("Clinical Triage & Bio-Enhancement Terminal", "GRID_UI_Sub", 88, 24, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Clinical Triage & Bio-Enhancement Terminal", "GRID_UI_Sub", 88, 24, Color(248, 250, 252),
+            TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
         -- Subtitle info
         local ownerNick = IsValid(owner) and owner:Nick() or "Licensed Pharmacist"
-        draw.SimpleText("Station Physician: Dr. " .. ownerNick .. "  •  Patients Served: " .. totalPatients, "GRID_UI_Caption", 20, 48, Color(148, 163, 184))
+        draw.SimpleText("Station Physician: Dr. " .. ownerNick .. "  •  Patients Served: " .. totalPatients,
+            "GRID_UI_Caption", 20, 48, Color(148, 163, 184))
 
         -- Status Pill on right
         local statusPillText = isDoc and "DR. ON DUTY (+50% BONUS)" or "AUTONOMOUS MODE"
@@ -112,7 +117,8 @@ net.Receive("GRID_OpenClinicMenu", function()
         draw.RoundedBox(6, pw - 20 - pillW - 32, 14, pillW, 22, statusPillBg)
         surface.SetDrawColor(statusPillCol.r, statusPillCol.g, statusPillCol.b, 140)
         surface.DrawOutlinedRect(pw - 20 - pillW - 32, 14, pillW, 22, 1)
-        draw.SimpleText(statusPillText, "GRID_UI_Badge", pw - 20 - (pillW / 2) - 32, 25, statusPillCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(statusPillText, "GRID_UI_Badge", pw - 20 - (pillW / 2) - 32, 25, statusPillCol, TEXT_ALIGN_CENTER,
+            TEXT_ALIGN_CENTER)
     end
 
     -- Close Button [X]
@@ -160,7 +166,8 @@ net.Receive("GRID_OpenClinicMenu", function()
 
                 -- Treatment Name & Cost
                 draw.SimpleText(def.name, "GRID_UI_Sub", 18, 18, Color(248, 250, 252))
-                draw.SimpleText("$" .. def.cost, "GRID_UI_Price", cw - 130, 20, Color(74, 222, 128), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("$" .. def.cost, "GRID_UI_Price", cw - 130, 20, Color(74, 222, 128), TEXT_ALIGN_RIGHT,
+                    TEXT_ALIGN_CENTER)
 
                 -- Description
                 local activeDesc = isDoc and def.doctorDesc or def.desc
@@ -176,7 +183,7 @@ net.Receive("GRID_OpenClinicMenu", function()
 
             buyBtn.Paint = function(s, bw, bh)
                 local canAfford = ply:CanAfford(def.cost)
-                local bg = s:IsHovered() and (canAfford and Color(16, 185, 129, 220) or Color(239, 68, 68, 160)) 
+                local bg = s:IsHovered() and (canAfford and Color(16, 185, 129, 220) or Color(239, 68, 68, 160))
                     or (canAfford and Color(5, 150, 105, 180) or Color(30, 41, 59, 140))
                 draw.RoundedBox(6, 0, 0, bw, bh, bg)
 
@@ -192,8 +199,8 @@ net.Receive("GRID_OpenClinicMenu", function()
                 end
 
                 net.Start("GRID_Clinic_PurchaseTreatment")
-                    net.WriteEntity(pod)
-                    net.WriteString(tId)
+                net.WriteEntity(pod)
+                net.WriteString(tId)
                 net.SendToServer()
 
                 surface.PlaySound("buttons/button14.wav")

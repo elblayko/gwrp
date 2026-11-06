@@ -35,6 +35,7 @@ GRID.Config.TurfCaptureTime = 15      -- seconds of holding uncontested to captu
 GRID.Config.TurfDividendInterval = 90 -- seconds between turf payouts
 GRID.Config.TurfDividendAmount = 25   -- cash given to each online gang member per owned turf
 GRID.Config.TurfCaptureReward = 40    -- instant cash reward to capturing player
+GRID.Config.AllowLowPopTurfCapture = true -- When true, permits territory capture during Low Pop mode (<4 players) for server launch & onboarding
 
 -- Contraband Money Printers & Networking
 GRID.Config.MaxPrintersPerPlayer = 4
@@ -124,6 +125,10 @@ GRID.HoboAllowedWeapons = {
     ["weapon_bugbait"] = true,
     ["gmod_camera"] = true
 }
+
+-- Hobo Job Scavenging Perks
+GRID.Config.HoboScavengeSearchDuration = 1.2 -- Seconds to rummage nodes (Standard is 1.5s; lower = faster)
+GRID.Config.HoboScavengeYieldBonus = 0.15    -- Bonus multiplier to scavenged loot & cash (0.15 = +15% yield)
 
 -- Default Colors
 GRID.Colors = {

@@ -6,7 +6,7 @@
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Undervolt Module"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = true
 
 -- Central Item Quality

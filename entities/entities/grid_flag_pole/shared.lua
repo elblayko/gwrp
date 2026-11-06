@@ -5,7 +5,7 @@
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Turf Flag Pole"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = false
 ENT.RenderGroup = RENDERGROUP_BOTH
 

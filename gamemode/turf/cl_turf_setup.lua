@@ -1,6 +1,6 @@
 --[[
     cl_turf_setup.lua - Comprehensive Admin & Debug Executive HUD
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 GRID = GRID or {}
@@ -64,10 +64,12 @@ hook.Add("PostDrawTranslucentRenderables", "GRID_TurfAdmin3DESP", function(bDept
             ang:RotateAroundAxis(ang:Forward(), 90)
 
             cam.Start3D2D(hitPos + Vector(0, 0, 110), ang, 0.12)
-                draw.RoundedBox(4, -130, -30, 260, 60, Color(15, 23, 42, 230))
-                draw.RoundedBox(4, -130, -30, 260, 3, prevCol)
-                draw.SimpleText("Flag Pole Placement Preview", "GRID_FontSmall", 0, -20, (GRID.Colors and GRID.Colors.Gold) or Color(245, 158, 11), TEXT_ALIGN_CENTER)
-                draw.SimpleText(string.format("%s (Radius: %d)", GRID.Turf.PreviewName, GRID.Turf.PreviewRadius), "GRID_FontSmall", 0, 4, (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252), TEXT_ALIGN_CENTER)
+            draw.RoundedBox(4, -130, -30, 260, 60, Color(15, 23, 42, 230))
+            draw.RoundedBox(4, -130, -30, 260, 3, prevCol)
+            draw.SimpleText("Flag Pole Placement Preview", "GRID_FontSmall", 0, -20,
+                (GRID.Colors and GRID.Colors.Gold) or Color(245, 158, 11), TEXT_ALIGN_CENTER)
+            draw.SimpleText(string.format("%s (Radius: %d)", GRID.Turf.PreviewName, GRID.Turf.PreviewRadius),
+                "GRID_FontSmall", 0, 4, (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252), TEXT_ALIGN_CENTER)
             cam.End3D2D()
         end
     end
@@ -105,8 +107,10 @@ function GRID.Turf.OpenSetupMenu()
         surface.DrawLine(0, 52, w, 52)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-        draw.SimpleText("GridRP Admin & Debug Dashboard", "GRID_UI_Title", 20, 12, (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252))
-        draw.SimpleText("Database Active | Map: " .. game.GetMap(), "GRID_UI_Caption", w - 40, 20, (GRID.Colors and GRID.Colors.MoneyGreen) or Color(74, 222, 128), TEXT_ALIGN_RIGHT)
+        draw.SimpleText("GridRP Admin & Debug Dashboard", "GRID_UI_Title", 20, 12,
+            (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252))
+        draw.SimpleText("Database Active | Map: " .. game.GetMap(), "GRID_UI_Caption", w - 40, 20,
+            (GRID.Colors and GRID.Colors.MoneyGreen) or Color(74, 222, 128), TEXT_ALIGN_RIGHT)
     end
 
     -- Tab Navigation Strip
@@ -121,8 +125,8 @@ function GRID.Turf.OpenSetupMenu()
     contentPanel.Paint = function() end
 
     local tabs = {
-        { id = "players", name = "Player Debug & Economy" },
-        { id = "turf", name = "Turf & Flag Poles" },
+        { id = "players",  name = "Player Debug & Economy" },
+        { id = "turf",     name = "Turf & Flag Poles" },
         { id = "spawners", name = "Game Loop & Spawners" }
     }
 
@@ -147,7 +151,8 @@ function GRID.Turf.OpenSetupMenu()
         btn:SetText("")
         btn.Paint = function(s, w, h)
             local isActive = (GRID.AdminActiveTab == t.id)
-            local bg = isActive and Color(30, 41, 59, 255) or (s:IsHovered() and Color(24, 32, 47, 180) or Color(15, 23, 42, 140))
+            local bg = isActive and Color(30, 41, 59, 255) or
+            (s:IsHovered() and Color(24, 32, 47, 180) or Color(15, 23, 42, 140))
             draw.RoundedBox(6, 0, 0, w, h, bg)
             if isActive then
                 draw.RoundedBox(2, 0, h - 3, w, 3, Color(6, 182, 212))
@@ -218,7 +223,8 @@ function GRID.Turf.RenderPlayerDebug(parent)
             end
             local job = p:GetJobData()
             local pLvl = p.GetLevel and p:GetLevel() or 1
-            local line = playerList:AddLine(nick, job and job.name or "Citizen", "Lv." .. pLvl, "$" .. string.Comma(p:GetMoney()), p:Health() .. " HP")
+            local line = playerList:AddLine(nick, job and job.name or "Citizen", "Lv." .. pLvl,
+                "$" .. string.Comma(p:GetMoney()), p:Health() .. " HP")
             line.Player = p
         end
     end
@@ -255,7 +261,8 @@ function GRID.Turf.RenderPlayerDebug(parent)
         topInfo.Paint = function(s, w, h)
             draw.RoundedBox(6, 10, 10, w - 20, h - 14, Color(24, 32, 47, 240))
             draw.SimpleText(pNick, "GRID_UI_Header", 20, 18, Color(248, 250, 252))
-            local subInfo = string.format("%s  |  Level %d (%s/%s XP)  |  Wallet: $%s  |  Gang: %s", pSteam, pLvl, string.Comma(pXP), string.Comma(pReqXP), string.Comma(pMoney), (pGang ~= "" and pGang or "None"))
+            local subInfo = string.format("%s  |  Level %d (%s/%s XP)  |  Wallet: $%s  |  Gang: %s", pSteam, pLvl,
+                string.Comma(pXP), string.Comma(pReqXP), string.Comma(pMoney), (pGang ~= "" and pGang or "None"))
             draw.SimpleText(subInfo, "GRID_UI_Caption", 20, 38, Color(148, 163, 184))
         end
 
@@ -287,11 +294,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnSetLevel.DoClick = function()
             local lvl = tonumber(txtLevel:GetText()) or 1
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_level")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(lvl, 16)
+            net.WriteString("set_level")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(lvl, 16)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnLvl1 = vgui.Create("DButton", secLevel)
@@ -300,11 +309,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnLvl1:SetText("Lv 1")
         btnLvl1.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_level")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(1, 16)
+            net.WriteString("set_level")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(1, 16)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnLvl10 = vgui.Create("DButton", secLevel)
@@ -313,11 +324,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnLvl10:SetText("Lv 10")
         btnLvl10.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_level")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(10, 16)
+            net.WriteString("set_level")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(10, 16)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnLvl25 = vgui.Create("DButton", secLevel)
@@ -326,11 +339,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnLvl25:SetText("Lv 25")
         btnLvl25.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_level")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(25, 16)
+            net.WriteString("set_level")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(25, 16)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnLvl50 = vgui.Create("DButton", secLevel)
@@ -339,11 +354,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnLvl50:SetText("Lv 50")
         btnLvl50.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_level")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(50, 16)
+            net.WriteString("set_level")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(50, 16)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnAdd100XP = vgui.Create("DButton", secLevel)
@@ -352,11 +369,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnAdd100XP:SetText("+ 100 XP")
         btnAdd100XP.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("add_xp")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(100, 32)
+            net.WriteString("add_xp")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(100, 32)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnAdd500XP = vgui.Create("DButton", secLevel)
@@ -365,11 +384,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnAdd500XP:SetText("+ 500 XP")
         btnAdd500XP.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("add_xp")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(500, 32)
+            net.WriteString("add_xp")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(500, 32)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnAdd2500XP = vgui.Create("DButton", secLevel)
@@ -378,11 +399,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnAdd2500XP:SetText("+ 2,500 XP")
         btnAdd2500XP.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("add_xp")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(2500, 32)
+            net.WriteString("add_xp")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(2500, 32)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnAdd10kXP = vgui.Create("DButton", secLevel)
@@ -391,11 +414,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnAdd10kXP:SetText("+ 10,000 XP")
         btnAdd10kXP.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("add_xp")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(10000, 32)
+            net.WriteString("add_xp")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(10000, 32)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         -- Section 2: Money & Economy Debug
@@ -422,11 +447,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnSetMoney.DoClick = function()
             local amt = tonumber(txtMoney:GetText()) or 0
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_money")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(amt, 32)
+            net.WriteString("set_money")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(amt, 32)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnAdd10k = vgui.Create("DButton", secMoney)
@@ -435,11 +462,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnAdd10k:SetText("+ $10,000")
         btnAdd10k.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("add_money")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(10000, 32)
+            net.WriteString("add_money")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(10000, 32)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnAdd100k = vgui.Create("DButton", secMoney)
@@ -448,11 +477,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnAdd100k:SetText("+ $100,000")
         btnAdd100k.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("add_money")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(100000, 32)
+            net.WriteString("add_money")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(100000, 32)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnResetMoney = vgui.Create("DButton", secMoney)
@@ -461,11 +492,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnResetMoney:SetText("Reset ($1,000)")
         btnResetMoney.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_money")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(1000, 32)
+            net.WriteString("set_money")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(1000, 32)
             net.SendToServer()
-            timer.Simple(0.2, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.2, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         -- Section 2: Role & Gang Control
@@ -495,11 +528,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
             local _, jId = comboJob:GetSelected()
             if jId then
                 net.Start("GRID_AdminDebugAction")
-                    net.WriteString("set_job")
-                    net.WriteEntity(selectedPlayer)
-                    net.WriteString(jId)
+                net.WriteString("set_job")
+                net.WriteEntity(selectedPlayer)
+                net.WriteString(jId)
                 net.SendToServer()
-                timer.Simple(0.3, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+                timer.Simple(0.3, function()
+                    PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+                end)
             end
         end
 
@@ -515,11 +550,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnSetGang:SetText("Set Gang")
         btnSetGang.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_gang")
-                net.WriteEntity(selectedPlayer)
-                net.WriteString(txtGang:GetText())
+            net.WriteString("set_gang")
+            net.WriteEntity(selectedPlayer)
+            net.WriteString(txtGang:GetText())
             net.SendToServer()
-            timer.Simple(0.3, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.3, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         local btnClearGang = vgui.Create("DButton", secJob)
@@ -528,11 +565,13 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnClearGang:SetText("Clear Gang")
         btnClearGang.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_gang")
-                net.WriteEntity(selectedPlayer)
-                net.WriteString("")
+            net.WriteString("set_gang")
+            net.WriteEntity(selectedPlayer)
+            net.WriteString("")
             net.SendToServer()
-            timer.Simple(0.3, function() PopulatePlayers(txtSearch:GetText()); RefreshActionPanel() end)
+            timer.Simple(0.3, function()
+                PopulatePlayers(txtSearch:GetText()); RefreshActionPanel()
+            end)
         end
 
         -- Section 3: Vitals & Cheats
@@ -551,9 +590,9 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnHeal:SetText("Heal (100 HP)")
         btnHeal.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_health")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(100, 32)
+            net.WriteString("set_health")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(100, 32)
             net.SendToServer()
         end
 
@@ -563,9 +602,9 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnArmor:SetText("Set 100% Armor")
         btnArmor.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("set_armor")
-                net.WriteEntity(selectedPlayer)
-                net.WriteInt(100, 32)
+            net.WriteString("set_armor")
+            net.WriteEntity(selectedPlayer)
+            net.WriteInt(100, 32)
             net.SendToServer()
         end
 
@@ -575,8 +614,8 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnGod:SetText("Toggle Godmode")
         btnGod.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("godmode")
-                net.WriteEntity(selectedPlayer)
+            net.WriteString("godmode")
+            net.WriteEntity(selectedPlayer)
             net.SendToServer()
         end
 
@@ -586,8 +625,8 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnRespawn:SetText("Respawn / Revive")
         btnRespawn.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("respawn")
-                net.WriteEntity(selectedPlayer)
+            net.WriteString("respawn")
+            net.WriteEntity(selectedPlayer)
             net.SendToServer()
         end
 
@@ -607,8 +646,8 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnGoto:SetText("Teleport To (Goto)")
         btnGoto.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("goto")
-                net.WriteEntity(selectedPlayer)
+            net.WriteString("goto")
+            net.WriteEntity(selectedPlayer)
             net.SendToServer()
         end
 
@@ -618,8 +657,8 @@ function GRID.Turf.RenderPlayerDebug(parent)
         btnBring:SetText("Bring Player Here")
         btnBring.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("bring")
-                net.WriteEntity(selectedPlayer)
+            net.WriteString("bring")
+            net.WriteEntity(selectedPlayer)
             net.SendToServer()
         end
     end
@@ -653,7 +692,7 @@ function GRID.Turf.RenderTurfTab(parent)
     btnSave:SetText("Save to MariaDB")
     btnSave.DoClick = function()
         net.Start("GRID_AdminTurfAction")
-            net.WriteString("save")
+        net.WriteString("save")
         net.SendToServer()
     end
 
@@ -663,7 +702,7 @@ function GRID.Turf.RenderTurfTab(parent)
     btnReload:SetText("Reload from MariaDB")
     btnReload.DoClick = function()
         net.Start("GRID_AdminTurfAction")
-            net.WriteString("reload")
+        net.WriteString("reload")
         net.SendToServer()
     end
 
@@ -675,7 +714,7 @@ function GRID.Turf.RenderTurfTab(parent)
         Derma_Query("Are you sure you want to remove all gang poles from this map?", "Confirm Clear",
             "Yes, Clear All", function()
                 net.Start("GRID_AdminTurfAction")
-                    net.WriteString("clear")
+                net.WriteString("clear")
                 net.SendToServer()
             end,
             "Cancel", function() end
@@ -707,9 +746,12 @@ function GRID.Turf.RenderTurfTab(parent)
     propPanel:SetSize(contW - 436, contH - 48)
     propPanel.Paint = function(s, w, h)
         draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
-        draw.SimpleText("Flag Pole Placement & Settings", "GRID_UI_Header", 16, 16, (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252))
-        draw.SimpleText("Territory Name:", "GRID_UI_Caption", 16, 52, (GRID.Colors and GRID.Colors.Muted) or Color(148, 163, 184))
-        draw.SimpleText("Initial Faction / Gang Owner:", "GRID_UI_Caption", 16, 114, (GRID.Colors and GRID.Colors.Muted) or Color(148, 163, 184))
+        draw.SimpleText("Flag Pole Placement & Settings", "GRID_UI_Header", 16, 16,
+            (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252))
+        draw.SimpleText("Territory Name:", "GRID_UI_Caption", 16, 52,
+            (GRID.Colors and GRID.Colors.Muted) or Color(148, 163, 184))
+        draw.SimpleText("Initial Faction / Gang Owner:", "GRID_UI_Caption", 16, 114,
+            (GRID.Colors and GRID.Colors.Muted) or Color(148, 163, 184))
     end
 
     local txtName = vgui.Create("DTextEntry", propPanel)
@@ -769,9 +811,11 @@ function GRID.Turf.RenderTurfTab(parent)
     btnCreate:SetSize(360, 42)
     btnCreate:SetText("Place New Gang Pole at Crosshair")
     btnCreate.DoClick = function()
-        local tr = (LocalPlayer().GetEyeTraceNoCursor and LocalPlayer():GetEyeTraceNoCursor()) or LocalPlayer():GetEyeTrace()
+        local tr = (LocalPlayer().GetEyeTraceNoCursor and LocalPlayer():GetEyeTraceNoCursor()) or
+        LocalPlayer():GetEyeTrace()
         if not tr.Hit or tr.HitSky then
-            GRID.Notify(LocalPlayer(), "Cannot place gang pole: Crosshair is not pointing at a valid surface!", NOTIFY_ERROR)
+            GRID.Notify(LocalPlayer(), "Cannot place gang pole: Crosshair is not pointing at a valid surface!",
+                NOTIFY_ERROR)
             return
         end
 
@@ -786,11 +830,11 @@ function GRID.Turf.RenderTurfTab(parent)
         end
 
         net.Start("GRID_AdminTurfAction")
-            net.WriteString("add")
-            net.WriteString(poleName)
-            net.WriteVector(tr.HitPos)
-            net.WriteUInt(GRID.Turf.PreviewRadius or 450, 16)
-            net.WriteString(ownerVal)
+        net.WriteString("add")
+        net.WriteString(poleName)
+        net.WriteVector(tr.HitPos)
+        net.WriteUInt(GRID.Turf.PreviewRadius or 450, 16)
+        net.WriteString(ownerVal)
         net.SendToServer()
 
         timer.Simple(0.2, function()
@@ -814,12 +858,12 @@ function GRID.Turf.RenderTurfTab(parent)
         if ownerVal == "Police / SWAT" then ownerVal = "police" end
 
         net.Start("GRID_AdminTurfAction")
-            net.WriteString("edit")
-            net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
-            net.WriteString(txtName:GetText())
-            net.WriteVector(Vector(0, 0, 0))
-            net.WriteUInt(sliderRadius:GetValue(), 16)
-            net.WriteString(ownerVal)
+        net.WriteString("edit")
+        net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
+        net.WriteString(txtName:GetText())
+        net.WriteVector(Vector(0, 0, 0))
+        net.WriteUInt(sliderRadius:GetValue(), 16)
+        net.WriteString(ownerVal)
         net.SendToServer()
 
         timer.Simple(0.2, function()
@@ -837,8 +881,8 @@ function GRID.Turf.RenderTurfTab(parent)
             return
         end
         net.Start("GRID_AdminTurfAction")
-            net.WriteString("teleport")
-            net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
+        net.WriteString("teleport")
+        net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
         net.SendToServer()
     end
 
@@ -852,8 +896,8 @@ function GRID.Turf.RenderTurfTab(parent)
             return
         end
         net.Start("GRID_AdminTurfAction")
-            net.WriteString("remove")
-            net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
+        net.WriteString("remove")
+        net.WriteUInt(GRID.Turf.SelectedZoneID, 8)
         net.SendToServer()
 
         GRID.Turf.SelectedZoneID = nil
@@ -908,7 +952,7 @@ function GRID.Turf.RenderSpawnersTab(parent)
     btnPayday:SetText("Trigger Payday Cycle Now")
     btnPayday.DoClick = function()
         net.Start("GRID_AdminDebugAction")
-            net.WriteString("trigger_payday")
+        net.WriteString("trigger_payday")
         net.SendToServer()
     end
 
@@ -918,7 +962,101 @@ function GRID.Turf.RenderSpawnersTab(parent)
     btnDivs:SetText("Trigger Turf Dividends Now")
     btnDivs.DoClick = function()
         net.Start("GRID_AdminDebugAction")
-            net.WriteString("trigger_dividends")
+        net.WriteString("trigger_dividends")
+        net.SendToServer()
+    end
+
+    -- Section: Scavenging & Recycling Persistence Spawners
+    local secScav = scroll:Add("DPanel")
+    secScav:Dock(TOP)
+    secScav:DockMargin(0, 0, 0, 14)
+    secScav:SetTall(160)
+    secScav.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        draw.SimpleText("Scavenging & Street Recycling Spawners (Auto-Persists to DB & JSON)", "GRID_UI_Header", 16, 12,
+            Color(52, 211, 153))
+        draw.SimpleText("Spawns an anchored entity at crosshair and immediately saves to the Map Profile.",
+            "GRID_UI_Caption", 16, 36, Color(148, 163, 184))
+    end
+
+    local scavSpawners = {
+        { name = "Dumpster",        class = "grid_scavenge_dumpster",  col = Color(56, 189, 248) },
+        { name = "Trash Can",       class = "grid_scavenge_trashbin",  col = Color(52, 211, 153) },
+        { name = "Scrap Pile",      class = "grid_scavenge_scrappile", col = Color(251, 191, 36) },
+        { name = "Recycling Depot", class = "grid_recycler_depot",     col = Color(168, 85, 247) }
+    }
+
+    local scX = 16
+    for _, sp in ipairs(scavSpawners) do
+        local btn = vgui.Create("DButton", secScav)
+        btn:SetPos(scX, 60)
+        btn:SetSize(185, 36)
+        btn:SetText("+ Spawn " .. sp.name)
+        btn:SetFont("GRID_UI_Badge")
+        btn:SetTextColor(Color(248, 250, 252))
+        btn.Paint = function(s, w, h)
+            local bg = s:IsHovered() and Color(sp.col.r, sp.col.g, sp.col.b, 220) or Color(30, 41, 59, 200)
+            draw.RoundedBox(4, 0, 0, w, h, bg)
+            surface.SetDrawColor(sp.col.r, sp.col.g, sp.col.b, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+        end
+        btn.DoClick = function()
+            net.Start("GRID_AdminDebugAction")
+            net.WriteString("spawn_entity")
+            net.WriteString(sp.class)
+            net.SendToServer()
+        end
+        scX = scX + 195
+    end
+
+    -- Management Controls for Scavenge Profile
+    local btnSaveScav = vgui.Create("DButton", secScav)
+    btnSaveScav:SetPos(16, 110)
+    btnSaveScav:SetSize(240, 32)
+    btnSaveScav:SetText("💾 Save All to DB & JSON Profile")
+    btnSaveScav:SetFont("GRID_UI_Caption")
+    btnSaveScav:SetTextColor(Color(248, 250, 252))
+    btnSaveScav.Paint = function(s, w, h)
+        local bg = s:IsHovered() and Color(16, 185, 129, 220) or Color(5, 150, 105, 180)
+        draw.RoundedBox(4, 0, 0, w, h, bg)
+    end
+    btnSaveScav.DoClick = function()
+        net.Start("GRID_AdminDebugAction")
+        net.WriteString("save_scavenge_profile")
+        net.SendToServer()
+    end
+
+    local btnRespawnScav = vgui.Create("DButton", secScav)
+    btnRespawnScav:SetPos(266, 110)
+    btnRespawnScav:SetSize(220, 32)
+    btnRespawnScav:SetText("🔄 Reload / Respawn from DB")
+    btnRespawnScav:SetFont("GRID_UI_Caption")
+    btnRespawnScav:SetTextColor(Color(248, 250, 252))
+    btnRespawnScav.Paint = function(s, w, h)
+        local bg = s:IsHovered() and Color(56, 189, 248, 220) or Color(14, 116, 144, 180)
+        draw.RoundedBox(4, 0, 0, w, h, bg)
+    end
+    btnRespawnScav.DoClick = function()
+        net.Start("GRID_AdminDebugAction")
+        net.WriteString("respawn_scavenge_profile")
+        net.SendToServer()
+    end
+
+    local btnClearScav = vgui.Create("DButton", secScav)
+    btnClearScav:SetPos(496, 110)
+    btnClearScav:SetSize(180, 32)
+    btnClearScav:SetText("🗑 Clear All Map Nodes")
+    btnClearScav:SetFont("GRID_UI_Caption")
+    btnClearScav:SetTextColor(Color(248, 250, 252))
+    btnClearScav.Paint = function(s, w, h)
+        local bg = s:IsHovered() and Color(239, 68, 68, 220) or Color(153, 27, 27, 180)
+        draw.RoundedBox(4, 0, 0, w, h, bg)
+    end
+    btnClearScav.DoClick = function()
+        net.Start("GRID_AdminDebugAction")
+        net.WriteString("clear_scavenge_profile")
         net.SendToServer()
     end
 
@@ -926,31 +1064,32 @@ function GRID.Turf.RenderSpawnersTab(parent)
     local secSpawn = scroll:Add("DPanel")
     secSpawn:Dock(TOP)
     secSpawn:DockMargin(0, 0, 0, 14)
-    secSpawn:SetTall(150)
+    secSpawn:SetTall(105)
     secSpawn.Paint = function(s, w, h)
         draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
         surface.SetDrawColor(30, 41, 59, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-        draw.SimpleText("Test Entity Spawners (Crosshair Placement)", "GRID_UI_Header", 16, 12, Color(56, 189, 248))
+        draw.SimpleText("Contraband & Economy Spawners (Crosshair Placement)", "GRID_UI_Header", 16, 12,
+            Color(56, 189, 248))
     end
 
     local spawners = {
-        { name = "Money Printer", class = "grid_printer_bronze" },
-        { name = "Silver Money Printer", class = "grid_printer_silver" },
-        { name = "Diamond Money Printer", class = "grid_printer_diamond" },
-        { name = "$10,000 Cash Stack", class = "grid_cash_stack" }
+        { name = "Bronze Printer",  class = "grid_printer_bronze" },
+        { name = "Silver Printer",  class = "grid_printer_silver" },
+        { name = "Diamond Printer", class = "grid_printer_diamond" },
+        { name = "$10k Cash Stack", class = "grid_cash_stack" }
     }
 
     local sx = 16
     for _, sp in ipairs(spawners) do
         local btn = vgui.Create("DButton", secSpawn)
-        btn:SetPos(sx, 44)
-        btn:SetSize(185, 38)
+        btn:SetPos(sx, 48)
+        btn:SetSize(185, 36)
         btn:SetText(sp.name)
         btn.DoClick = function()
             net.Start("GRID_AdminDebugAction")
-                net.WriteString("spawn_entity")
-                net.WriteString(sp.class)
+            net.WriteString("spawn_entity")
+            net.WriteString(sp.class)
             net.SendToServer()
         end
         sx = sx + 195

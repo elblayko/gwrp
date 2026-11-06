@@ -1,7 +1,7 @@
 --[[
     entities/weapons/weapon_grid_lockpick/init.lua
     GridRP Tactical Lockpick - Server
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile("cl_init.lua")
@@ -27,7 +27,8 @@ function SWEP:StartLockpick(ply, ent)
     self:SetPickEndTime(CurTime() + self.LockpickTime)
     self.NextClickSound = CurTime() + 0.65
 
-    GRID.Notify(ply, string.format("Lockpicking started... stay close (%ds)!", math.Round(self.LockpickTime)), NOTIFY_GENERIC, 3)
+    GRID.Notify(ply, string.format("Lockpicking started... stay close (%ds)!", math.Round(self.LockpickTime)),
+        NOTIFY_GENERIC, 3)
 
     -- Silent Alarm Security Trip
     local doorOwner = ent.GetDoorOwner and ent:GetDoorOwner()
@@ -48,7 +49,9 @@ function SWEP:StartLockpick(ply, ent)
         for _, p in ipairs(player.GetAll()) do
             if p:IsPolice() then
                 p:EmitSound("ambient/alarms/klaxon1.wav", 65, 130, 0.5)
-                GRID.Notify(p, string.format("[LSPD 911] Silent alarm tripped! Burglary in progress at %s's property!", doorOwner:Nick()), NOTIFY_ERROR, 8)
+                GRID.Notify(p,
+                    string.format("[LSPD 911] Silent alarm tripped! Burglary in progress at %s's property!",
+                        doorOwner:Nick()), NOTIFY_ERROR, 8)
             end
         end
     end

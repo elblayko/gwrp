@@ -1,7 +1,7 @@
 --[[
     entities/entities/grid_printer_base/cl_init.lua
     GridRP Contraband Money Printer Abstract Base Client Logic
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 include("shared.lua")
@@ -31,64 +31,65 @@ function ENT:Draw()
     local isDamped = self.GetLowEmissionUntil and (self:GetLowEmissionUntil() > now)
 
     cam.Start3D2D(pos, ang, 0.08)
-        -- Compact Sleek 3D Plate
-        draw.RoundedBox(6, -105, -50, 210, 100, Color(15, 23, 42, 240))
-        draw.RoundedBox(6, -105, -50, 210, 3, trimCol)
+    -- Compact Sleek 3D Plate
+    draw.RoundedBox(6, -105, -50, 210, 100, Color(15, 23, 42, 240))
+    draw.RoundedBox(6, -105, -50, 210, 3, trimCol)
 
-        -- Printer Name
-        draw.SimpleText(self.PrintName, "GRID_FontMedium", 0, -32, GRID.Colors.White, TEXT_ALIGN_CENTER)
+    -- Printer Name
+    draw.SimpleText(self.PrintName, "GRID_FontMedium", 0, -32, GRID.Colors.White, TEXT_ALIGN_CENTER)
 
-        if isVenting then
-            -- Active Sweet-Spot Pressure Gauge
-            local duration = math.max(0.1, self:GetVentDuration())
-            local progress = math.Clamp((now - self:GetVentStartTime()) / duration, 0, 1)
-            local sMin = self:GetVentSweetMin()
-            local sMax = self:GetVentSweetMax()
+    if isVenting then
+        -- Active Sweet-Spot Pressure Gauge
+        local duration = math.max(0.1, self:GetVentDuration())
+        local progress = math.Clamp((now - self:GetVentStartTime()) / duration, 0, 1)
+        local sMin = self:GetVentSweetMin()
+        local sMax = self:GetVentSweetMax()
 
-            draw.SimpleText("HIT [E] IN GREEN ZONE", "GRID_FontSmall", 0, -8, Color(251, 191, 36), TEXT_ALIGN_CENTER)
+        draw.SimpleText("HIT [E] IN GREEN ZONE", "GRID_FontSmall", 0, -8, Color(251, 191, 36), TEXT_ALIGN_CENTER)
 
-            -- Track
-            local barW = 180
-            local barH = 16
-            local barX = -90
-            local barY = 14
-            draw.RoundedBox(4, barX, barY, barW, barH, Color(11, 15, 25, 230))
+        -- Track
+        local barW = 180
+        local barH = 16
+        local barX = -90
+        local barY = 14
+        draw.RoundedBox(4, barX, barY, barW, barH, Color(11, 15, 25, 230))
 
-            -- Green sweet spot zone
-            local greenX = barX + (sMin * barW)
-            local greenW = math.max(6, (sMax - sMin) * barW)
-            draw.RoundedBox(2, greenX, barY + 2, greenW, barH - 4, Color(52, 211, 153, 220))
+        -- Green sweet spot zone
+        local greenX = barX + (sMin * barW)
+        local greenW = math.max(6, (sMax - sMin) * barW)
+        draw.RoundedBox(2, greenX, barY + 2, greenW, barH - 4, Color(52, 211, 153, 220))
 
-            -- Needle
-            local needleX = barX + (progress * barW)
-            draw.RoundedBox(2, needleX - 2, barY - 2, 4, barH + 4, Color(251, 191, 36, 255))
-        elseif isJammed then
-            -- Valve Jammed Warning
-            local remain = math.ceil(self:GetValveJammedUntil() - now)
-            draw.SimpleText("$" .. self:GetStoredCash(), "GRID_FontLarge", 0, -6, GRID.Colors.MoneyGreen, TEXT_ALIGN_CENTER)
+        -- Needle
+        local needleX = barX + (progress * barW)
+        draw.RoundedBox(2, needleX - 2, barY - 2, 4, barH + 4, Color(251, 191, 36, 255))
+    elseif isJammed then
+        -- Valve Jammed Warning
+        local remain = math.ceil(self:GetValveJammedUntil() - now)
+        draw.SimpleText("$" .. self:GetStoredCash(), "GRID_FontLarge", 0, -6, GRID.Colors.MoneyGreen, TEXT_ALIGN_CENTER)
 
-            draw.RoundedBox(4, -90, 18, 180, 20, Color(239, 68, 68, 35))
-            surface.SetDrawColor(239, 68, 68, 140)
-            surface.DrawOutlinedRect(-90, 18, 180, 20, 1)
-            draw.SimpleText("VALVE JAMMED (" .. remain .. "s)", "GRID_FontSmall", 0, 28, Color(248, 113, 113), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        else
-            -- Standard Idle State: Stored Cash & Stats
-            draw.SimpleText("$" .. self:GetStoredCash(), "GRID_FontLarge", 0, -4, GRID.Colors.MoneyGreen, TEXT_ALIGN_CENTER)
+        draw.RoundedBox(4, -90, 18, 180, 20, Color(239, 68, 68, 35))
+        surface.SetDrawColor(239, 68, 68, 140)
+        surface.DrawOutlinedRect(-90, 18, 180, 20, 1)
+        draw.SimpleText("VALVE JAMMED (" .. remain .. "s)", "GRID_FontSmall", 0, 28, Color(248, 113, 113),
+            TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    else
+        -- Standard Idle State: Stored Cash & Stats
+        draw.SimpleText("$" .. self:GetStoredCash(), "GRID_FontLarge", 0, -4, GRID.Colors.MoneyGreen, TEXT_ALIGN_CENTER)
 
-            local temp = self:GetTemperature()
-            local tempCol = temp > 75 and GRID.Colors.HealthRed or GRID.Colors.Muted
-            local isUv = self.GetHasUndervolt and self:GetHasUndervolt()
-            local isOc = self.GetHasOverclock and self:GetHasOverclock()
-            local isTuned = self.GetIsTuned and self:GetIsTuned()
-            local tags = {}
-            if isUv then table.insert(tags, "UV") end
-            if isOc then table.insert(tags, "OC") end
-            if isTuned then table.insert(tags, "TUNED") end
-            local modTag = #tags > 0 and (" (" .. table.concat(tags, "+") .. ")") or ""
-            local tempTxt = "Temp: " .. temp .. "°C" .. modTag
-            draw.SimpleText(tempTxt, "GRID_FontSmall", -90, 24, tempCol, TEXT_ALIGN_LEFT)
-            draw.SimpleText("Eff: " .. eff .. "%", "GRID_FontSmall", 90, 24, effCol, TEXT_ALIGN_RIGHT)
-        end
+        local temp = self:GetTemperature()
+        local tempCol = temp > 75 and GRID.Colors.HealthRed or GRID.Colors.Muted
+        local isUv = self.GetHasUndervolt and self:GetHasUndervolt()
+        local isOc = self.GetHasOverclock and self:GetHasOverclock()
+        local isTuned = self.GetIsTuned and self:GetIsTuned()
+        local tags = {}
+        if isUv then table.insert(tags, "UV") end
+        if isOc then table.insert(tags, "OC") end
+        if isTuned then table.insert(tags, "TUNED") end
+        local modTag = #tags > 0 and (" (" .. table.concat(tags, "+") .. ")") or ""
+        local tempTxt = "Temp: " .. temp .. "°C" .. modTag
+        draw.SimpleText(tempTxt, "GRID_FontSmall", -90, 24, tempCol, TEXT_ALIGN_LEFT)
+        draw.SimpleText("Eff: " .. eff .. "%", "GRID_FontSmall", 90, 24, effCol, TEXT_ALIGN_RIGHT)
+    end
     cam.End3D2D()
 end
 
@@ -144,7 +145,7 @@ hook.Add("HUDPaint", "GRID_PrinterValveHUD", function()
         draw.SimpleText(hint, "GRID_UI_Badge", cx, by + barH + 10, hintCol, TEXT_ALIGN_CENTER)
     elseif isJammed then
         local remain = math.ceil(ent:GetValveJammedUntil() - now)
-        draw.SimpleText(string.format("VALVE JAMMED (%ds)", remain), "GRID_UI_Badge", cx, cy + 24, Color(239, 68, 68), TEXT_ALIGN_CENTER)
+        draw.SimpleText(string.format("VALVE JAMMED (%ds)", remain), "GRID_UI_Badge", cx, cy + 24, Color(239, 68, 68),
+            TEXT_ALIGN_CENTER)
     end
 end)
-

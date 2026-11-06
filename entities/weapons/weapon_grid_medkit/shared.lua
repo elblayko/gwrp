@@ -1,14 +1,15 @@
 --[[
     entities/weapons/weapon_grid_medkit/shared.lua
     GridRP Field Medical Kit
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile()
 
 SWEP.PrintName = "Medical Kit"
-SWEP.Author = "Toxic"
-SWEP.Instructions = "Primary Fire: Heal targeted ally\nSecondary Fire: Self-Heal or Adrenaline Injector (Target Ally)\nReload: Self Adrenaline Injection (Pharmacist)"
+SWEP.Author = "Juicebox"
+SWEP.Instructions =
+"Primary Fire: Heal targeted ally\nSecondary Fire: Self-Heal or Adrenaline Injector (Target Ally)\nReload: Self Adrenaline Injection (Pharmacist)"
 SWEP.Category = "GridRP"
 
 SWEP.Spawnable = true
@@ -73,7 +74,8 @@ function SWEP:SecondaryAttack()
     local isPharmacist = (ply:GetJob() == "pharmacist")
     local tr = ply:GetEyeTrace()
     local target = tr.Entity
-    local isTargetAlly = IsValid(target) and target:IsPlayer() and target:Alive() and (tr.HitPos:DistToSqr(ply:EyePos()) <= (95 * 95))
+    local isTargetAlly = IsValid(target) and target:IsPlayer() and target:Alive() and
+    (tr.HitPos:DistToSqr(ply:EyePos()) <= (95 * 95))
 
     -- Pharmacist Specialty: If targeting an ally, administer Combat Adrenaline Stim (+25% speed for 45s)
     if isPharmacist and isTargetAlly then
@@ -88,7 +90,8 @@ function SWEP:SecondaryAttack()
             target:EmitSound("items/medshot4.wav", 75, 105)
             self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
 
-            GRID.Notify(target, string.format("Dr. %s administered Combat Adrenaline! (+25%% Speed for 45s)", ply:Nick()), NOTIFY_GENERIC, 5)
+            GRID.Notify(target, string.format("Dr. %s administered Combat Adrenaline! (+25%% Speed for 45s)", ply:Nick()),
+                NOTIFY_GENERIC, 5)
             GRID.Notify(ply, string.format("Administered Combat Adrenaline to %s!", target:Nick()), NOTIFY_HINT, 4)
         end
         return

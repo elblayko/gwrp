@@ -1,13 +1,13 @@
 --[[
     entities/entities/grid_network_switch_base/shared.lua
     GridRP Layer-3 Modular Network Switch Abstract Base
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Base Network Switch"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = false
 ENT.AdminOnly = false
 ENT.IsNetworkSwitch = true
@@ -20,9 +20,9 @@ function ENT:SetupDataTables()
     self:NetworkVar("Int", 1, "MaxPorts")
     self:NetworkVar("Int", 2, "Efficiency")
     self:NetworkVar("Int", 3, "SubnetID")
-    self:NetworkVar("Int", 4, "ActivePortsMask")   -- Bitmask: Bit (i-1) = Port i active link
-    self:NetworkVar("Int", 5, "Port10GMask")        -- Bitmask: Bit (i-1) = Port i 10G SFP/Fiber mode
-    self:NetworkVar("Int", 6, "PortUplinkMask")     -- Bitmask: Bit (i-1) = Port i Switch trunk
+    self:NetworkVar("Int", 4, "ActivePortsMask") -- Bitmask: Bit (i-1) = Port i active link
+    self:NetworkVar("Int", 5, "Port10GMask")     -- Bitmask: Bit (i-1) = Port i 10G SFP/Fiber mode
+    self:NetworkVar("Int", 6, "PortUplinkMask")  -- Bitmask: Bit (i-1) = Port i Switch trunk
     self:NetworkVar("Entity", 0, "OwnerPlayer")
     self:NetworkVar("String", 0, "IPAddress")
 end
@@ -66,9 +66,13 @@ end
 
 -- Backward compatibility getters for legacy code
 function ENT:GetPort1Active() return self:IsPortActive(1) end
+
 function ENT:GetPort2Active() return self:IsPortActive(2) end
+
 function ENT:GetPort3Active() return self:IsPortActive(3) end
+
 function ENT:GetPort4Active() return self:IsPortActive(4) end
+
 function ENT:GetPort3Is10G() return self:IsPort10G(3) end
 
 function ENT:GetUplinkSwitch(portId)
@@ -89,4 +93,3 @@ end
 function ENT:GetPort3Switch()
     return self:GetUplinkSwitch(3)
 end
-

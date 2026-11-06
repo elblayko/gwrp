@@ -42,6 +42,14 @@ function ENT:Use(activator, caller)
     local zone = GRID.Turf and GRID.Turf.Zones and GRID.Turf.Zones[turfId]
     if not zone then return end
 
+    if GRID.Population and GRID.Population.CanCaptureTurf then
+        local canCap, reason = GRID.Population.CanCaptureTurf()
+        if not canCap then
+            GRID.Notify(activator, reason, NOTIFY_ERROR)
+            return
+        end
+    end
+
     local faction = activator:GetFaction()
     if not faction or faction.id == "neutral" then
         GRID.Notify(activator, "Join a Gang or Police (F4) to contest turf!", NOTIFY_ERROR)

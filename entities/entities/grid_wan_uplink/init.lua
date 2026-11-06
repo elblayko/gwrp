@@ -1,7 +1,7 @@
 --[[
     entities/entities/grid_wan_uplink/init.lua
     GridRP Encrypted Satellite WAN Uplink Server Logic
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile("cl_init.lua")
@@ -80,7 +80,8 @@ function ENT:UpdateKey(newKey)
     -- Changing encryption key interrupts any active Cloud Botnet C2 tunnel on this broadcast domain
     if oldKey and oldKey ~= "" and oldKey ~= cleanKey then
         local sw = self:GetConnectedSwitch()
-        local botnetPC = IsValid(sw) and GRID.Network and GRID.Network.GetActiveBotnetForSwitch and GRID.Network.GetActiveBotnetForSwitch(sw)
+        local botnetPC = IsValid(sw) and GRID.Network and GRID.Network.GetActiveBotnetForSwitch and
+        GRID.Network.GetActiveBotnetForSwitch(sw)
         if IsValid(botnetPC) and botnetPC.StopBotnet then
             botnetPC:StopBotnet("WAN encryption key changed — C2 tunnel handshake dropped.")
         end
@@ -106,7 +107,8 @@ function ENT:UpdateWireOutputs()
     WireLib.TriggerOutput(self, "AssignedPort", self:GetAssignedPort() or 0)
     WireLib.TriggerOutput(self, "ConnectedSwitch", sw)
 
-    local statusStr = (isOnline == 1) and string.format("ONLINE (%d Peer%s)", peers, peers == 1 and "" or "s") or "NO SIGNAL (Standalone)"
+    local statusStr = (isOnline == 1) and string.format("ONLINE (%d Peer%s)", peers, peers == 1 and "" or "s") or
+    "NO SIGNAL (Standalone)"
     WireLib.SetOverlayText(self, string.format(
         "[GridRP Satellite WAN Uplink]\nKey: %s\nStatus: %s\nLocal Subnet: 192.168.%d.0/24",
         key, statusStr, subnet
@@ -115,7 +117,8 @@ end
 
 function ENT:DisconnectFromSwitch()
     local sw = self:GetConnectedSwitch()
-    local botnetPC = IsValid(sw) and GRID.Network and GRID.Network.GetActiveBotnetForSwitch and GRID.Network.GetActiveBotnetForSwitch(sw)
+    local botnetPC = IsValid(sw) and GRID.Network and GRID.Network.GetActiveBotnetForSwitch and
+    GRID.Network.GetActiveBotnetForSwitch(sw)
 
     if IsValid(sw) and sw.DisconnectDevice then
         sw:DisconnectDevice(self)
@@ -145,7 +148,9 @@ function ENT:Use(activator, caller)
     if activator:IsPolice() then
         local baseBounty = 350
         activator:AddMoney(baseBounty)
-        GRID.Notify(activator, string.format("Contraband encrypted WAN Satellite Uplink confiscated for +$%d bounty!", baseBounty), NOTIFY_GENERIC)
+        GRID.Notify(activator,
+            string.format("Contraband encrypted WAN Satellite Uplink confiscated for +$%d bounty!", baseBounty),
+            NOTIFY_GENERIC)
         activator:EmitSound("ambient/levels/labs/coinslot1.wav")
         self:DisconnectFromSwitch()
         self:Remove()
@@ -154,15 +159,15 @@ function ENT:Use(activator, caller)
 
     -- Open configuration UI for player
     net.Start("GRID_OpenWANConfig")
-        net.WriteEntity(self)
-        net.WriteString(self:GetEncryptionKey() or "")
-        net.WriteBool(self:GetIsOnline())
-        net.WriteUInt(self:GetLinkedPeerCount() or 0, 8)
-        local sw = self:GetConnectedSwitch()
-        net.WriteEntity(sw)
-        local subnet = IsValid(sw) and (sw.GetSubnetID and sw:GetSubnetID() or 1) or 0
-        net.WriteUInt(subnet, 16)
-        net.WriteString(self:GetIPAddress() or "")
+    net.WriteEntity(self)
+    net.WriteString(self:GetEncryptionKey() or "")
+    net.WriteBool(self:GetIsOnline())
+    net.WriteUInt(self:GetLinkedPeerCount() or 0, 8)
+    local sw = self:GetConnectedSwitch()
+    net.WriteEntity(sw)
+    local subnet = IsValid(sw) and (sw.GetSubnetID and sw:GetSubnetID() or 1) or 0
+    net.WriteUInt(subnet, 16)
+    net.WriteString(self:GetIPAddress() or "")
     net.Send(activator)
 
     self:EmitSound("buttons/button14.wav", 60, 100)
@@ -191,5 +196,7 @@ net.Receive("GRID_UpdateWANKey", function(len, ply)
     if uplink:GetPos():DistToSqr(ply:GetPos()) > (250 * 250) then return end
 
     uplink:UpdateKey(newKey)
-    GRID.Notify(ply, string.format("WAN Uplink encryption key updated to [%s]. Re-associating mesh...", uplink:GetEncryptionKey()), NOTIFY_GENERIC)
+    GRID.Notify(ply,
+        string.format("WAN Uplink encryption key updated to [%s]. Re-associating mesh...", uplink:GetEncryptionKey()),
+        NOTIFY_GENERIC)
 end)

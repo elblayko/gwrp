@@ -1,7 +1,7 @@
 --[[
     entities/entities/grid_computer/cl_init.lua
     GridRP Personal Computer Client Logic & Hacking OS Terminal
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 include("shared.lua")
@@ -72,7 +72,8 @@ function ENT:Draw()
     if isBotnet then
         draw.SimpleText("CYBERDECK TERMINAL", "GRID_FontSmall", 0, -33, Color(56, 189, 248), TEXT_ALIGN_CENTER)
         draw.SimpleText(statusText, "GRID_FontSmall", 0, -15, statusCol, TEXT_ALIGN_CENTER)
-        draw.SimpleText(string.format("BOTNET C2: +$%d / 20s", botnetYield), "GRID_FontSmall", 0, 4, Color(250, 204, 21), TEXT_ALIGN_CENTER)
+        draw.SimpleText(string.format("BOTNET C2: +$%d / 20s", botnetYield), "GRID_FontSmall", 0, 4, Color(250, 204, 21),
+            TEXT_ALIGN_CENTER)
         draw.SimpleText("[E] Access Shell", "GRID_FontSmall", 0, 23, Color(148, 163, 184), TEXT_ALIGN_CENTER)
     else
         draw.SimpleText("CYBERDECK TERMINAL", "GRID_FontSmall", 0, -24, Color(56, 189, 248), TEXT_ALIGN_CENTER)
@@ -222,7 +223,9 @@ local function OpenTerminalUI(computerEnt, switchEnt, ipStr, isNet)
                     computerEnt.GetBotnetYield and computerEnt:GetBotnetYield() or 0),
                 "highlight")
         else
-            AddTerminalLine("  Cloud Botnet C2   : IDLE - Type 'botnet start' to launch cloud attacks (Requires WAN Uplink).", "highlight")
+            AddTerminalLine(
+            "  Cloud Botnet C2   : IDLE - Type 'botnet start' to launch cloud attacks (Requires WAN Uplink).",
+                "highlight")
         end
     end
     AddTerminalLine("--------------------------------------------------------------------------------", "dark")

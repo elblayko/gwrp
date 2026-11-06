@@ -1,5 +1,5 @@
 --[[
-    GridRP (GRID) by Toxic
+    GridRP (GRID) by Juicebox
     gamemode/cl_init.lua - Client Gamemode Entry Point
 --]]
 

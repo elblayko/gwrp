@@ -7,7 +7,7 @@ AddCSLuaFile()
 
 SWEP.Base = "weapon_grid_base"
 SWEP.PrintName = "Pump Shotgun"
-SWEP.Author = "Toxic"
+SWEP.Author = "Juicebox"
 SWEP.Instructions = "Primary: Shotgun Blast\nSecondary: Iron Sights\nReload: Reload"
 SWEP.Category = "GridRP"
 
@@ -35,7 +35,8 @@ SWEP.ViewModelFlip = false
 
 local hasCStrike = util.IsValidModel("models/weapons/cstrike/c_shot_m3super90.mdl")
 SWEP.ViewModel = hasCStrike and "models/weapons/cstrike/c_shot_m3super90.mdl" or "models/weapons/c_shotgun.mdl"
-SWEP.WorldModel = util.IsValidModel("models/weapons/w_shot_m3super90.mdl") and "models/weapons/w_shot_m3super90.mdl" or "models/weapons/w_shotgun.mdl"
+SWEP.WorldModel = util.IsValidModel("models/weapons/w_shot_m3super90.mdl") and "models/weapons/w_shot_m3super90.mdl" or
+"models/weapons/w_shotgun.mdl"
 
 SWEP.IronSightsPos = hasCStrike and Vector(-7.65, -8, 3.5) or Vector(-8.96, -10, 4.15)
 SWEP.IronSightsAng = Vector(0, 0, 0)

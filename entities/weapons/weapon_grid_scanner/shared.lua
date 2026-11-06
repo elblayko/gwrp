@@ -1,14 +1,15 @@
 --[[
     entities/weapons/weapon_grid_scanner/shared.lua
     GridRP Police Acoustic & Thermal Contraband Scanner
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile()
 
 SWEP.PrintName = "Contraband Scanner"
-SWEP.Author = "Toxic"
-SWEP.Instructions = "Primary Fire: Ping Contraband Signal (Triangulate 1/3, 2/3, 3/3)\nSecondary Fire: Broadcast Police Raid Dispatch Waypoint (Requires 3/3 Samples)\nReload (R): Reset Triangulation Radar"
+SWEP.Author = "Juicebox"
+SWEP.Instructions =
+"Primary Fire: Ping Contraband Signal (Triangulate 1/3, 2/3, 3/3)\nSecondary Fire: Broadcast Police Raid Dispatch Waypoint (Requires 3/3 Samples)\nReload (R): Reset Triangulation Radar"
 SWEP.Category = "GridRP"
 
 SWEP.Spawnable = true
@@ -205,7 +206,8 @@ function SWEP:PrimaryAttack()
                         bestScore = strength
                         bestPrinter = ent
                         detectedDist = dist
-                        detectedType = isOc and "overclocked" or (isUv and "undervolted" or (isTuned and "tuned" or "standard"))
+                        detectedType = isOc and "overclocked" or
+                        (isUv and "undervolted" or (isTuned and "tuned" or "standard"))
                     end
                 end
             end
@@ -219,7 +221,10 @@ function SWEP:PrimaryAttack()
             if sep < minDist then
                 local metersAway = math.max(1, math.Round((minDist - sep) * 0.01905))
                 ply:EmitSound("common/warning.wav", 60, 120)
-                GRID.Notify(ply, string.format("Baseline too narrow! Move at least ~%dm further away from Sample #%d to establish triangulation geometry.", metersAway, idx), NOTIFY_ERROR, 5)
+                GRID.Notify(ply,
+                    string.format(
+                    "Baseline too narrow! Move at least ~%dm further away from Sample #%d to establish triangulation geometry.",
+                        metersAway, idx), NOTIFY_ERROR, 5)
                 return
             end
         end
@@ -235,7 +240,8 @@ function SWEP:PrimaryAttack()
         end
 
         local hasPrinter = IsValid(bestPrinter)
-        local sampleRadius = hasPrinter and math.max(50, detectedDist + math.random(-6, 6)) or 1200 -- 1200 units (~23m sweep boundary)
+        local sampleRadius = hasPrinter and math.max(50, detectedDist + math.random(-6, 6)) or
+        1200                                                                                        -- 1200 units (~23m sweep boundary)
 
         table.insert(self.Samples, {
             pos = myPos,
@@ -269,35 +275,47 @@ function SWEP:PrimaryAttack()
                 ply:EmitSound("buttons/bell1.wav", 70, 115)
 
                 local distMeters = math.Round(myPos:Distance(targetPos) * 0.01905)
-                local modNote = detectedType == "overclocked" and " [HIGH EM FREQUENCY DETECTED]" or (detectedType == "undervolted" and " [LOW THERMAL FOOTPRINT]" or "")
-                GRID.Notify(ply, string.format("[TRILATERATION COMPLETE] Target pinpointed ~%dm away (%d%% confidence)!%s Press RIGHT-CLICK to dispatch raid waypoint.", distMeters, confidence, modNote), NOTIFY_GENERIC, 8)
+                local modNote = detectedType == "overclocked" and " [HIGH EM FREQUENCY DETECTED]" or
+                (detectedType == "undervolted" and " [LOW THERMAL FOOTPRINT]" or "")
+                GRID.Notify(ply,
+                    string.format(
+                    "[TRILATERATION COMPLETE] Target pinpointed ~%dm away (%d%% confidence)!%s Press RIGHT-CLICK to dispatch raid waypoint.",
+                        distMeters, confidence, modNote), NOTIFY_GENERIC, 8)
             else
                 noContraband = true
                 self.LockedTargetPos = nil
                 ply:EmitSound("buttons/button10.wav", 65, 90)
-                GRID.Notify(ply, "[TRILATERATION COMPLETE] Sector clear. Zero contraband printer signatures detected across all 3 baseline pings.", NOTIFY_HINT, 6)
+                GRID.Notify(ply,
+                    "[TRILATERATION COMPLETE] Sector clear. Zero contraband printer signatures detected across all 3 baseline pings.",
+                    NOTIFY_HINT, 6)
             end
         else
             if hasPrinter then
                 self.TargetPrinter = bestPrinter
                 ply:EmitSound("npc/scanner/scanner_scan4.wav", 70, 105 + (sampleIndex * 15))
                 local distMeters = math.Round(sampleRadius * 0.01905)
-                GRID.Notify(ply, string.format("[SAMPLE %d/3 RECORDED] Signal detected (~%dm away). Move to next vantage point to cross-reference bearings.", sampleIndex, distMeters), NOTIFY_GENERIC, 5)
+                GRID.Notify(ply,
+                    string.format(
+                    "[SAMPLE %d/3 RECORDED] Signal detected (~%dm away). Move to next vantage point to cross-reference bearings.",
+                        sampleIndex, distMeters), NOTIFY_GENERIC, 5)
             else
                 ply:EmitSound("npc/scanner/scanner_scan4.wav", 65, 95 + (sampleIndex * 10))
-                GRID.Notify(ply, string.format("[SAMPLE %d/3 RECORDED] Sector sweep logged. Move to next vantage point to establish triangulation geometry.", sampleIndex), NOTIFY_GENERIC, 5)
+                GRID.Notify(ply,
+                    string.format(
+                    "[SAMPLE %d/3 RECORDED] Sector sweep logged. Move to next vantage point to establish triangulation geometry.",
+                        sampleIndex), NOTIFY_GENERIC, 5)
             end
         end
 
         net.Start("GRID_Scanner_AddSample")
-            net.WriteUInt(sampleIndex, 4)
-            net.WriteVector(myPos)
-            net.WriteFloat(sampleRadius)
-            net.WriteBool(isLocked)
-            net.WriteVector(targetPos)
-            net.WriteFloat(confidence)
-            net.WriteString(detectedType)
-            net.WriteBool(noContraband)
+        net.WriteUInt(sampleIndex, 4)
+        net.WriteVector(myPos)
+        net.WriteFloat(sampleRadius)
+        net.WriteBool(isLocked)
+        net.WriteVector(targetPos)
+        net.WriteFloat(confidence)
+        net.WriteString(detectedType)
+        net.WriteBool(noContraband)
         net.Send(ply)
     end
 end
@@ -310,7 +328,8 @@ function SWEP:SecondaryAttack()
     if SERVER then
         if not self.LockedTargetPos or not self.Samples or #self.Samples < 3 then
             ply:EmitSound("buttons/button10.wav", 60, 90)
-            GRID.Notify(ply, "You must complete a 3-point triangulation (3/3 samples) before dispatching a raid alert!", NOTIFY_HINT, 5)
+            GRID.Notify(ply, "You must complete a 3-point triangulation (3/3 samples) before dispatching a raid alert!",
+                NOTIFY_HINT, 5)
             return
         end
 
@@ -322,15 +341,18 @@ function SWEP:SecondaryAttack()
 
         for _, officer in ipairs(player.GetAll()) do
             if officer:IsPolice() then
-                GRID.Notify(officer, string.format("[DISPATCH ALERT] Officer %s deployed a Raid Waypoint on suspected contraband (~%dm)! Beacon active for 30s.", ply:Nick(), distMeters), NOTIFY_GENERIC, 10)
+                GRID.Notify(officer,
+                    string.format(
+                    "[DISPATCH ALERT] Officer %s deployed a Raid Waypoint on suspected contraband (~%dm)! Beacon active for 30s.",
+                        ply:Nick(), distMeters), NOTIFY_GENERIC, 10)
                 officer:EmitSound("ambient/alarms/klaxon1.wav", 65, 120)
             end
         end
 
         net.Start("GRID_Scanner_PoliceRaidAlert")
-            net.WriteEntity(ply)
-            net.WriteVector(targetPos)
-            net.WriteFloat(30)
+        net.WriteEntity(ply)
+        net.WriteVector(targetPos)
+        net.WriteFloat(30)
         net.Broadcast()
 
         GRID.Notify(ply, "Raid dispatch waypoint broadcasted to all police units!", NOTIFY_GENERIC, 5)
@@ -417,9 +439,9 @@ if CLIENT then
     end)
 
     local sampleColors = {
-        [1] = Color(56, 189, 248, 200),  -- Cyan
-        [2] = Color(251, 191, 36, 200),  -- Amber
-        [3] = Color(52, 211, 153, 200)   -- Emerald
+        [1] = Color(56, 189, 248, 200), -- Cyan
+        [2] = Color(251, 191, 36, 200), -- Amber
+        [3] = Color(52, 211, 153, 200)  -- Emerald
     }
 
     local function Draw3DCircle(origin, radius, col, segments)
@@ -505,7 +527,7 @@ if CLIENT then
         -- Top Accent Line
         local topAccent = (count >= 3 and not clientNoTarget) and Color(52, 211, 153, 240)
             or ((count >= 3 and clientNoTarget) and Color(71, 85, 105, 180)
-            or ((count > 0) and Color(6, 182, 212, 240) or Color(56, 189, 248, 120)))
+                or ((count > 0) and Color(6, 182, 212, 240) or Color(56, 189, 248, 120)))
         draw.RoundedBoxEx(8, x, y, w, 3, topAccent, true, true, false, false)
 
         -- Row 1: Header (y + 12)
@@ -513,9 +535,11 @@ if CLIENT then
         draw.RoundedBox(4, x + 16, y + 12, 52, 20, Color(6, 182, 212, 35))
         surface.SetDrawColor(6, 182, 212, 120)
         surface.DrawOutlinedRect(x + 16, y + 12, 52, 20, 1)
-        draw.SimpleText("POLICE", "GRID_UI_Badge", x + 42, y + 22, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("POLICE", "GRID_UI_Badge", x + 42, y + 22, Color(34, 211, 238), TEXT_ALIGN_CENTER,
+            TEXT_ALIGN_CENTER)
 
-        draw.SimpleText("Acoustic Trilateration Radar", "GRID_UI_Sub", x + 76, y + 22, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("Acoustic Trilateration Radar", "GRID_UI_Sub", x + 76, y + 22, Color(248, 250, 252),
+            TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
         -- Right: Status Pill Badge
         local statusText = "STANDBY - PING TO SCAN"
@@ -552,7 +576,8 @@ if CLIENT then
         draw.RoundedBox(10, statusX, y + 12, statusW, 22, statusBg)
         surface.SetDrawColor(statusBorder.r, statusBorder.g, statusBorder.b, statusBorder.a)
         surface.DrawOutlinedRect(statusX, y + 12, statusW, 22, 1)
-        draw.SimpleText(statusText, "GRID_UI_Badge", statusX + (statusW / 2), y + 23, statusTextCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(statusText, "GRID_UI_Badge", statusX + (statusW / 2), y + 23, statusTextCol, TEXT_ALIGN_CENTER,
+            TEXT_ALIGN_CENTER)
 
         -- Row 2: Directional Signal Strength Strip (y + 42, h = 32)
         local rssiY = y + 42
@@ -563,7 +588,8 @@ if CLIENT then
         surface.DrawOutlinedRect(x + 16, rssiY, rssiW, rssiH, 1)
 
         -- RSSI Label
-        draw.SimpleText("FORWARD RSSI", "GRID_UI_Badge", x + 28, rssiY + 16, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("FORWARD RSSI", "GRID_UI_Badge", x + 28, rssiY + 16, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+            TEXT_ALIGN_CENTER)
 
         -- 5 Segmented Bars
         local barStartX = x + 120
@@ -609,7 +635,8 @@ if CLIENT then
             bearingDesc = "Peak Bearing (~12m Proximity)"
             bearingCol = Color(52, 211, 153)
         end
-        draw.SimpleText(bearingDesc, "GRID_UI_Caption", x + w - 28, rssiY + 16, bearingCol, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(bearingDesc, "GRID_UI_Caption", x + w - 28, rssiY + 16, bearingCol, TEXT_ALIGN_RIGHT,
+            TEXT_ALIGN_CENTER)
 
         -- Row 3: 3 Sample Cards (y + 82, h = 50)
         local cardW = (w - 32 - 16) / 3
@@ -637,17 +664,21 @@ if CLIENT then
             -- Card Content
             local stepLabel = string.format("SAMPLE 0%d", i)
             local stepCol = hasSample and borderCol or Color(100, 116, 139)
-            draw.SimpleText(stepLabel, "GRID_UI_Badge", cardX + 12, cardY + 13, stepCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(stepLabel, "GRID_UI_Badge", cardX + 12, cardY + 13, stepCol, TEXT_ALIGN_LEFT,
+                TEXT_ALIGN_CENTER)
 
             if hasSample and sData then
                 if sData.hasSignal then
                     local distMeters = math.Round(sData.radius * 0.01905)
-                    draw.SimpleText("~" .. distMeters .. "m Signal", "GRID_UI_Sub", cardX + 12, cardY + 34, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("~" .. distMeters .. "m Signal", "GRID_UI_Sub", cardX + 12, cardY + 34,
+                        Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
                 else
-                    draw.SimpleText(clientNoTarget and "No Signal" or "Sector Sweep", "GRID_UI_Caption", cardX + 12, cardY + 34, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                    draw.SimpleText(clientNoTarget and "No Signal" or "Sector Sweep", "GRID_UI_Caption", cardX + 12,
+                        cardY + 34, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
                 end
             else
-                draw.SimpleText("Awaiting Ping", "GRID_UI_Caption", cardX + 12, cardY + 34, Color(100, 116, 139), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("Awaiting Ping", "GRID_UI_Caption", cardX + 12, cardY + 34, Color(100, 116, 139),
+                    TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             end
         end
 
@@ -659,17 +690,25 @@ if CLIENT then
 
         if count >= 3 then
             if clientNoTarget then
-                draw.SimpleText("[LMB] NEW SCAN", "GRID_UI_Badge", x + 30, barY + 15, Color(34, 211, 238), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText("NO CONTRABAND DETECTED IN SECTOR", "GRID_UI_Badge", x + (w / 2), barY + 15, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                draw.SimpleText("[R] RESET", "GRID_UI_Badge", x + w - 30, barY + 15, Color(239, 68, 68), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("[LMB] NEW SCAN", "GRID_UI_Badge", x + 30, barY + 15, Color(34, 211, 238),
+                    TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("NO CONTRABAND DETECTED IN SECTOR", "GRID_UI_Badge", x + (w / 2), barY + 15,
+                    Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText("[R] RESET", "GRID_UI_Badge", x + w - 30, barY + 15, Color(239, 68, 68), TEXT_ALIGN_RIGHT,
+                    TEXT_ALIGN_CENTER)
             else
-                draw.SimpleText("[LMB] PING SWEEP", "GRID_UI_Badge", x + 30, barY + 15, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText("[RMB] DISPATCH RAID WAYPOINT", "GRID_UI_Badge", x + (w / 2), barY + 15, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-                draw.SimpleText("[R] RESET", "GRID_UI_Badge", x + w - 30, barY + 15, Color(239, 68, 68), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("[LMB] PING SWEEP", "GRID_UI_Badge", x + 30, barY + 15, Color(148, 163, 184),
+                    TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText("[RMB] DISPATCH RAID WAYPOINT", "GRID_UI_Badge", x + (w / 2), barY + 15,
+                    Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText("[R] RESET", "GRID_UI_Badge", x + w - 30, barY + 15, Color(239, 68, 68), TEXT_ALIGN_RIGHT,
+                    TEXT_ALIGN_CENTER)
             end
         else
-            draw.SimpleText("[LMB] PING SAMPLE (MOVE ~5M BETWEEN PINGS)", "GRID_UI_Badge", x + 30, barY + 15, Color(34, 211, 238), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText("[R] RESET RADAR", "GRID_UI_Badge", x + w - 30, barY + 15, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("[LMB] PING SAMPLE (MOVE ~5M BETWEEN PINGS)", "GRID_UI_Badge", x + 30, barY + 15,
+                Color(34, 211, 238), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("[R] RESET RADAR", "GRID_UI_Badge", x + w - 30, barY + 15, Color(148, 163, 184),
+                TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
     end
 
@@ -696,7 +735,9 @@ if CLIENT then
         surface.DrawOutlinedRect(mx, my, mw, mh, 1)
         draw.RoundedBoxEx(6, mx, my, mw, 2, badgeCol, true, true, false, false)
 
-        draw.SimpleText("◆ RAID TARGET: CONTRABAND ◆", "GRID_UI_Badge", screen.x, my + 14, badgeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        draw.SimpleText(string.format("Distance: ~%dm  •  Expires: %ds", distMeters, remaining), "GRID_UI_Caption", screen.x, my + 32, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("◆ RAID TARGET: CONTRABAND ◆", "GRID_UI_Badge", screen.x, my + 14, badgeCol, TEXT_ALIGN_CENTER,
+            TEXT_ALIGN_CENTER)
+        draw.SimpleText(string.format("Distance: ~%dm  •  Expires: %ds", distMeters, remaining), "GRID_UI_Caption",
+            screen.x, my + 32, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end)
 end

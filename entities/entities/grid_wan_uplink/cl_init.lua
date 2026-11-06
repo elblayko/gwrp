@@ -1,7 +1,7 @@
 --[[
     entities/entities/grid_wan_uplink/cl_init.lua
     GridRP Encrypted Satellite WAN Uplink Client Logic & UI
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 include("shared.lua")
@@ -29,35 +29,41 @@ function ENT:Draw()
     ang:RotateAroundAxis(ang:Forward(), 90)
 
     cam.Start3D2D(pos, ang, 0.08)
-        local w, h = 320, 140
-        local x, y = -w / 2, -h / 2
+    local w, h = 320, 140
+    local x, y = -w / 2, -h / 2
 
-        -- Background panel
-        draw.RoundedBox(8, x, y, w, h, Color(11, 15, 25, 235))
-        surface.SetDrawColor(56, 189, 248, 180)
-        surface.DrawOutlinedRect(x, y, w, h, 1)
+    -- Background panel
+    draw.RoundedBox(8, x, y, w, h, Color(11, 15, 25, 235))
+    surface.SetDrawColor(56, 189, 248, 180)
+    surface.DrawOutlinedRect(x, y, w, h, 1)
 
-        -- Header
-        draw.SimpleText("SATELLITE WAN UPLINK", "GRID_FontSmall", 0, y + 16, Color(56, 189, 248), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Header
+    draw.SimpleText("SATELLITE WAN UPLINK", "GRID_FontSmall", 0, y + 16, Color(56, 189, 248), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
-        -- Key Pill
-        local keyBoxW = 260
-        draw.RoundedBox(4, -keyBoxW / 2, y + 36, keyBoxW, 26, Color(30, 41, 59, 220))
-        surface.SetDrawColor(100, 116, 139, 120)
-        surface.DrawOutlinedRect(-keyBoxW / 2, y + 36, keyBoxW, 26, 1)
-        draw.SimpleText("KEY: " .. key, "GRID_UI_BodyBold", 0, y + 49, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Key Pill
+    local keyBoxW = 260
+    draw.RoundedBox(4, -keyBoxW / 2, y + 36, keyBoxW, 26, Color(30, 41, 59, 220))
+    surface.SetDrawColor(100, 116, 139, 120)
+    surface.DrawOutlinedRect(-keyBoxW / 2, y + 36, keyBoxW, 26, 1)
+    draw.SimpleText("KEY: " .. key, "GRID_UI_BodyBold", 0, y + 49, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
 
-        -- Status Indicator
-        local statusCol = isOnline and Color(52, 211, 153) or Color(245, 158, 11)
-        local statusTxt = isOnline and string.format("ONLINE (%d MESH PEER%s)", peers, peers == 1 and "" or "S") or (isLinkedToSwitch and "SEARCHING FOR PEERS..." or "NO SWITCH LINK")
-        draw.SimpleText(statusTxt, "GRID_UI_Caption", 0, y + 80, statusCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Status Indicator
+    local statusCol = isOnline and Color(52, 211, 153) or Color(245, 158, 11)
+    local statusTxt = isOnline and string.format("ONLINE (%d MESH PEER%s)", peers, peers == 1 and "" or "S") or
+    (isLinkedToSwitch and "SEARCHING FOR PEERS..." or "NO SWITCH LINK")
+    draw.SimpleText(statusTxt, "GRID_UI_Caption", 0, y + 80, statusCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        -- Switch link indicator
-        local swText = isLinkedToSwitch and string.format("Switch Port %d | IP: %s", self:GetAssignedPort() or 0, self:GetIPAddress() ~= "" and self:GetIPAddress() or "DHCP") or "Connect to L3 Switch via Wire Tool"
-        draw.SimpleText(swText, "GRID_UI_Caption", 0, y + 104, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Switch link indicator
+    local swText = isLinkedToSwitch and
+    string.format("Switch Port %d | IP: %s", self:GetAssignedPort() or 0,
+        self:GetIPAddress() ~= "" and self:GetIPAddress() or "DHCP") or "Connect to L3 Switch via Wire Tool"
+    draw.SimpleText(swText, "GRID_UI_Caption", 0, y + 104, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        -- Interaction hint
-        draw.SimpleText("[E] Configure Encryption Key", "GRID_UI_Caption", 0, y + 124, Color(203, 213, 225), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Interaction hint
+    draw.SimpleText("[E] Configure Encryption Key", "GRID_UI_Caption", 0, y + 124, Color(203, 213, 225),
+        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     cam.End3D2D()
 end
 
@@ -93,7 +99,8 @@ local function OpenWANConfigUI(uplinkEnt, currentKey, isOnline, peerCount, switc
         surface.SetDrawColor(30, 41, 59, 200)
         surface.DrawLine(0, 44, w, 44)
 
-        draw.SimpleText("SATELLITE WAN GATEWAY // CONFIGURATION", "GRID_UI_BodyBold", 16, 22, Color(56, 189, 248), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("SATELLITE WAN GATEWAY // CONFIGURATION", "GRID_UI_BodyBold", 16, 22, Color(56, 189, 248),
+            TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     -- Close Button
@@ -122,14 +129,19 @@ local function OpenWANConfigUI(uplinkEnt, currentKey, isOnline, peerCount, switc
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
         local statusCol = isOnline and Color(52, 211, 153) or Color(245, 158, 11)
-        local statusTxt = isOnline and string.format("STATUS: MESH ONLINE (%d PEER%s LINKED ACROSS MAP)", peerCount, peerCount == 1 and "" or "S") or "STATUS: STANDALONE (Searching for matching key...)"
+        local statusTxt = isOnline and
+        string.format("STATUS: MESH ONLINE (%d PEER%s LINKED ACROSS MAP)", peerCount, peerCount == 1 and "" or "S") or
+        "STATUS: STANDALONE (Searching for matching key...)"
 
         draw.SimpleText(statusTxt, "GRID_UI_BodyBold", 14, 18, statusCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-        local swInfo = IsValid(switchEnt) and string.format("Local L3 Switch Subnet: 192.168.%d.0/24 (Gateway: 192.168.%d.1 | IP: %s)", subnet, subnet, ipStr ~= "" and ipStr or "Pending") or "Local Switch: Not Connected (Use Wire Tool to link to an L3 Switch)"
+        local swInfo = IsValid(switchEnt) and
+        string.format("Local L3 Switch Subnet: 192.168.%d.0/24 (Gateway: 192.168.%d.1 | IP: %s)", subnet, subnet,
+            ipStr ~= "" and ipStr or "Pending") or "Local Switch: Not Connected (Use Wire Tool to link to an L3 Switch)"
         draw.SimpleText(swInfo, "GRID_UI_Caption", 14, 42, Color(203, 213, 225), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-        local routeInfo = isOnline and "Routing Engine: Active (Cross-subnet traffic forwarded over WAN tunnel)" or "Routing Engine: Idle (Requires 2+ matching uplinks)"
+        local routeInfo = isOnline and "Routing Engine: Active (Cross-subnet traffic forwarded over WAN tunnel)" or
+        "Routing Engine: Idle (Requires 2+ matching uplinks)"
         draw.SimpleText(routeInfo, "GRID_UI_Caption", 14, 62, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
@@ -180,8 +192,8 @@ local function OpenWANConfigUI(uplinkEnt, currentKey, isOnline, peerCount, switc
         end
 
         net.Start("GRID_UpdateWANKey")
-            net.WriteEntity(uplinkEnt)
-            net.WriteString(val)
+        net.WriteEntity(uplinkEnt)
+        net.WriteString(val)
         net.SendToServer()
 
         surface.PlaySound("buttons/button14.wav")

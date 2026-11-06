@@ -7,7 +7,7 @@ AddCSLuaFile()
 
 SWEP.Base = "weapon_grid_base"
 SWEP.PrintName = "Desert Eagle"
-SWEP.Author = "Toxic"
+SWEP.Author = "Juicebox"
 SWEP.Instructions = "Primary: Fire .50 Hand Cannon\nSecondary: Iron Sights\nReload: Reload"
 SWEP.Category = "GridRP"
 
@@ -35,7 +35,8 @@ SWEP.ViewModelFlip = false
 
 local hasCStrike = util.IsValidModel("models/weapons/cstrike/c_pist_deagle.mdl")
 SWEP.ViewModel = hasCStrike and "models/weapons/cstrike/c_pist_deagle.mdl" or "models/weapons/c_357.mdl"
-SWEP.WorldModel = util.IsValidModel("models/weapons/w_pist_deagle.mdl") and "models/weapons/w_pist_deagle.mdl" or "models/weapons/w_357.mdl"
+SWEP.WorldModel = util.IsValidModel("models/weapons/w_pist_deagle.mdl") and "models/weapons/w_pist_deagle.mdl" or
+"models/weapons/w_357.mdl"
 
 SWEP.IronSightsPos = hasCStrike and Vector(-6.36, -10, 2.02) or Vector(-4.68, -10, 0.65)
 SWEP.IronSightsAng = hasCStrike and Vector(0, 0, 0) or Vector(0, -0.2, 0)

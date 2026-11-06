@@ -1,7 +1,7 @@
 --[[
     entities/entities/grid_computer/init.lua
     GridRP Personal Computer Server Logic & Terminal Execution Engine
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile("cl_init.lua")
@@ -267,7 +267,8 @@ function ENT:StartBotnet(ply)
             "No Satellite WAN Uplink detected on this broadcast domain. Wire a WAN Uplink dish to your switch to reach cloud targets."
     end
 
-    local existingBotnet = GRID.Network and GRID.Network.GetActiveBotnetForSwitch and GRID.Network.GetActiveBotnetForSwitch(sw)
+    local existingBotnet = GRID.Network and GRID.Network.GetActiveBotnetForSwitch and
+    GRID.Network.GetActiveBotnetForSwitch(sw)
     if IsValid(existingBotnet) and existingBotnet ~= self then
         return false,
             string.format("A Cloud Botnet C2 daemon is already running on this network (%s).",
@@ -1007,7 +1008,7 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
                 table.insert(responseLines, { text = " _|    _|  _|  _|  _|       ", color = "cyan" })
                 table.insert(responseLines, { text = "  _|_|_|   _|  _|  _|       ", color = "cyan" })
                 table.insert(responseLines,
-                    { text = "Metasploit Framework Console (MSF v6.4.12-toxic)", color = "white" })
+                    { text = "Metasploit Framework Console (MSF v6.4.12-Juicebox)", color = "white" })
                 local modDisplay = chosenModule == "overheat" and "exploit/multi/thermal_overheat" or
                     "exploit/printer/cash_siphon"
                 table.insert(responseLines,
@@ -1428,7 +1429,9 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
                     { text = "[+] Cloud Botnet C2 daemon gracefully terminated.", color = "green" })
                 -- Check if pending buffer exists when stopped
                 if (computer.BotnetBuffer or 0) > 0 then
-                    table.insert(responseLines, { text = string.format("    Pending Buffer          : +$%s (Type 'botnet collect' to withdraw)", string.Comma(computer.BotnetBuffer)), color = "yellow" })
+                    table.insert(responseLines,
+                        { text = string.format("    Pending Buffer          : +$%s (Type 'botnet collect' to withdraw)",
+                            string.Comma(computer.BotnetBuffer)), color = "yellow" })
                 end
                 table.insert(responseLines,
                     {
@@ -1441,13 +1444,17 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
             if arg1 == "collect" or arg1 == "withdraw" or arg1 == "claim" then
                 local pending = computer.BotnetBuffer or 0
                 if pending <= 0 then
-                    table.insert(responseLines, { text = "[-] No siphoned funds pending in terminal buffer ($0).", color = "yellow" })
+                    table.insert(responseLines,
+                        { text = "[-] No siphoned funds pending in terminal buffer ($0).", color = "yellow" })
                 else
                     computer.BotnetBuffer = 0
                     computer:SetNWInt("GRID_BotnetBuffer", 0)
                     ply:AddMoney(pending)
-                    table.insert(responseLines, { text = string.format("[+] Withdrew +$%s from Botnet C2 buffer directly to your wallet!", string.Comma(pending)), color = "green" })
-                    GRID.Notify(ply, string.format("Collected +$%s from Botnet C2 buffer!", string.Comma(pending)), NOTIFY_GENERIC)
+                    table.insert(responseLines,
+                        { text = string.format("[+] Withdrew +$%s from Botnet C2 buffer directly to your wallet!",
+                            string.Comma(pending)), color = "green" })
+                    GRID.Notify(ply, string.format("Collected +$%s from Botnet C2 buffer!", string.Comma(pending)),
+                        NOTIFY_GENERIC)
                     if GRID.Telemetry and GRID.Telemetry.Log then
                         GRID.Telemetry.Log("ECONOMY", "BOTNET_COLLECT", ply:SteamID(), "", pending, {})
                     end

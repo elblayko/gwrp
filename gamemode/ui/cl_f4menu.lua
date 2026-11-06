@@ -1,6 +1,6 @@
 --[[
     cl_f4menu.lua - High-Legibility Scaled UI/UX F4 Dashboard with Full Word Wrap & Truncation Protection
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -272,7 +272,8 @@ function GRID.UI.ToggleF4Menu()
         secHeader:DockMargin(4, secIdx == 1 and 4 or 12, 4, 4)
         secHeader:SetTall(24)
         secHeader.Paint = function(s, w, h)
-            draw.SimpleText(sec.header, "GRID_UI_Badge", 8, h / 2, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(sec.header, "GRID_UI_Badge", 8, h / 2, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+                TEXT_ALIGN_CENTER)
             surface.SetFont("GRID_UI_Badge")
             local tw, _ = surface.GetTextSize(sec.header)
             local lineX = 14 + tw
@@ -639,7 +640,8 @@ function GRID.UI.RenderGangContent(scroll, mainFrame)
             draw.SimpleText("GANG VAULT & TREASURY", "GRID_UI_Sub", 18, 16, Color(16, 185, 129))
             local balText = "$" .. string.Comma(data.bank)
             draw.SimpleText(balText, "GRID_UI_Price", 18, 52, Color(74, 222, 128))
-            draw.SimpleText("Territory tax earnings and dividends accumulate directly in the vault.", "GRID_UI_Caption", 18,
+            draw.SimpleText("Territory tax earnings and dividends accumulate directly in the vault.", "GRID_UI_Caption",
+                18,
                 88, Color(148, 163, 184))
         end
 
@@ -808,7 +810,8 @@ function GRID.UI.RenderGangContent(scroll, mainFrame)
                 -- Member Name & Role
                 local nameCol = m.isOnline and Color(248, 250, 252) or Color(148, 163, 184)
                 draw.SimpleText(m.name, "GRID_UI_Sub", 28, 14, nameCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                draw.SimpleText(m.job, "GRID_UI_Caption", 28, 32, Color(100, 116, 139), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(m.job, "GRID_UI_Caption", 28, 32, Color(100, 116, 139), TEXT_ALIGN_LEFT,
+                    TEXT_ALIGN_CENTER)
 
                 -- Rank Tag
                 local rankText = m.isLeader and "Leader" or "Member"
@@ -927,7 +930,8 @@ function GRID.UI.RenderGangContent(scroll, mainFrame)
             btnGoJobs.Paint = function(s, w, h)
                 local bg = s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200)
                 draw.RoundedBox(6, 0, 0, w, h, bg)
-                draw.SimpleText("Open Careers & Jobs", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+                draw.SimpleText("Open Careers & Jobs", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252),
+                    TEXT_ALIGN_CENTER,
                     TEXT_ALIGN_CENTER)
             end
             btnGoJobs.DoClick = function()
@@ -1160,7 +1164,8 @@ function GRID.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
         btnDrop.Paint = function(s, w, h)
             local bg = s:IsHovered() and Color(239, 68, 68, 240) or Color(185, 28, 28, 190)
             draw.RoundedBox(6, 0, 0, w, h, bg)
-            draw.SimpleText("Drop", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Drop", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
         end
         btnDrop.DoClick = function()
             GRID.Inventory.DropItem(rowId)
@@ -1243,9 +1248,9 @@ function GRID.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
         local filterButtons = {
             { id = "all",     label = "All Roles (" .. table.Count(GRID.Jobs or {}) .. ")", color = Color(6, 182, 212) },
-            { id = "neutral", label = "Civilians (" .. catCounts.neutral .. ")",          color = Color(148, 163, 184) },
-            { id = "gang",    label = "Street Gangs (" .. catCounts.gang .. ")",          color = Color(245, 158, 11) },
-            { id = "police",  label = "Police (" .. catCounts.police .. ")",              color = Color(16, 185, 129) }
+            { id = "neutral", label = "Civilians (" .. catCounts.neutral .. ")",            color = Color(148, 163, 184) },
+            { id = "gang",    label = "Street Gangs (" .. catCounts.gang .. ")",            color = Color(245, 158, 11) },
+            { id = "police",  label = "Police (" .. catCounts.police .. ")",                color = Color(16, 185, 129) }
         }
 
         local btnX = 8
@@ -1460,7 +1465,8 @@ function GRID.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         btnEnlist.DoClick = function()
                             if isMyJob then return end
                             if not hasJobLvl then
-                                GRID.Notify(ply, string.format("You must be Level %d to become a %s!", reqJobLvl, job.name),
+                                GRID.Notify(ply,
+                                    string.format("You must be Level %d to become a %s!", reqJobLvl, job.name),
                                     NOTIFY_ERROR)
                                 surface.PlaySound("buttons/button10.wav")
                                 return

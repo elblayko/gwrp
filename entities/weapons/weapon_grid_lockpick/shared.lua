@@ -1,11 +1,11 @@
 --[[
     entities/weapons/weapon_grid_lockpick/shared.lua
     GridRP Tactical Lockpick - Shared
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 SWEP.PrintName = "Tactical Lockpick"
-SWEP.Author = "Toxic"
+SWEP.Author = "Juicebox"
 SWEP.Instructions = "Primary Fire: Lockpick a locked door or barricade (20s)\nSecondary Fire: Cancel active lockpicking"
 SWEP.Category = "GridRP"
 

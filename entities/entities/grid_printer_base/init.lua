@@ -1,7 +1,7 @@
 --[[
     entities/entities/grid_printer_base/init.lua
     GridRP Contraband Money Printer Abstract Base Server Logic
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile("cl_init.lua")
@@ -482,4 +482,3 @@ function ENT:OnRemove()
         WireLib.Remove(self)
     end
 end
-

@@ -1,12 +1,13 @@
 --[[
     entities/weapons/weapon_grid_cyberphone/shared.lua
     GridRP CyberDeck Mobile Handset SWEP (Cyber Engineer Exclusive)
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 SWEP.PrintName = "CyberDeck Mobile Phone"
-SWEP.Author = "Toxic"
-SWEP.Instructions = "Primary / Secondary Fire: Launch Mobile CyberDeck OS Terminal\nReload: Run quick wireless spectrum scan"
+SWEP.Author = "Juicebox"
+SWEP.Instructions =
+"Primary / Secondary Fire: Launch Mobile CyberDeck OS Terminal\nReload: Run quick wireless spectrum scan"
 SWEP.Category = "GridRP"
 
 SWEP.Spawnable = true
@@ -65,10 +66,10 @@ function SWEP:PrimaryAttack()
         local isNet = self:GetIsConnected() or (self:GetAssociatedWANKey() ~= "")
 
         net.Start("GRID_OpenComputerOS")
-            net.WriteEntity(self)
-            net.WriteEntity(NULL)
-            net.WriteString(ip)
-            net.WriteBool(isNet)
+        net.WriteEntity(self)
+        net.WriteEntity(NULL)
+        net.WriteString(ip)
+        net.WriteBool(isNet)
         net.Send(ply)
 
         self:SendWeaponAnim(ACT_VM_PRIMARYATTACK)
@@ -92,7 +93,9 @@ function SWEP:Reload()
         if count == 0 then
             GRID.Notify(ply, "Wireless Scanner: No active WAN Satellite uplinks detected in map airspace.", NOTIFY_HINT)
         else
-            GRID.Notify(ply, string.format("Wireless Scanner: Detected %d active WAN transmitter%s! Launch CyberDeck OS to scan.", count, count == 1 and "" or "s"), NOTIFY_GENERIC)
+            GRID.Notify(ply,
+                string.format("Wireless Scanner: Detected %d active WAN transmitter%s! Launch CyberDeck OS to scan.",
+                    count, count == 1 and "" or "s"), NOTIFY_GENERIC)
         end
         ply:EmitSound("ambient/energy/zap1.wav", 60, 130)
     end
@@ -107,7 +110,9 @@ if CLIENT then
         local cx, cy = scrW / 2, scrH / 2
 
         draw.SimpleText("CYBERDECK MOBILE PHONE", "GRID_FontSmall", cx, cy + 30, Color(56, 189, 248), TEXT_ALIGN_CENTER)
-        draw.SimpleText("[Left-Click / Right-Click] Open CyberDeck OS Shell", "GRID_UI_Caption", cx, cy + 48, Color(248, 250, 252), TEXT_ALIGN_CENTER)
-        draw.SimpleText("[Reload] Quick Spectrum Reconnaissance Scan", "GRID_UI_Caption", cx, cy + 64, GRID.Colors.Muted, TEXT_ALIGN_CENTER)
+        draw.SimpleText("[Left-Click / Right-Click] Open CyberDeck OS Shell", "GRID_UI_Caption", cx, cy + 48,
+            Color(248, 250, 252), TEXT_ALIGN_CENTER)
+        draw.SimpleText("[Reload] Quick Spectrum Reconnaissance Scan", "GRID_UI_Caption", cx, cy + 64, GRID.Colors.Muted,
+            TEXT_ALIGN_CENTER)
     end
 end

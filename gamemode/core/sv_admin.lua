@@ -1,6 +1,6 @@
 --[[
     sv_admin.lua - Server-Side Admin & Debug Executive Controller
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 GRID = GRID or {}
@@ -26,10 +26,11 @@ local function HandleAdminDebugAction(len, ply)
         local amount = math.max(0, net.ReadInt(32))
         if IsValid(target) and target:IsPlayer() then
             target:SetMoney(amount)
-            GRID.Notify(ply, string.format("Set %s's wallet to $%s.", target:Nick(), string.Comma(amount)), NOTIFY_GENERIC)
-            GRID.Notify(target, string.format("An administrator set your wallet to $%s.", string.Comma(amount)), NOTIFY_HINT)
+            GRID.Notify(ply, string.format("Set %s's wallet to $%s.", target:Nick(), string.Comma(amount)),
+                NOTIFY_GENERIC)
+            GRID.Notify(target, string.format("An administrator set your wallet to $%s.", string.Comma(amount)),
+                NOTIFY_HINT)
         end
-
     elseif action == "add_money" then
         local target = net.ReadEntity()
         local amount = net.ReadInt(32)
@@ -39,7 +40,7 @@ local function HandleAdminDebugAction(len, ply)
             GRID.Notify(target, string.format("Received $%s from an administrator.", string.Comma(amount)), NOTIFY_HINT)
         end
 
-    -- Leveling & Progression Debug
+        -- Leveling & Progression Debug
     elseif action == "set_level" then
         local target = net.ReadEntity()
         local lvl = net.ReadInt(16)
@@ -48,7 +49,6 @@ local function HandleAdminDebugAction(len, ply)
             GRID.Notify(ply, string.format("Set %s's level to %d.", target:Nick(), target:GetLevel()), NOTIFY_GENERIC)
             GRID.Notify(target, string.format("An administrator set your level to %d.", target:GetLevel()), NOTIFY_HINT)
         end
-
     elseif action == "add_xp" then
         local target = net.ReadEntity()
         local xpAmount = net.ReadInt(32)
@@ -57,15 +57,15 @@ local function HandleAdminDebugAction(len, ply)
             GRID.Notify(ply, string.format("Awarded %s XP to %s.", string.Comma(xpAmount), target:Nick()), NOTIFY_GENERIC)
         end
 
-    -- 2. Role & Faction Debug
+        -- 2. Role & Faction Debug
     elseif action == "set_job" then
         local target = net.ReadEntity()
         local jobId = net.ReadString()
         if IsValid(target) and target:IsPlayer() and GRID.Jobs and GRID.Jobs[jobId] then
             target:SetJob(jobId, true)
-            GRID.Notify(ply, string.format("Forced %s to role: %s.", target:Nick(), GRID.Jobs[jobId].name), NOTIFY_GENERIC)
+            GRID.Notify(ply, string.format("Forced %s to role: %s.", target:Nick(), GRID.Jobs[jobId].name),
+                NOTIFY_GENERIC)
         end
-
     elseif action == "set_gang" then
         local target = net.ReadEntity()
         local gangName = net.ReadString()
@@ -76,10 +76,12 @@ local function HandleAdminDebugAction(len, ply)
             elseif gangName == "" and GRID.Database and GRID.Database.RemoveGangMember then
                 GRID.Database.RemoveGangMember(target:SteamID())
             end
-            GRID.Notify(ply, string.format("Updated %s's gang to '%s'.", target:Nick(), gangName ~= "" and gangName or "None"), NOTIFY_GENERIC)
+            GRID.Notify(ply,
+                string.format("Updated %s's gang to '%s'.", target:Nick(), gangName ~= "" and gangName or "None"),
+                NOTIFY_GENERIC)
         end
 
-    -- 3. Vitals & Combat Debug
+        -- 3. Vitals & Combat Debug
     elseif action == "set_health" then
         local target = net.ReadEntity()
         local hp = math.Clamp(net.ReadInt(32), 1, 99999)
@@ -87,7 +89,6 @@ local function HandleAdminDebugAction(len, ply)
             target:SetHealth(hp)
             GRID.Notify(ply, string.format("Set %s's health to %d.", target:Nick(), hp), NOTIFY_GENERIC)
         end
-
     elseif action == "set_armor" then
         local target = net.ReadEntity()
         local armor = math.Clamp(net.ReadInt(32), 0, 500)
@@ -95,7 +96,6 @@ local function HandleAdminDebugAction(len, ply)
             target:SetArmor(armor)
             GRID.Notify(ply, string.format("Set %s's armor to %d.", target:Nick(), armor), NOTIFY_GENERIC)
         end
-
     elseif action == "godmode" then
         local target = net.ReadEntity()
         if IsValid(target) and target:IsPlayer() then
@@ -109,21 +109,19 @@ local function HandleAdminDebugAction(len, ply)
             end
         end
 
-    -- 4. Teleportation & Movement
+        -- 4. Teleportation & Movement
     elseif action == "goto" then
         local target = net.ReadEntity()
         if IsValid(target) and target:IsPlayer() and target ~= ply then
             ply:SetPos(target:GetPos() + Vector(0, 45, 5))
             GRID.Notify(ply, "Teleported to " .. target:Nick(), NOTIFY_GENERIC)
         end
-
     elseif action == "bring" then
         local target = net.ReadEntity()
         if IsValid(target) and target:IsPlayer() and target ~= ply then
             target:SetPos(ply:GetPos() + Vector(0, 45, 5))
             GRID.Notify(ply, "Brought " .. target:Nick() .. " to your position.", NOTIFY_GENERIC)
         end
-
     elseif action == "respawn" then
         local target = net.ReadEntity()
         if IsValid(target) and target:IsPlayer() then
@@ -131,7 +129,7 @@ local function HandleAdminDebugAction(len, ply)
             GRID.Notify(ply, "Respawned " .. target:Nick(), NOTIFY_GENERIC)
         end
 
-    -- 5. Game Loop & Economy Simulation Debug
+        -- 5. Game Loop & Economy Simulation Debug
     elseif action == "trigger_payday" then
         for _, p in ipairs(player.GetAll()) do
             local job = p:GetJobData()
@@ -141,14 +139,13 @@ local function HandleAdminDebugAction(len, ply)
             end
         end
         GRID.Notify(ply, "Simulated instant server-wide Payday cycle.", NOTIFY_GENERIC)
-
     elseif action == "trigger_dividends" then
         if GRID.Turf and GRID.Turf.DistributeDividends then
             GRID.Turf.DistributeDividends()
             GRID.Notify(ply, "Simulated instant turf dividend distribution.", NOTIFY_GENERIC)
         end
 
-    -- 6. Entity Spawning Debug
+        -- 6. Entity Spawning & Persistence Debug
     elseif action == "spawn_entity" then
         local class = net.ReadString()
         local tr = ply:GetEyeTrace()
@@ -157,6 +154,18 @@ local function HandleAdminDebugAction(len, ply)
         if class == "grid_cash_stack" then
             GRID.Economy.SpawnCashStack(spawnPos, 10000)
             GRID.Notify(ply, "Spawned $10,000 cash stack at crosshair.", NOTIFY_GENERIC)
+        elseif string.StartWith(class, "grid_scavenge_") or class == "grid_recycler_depot" then
+            local ang = Angle(0, ply:EyeAngles().y + 180, 0)
+            local ent = (GRID.Scavenge and GRID.Scavenge.SpawnNode) and
+            GRID.Scavenge.SpawnNode(class, tr.HitPos + tr.HitNormal * 2, ang)
+            if IsValid(ent) then
+                if GRID.Scavenge and GRID.Scavenge.SaveMapProfile then
+                    GRID.Scavenge.SaveMapProfile()
+                end
+                GRID.Notify(ply,
+                    string.format("Spawned %s and persisted to Database & Map JSON Profile.", ent.PrintName or class),
+                    NOTIFY_GENERIC)
+            end
         else
             local ent = ents.Create(class)
             if IsValid(ent) then
@@ -167,6 +176,24 @@ local function HandleAdminDebugAction(len, ply)
                 ent:Activate()
                 GRID.Notify(ply, "Spawned " .. class .. " at crosshair.", NOTIFY_GENERIC)
             end
+        end
+    elseif action == "save_scavenge_profile" then
+        if GRID.Scavenge and GRID.Scavenge.SaveMapProfile then
+            GRID.Scavenge.SaveMapProfile()
+            GRID.Notify(ply, "Persisted all scavenge nodes & depots to Database and JSON Profile.", NOTIFY_GENERIC)
+        end
+    elseif action == "clear_scavenge_profile" then
+        if GRID.Scavenge and GRID.Scavenge.ClearSpawned then
+            GRID.Scavenge.ClearSpawned()
+            if GRID.Scavenge.SaveMapProfile then
+                GRID.Scavenge.SaveMapProfile()
+            end
+            GRID.Notify(ply, "Cleared all scavenge nodes & depots from map and database.", NOTIFY_HINT)
+        end
+    elseif action == "respawn_scavenge_profile" then
+        if GRID.Scavenge and GRID.Scavenge.LoadAndSpawn then
+            GRID.Scavenge.LoadAndSpawn()
+            GRID.Notify(ply, "Reloaded all scavenge nodes & depots from Database & JSON Profile.", NOTIFY_GENERIC)
         end
     end
 end
@@ -253,7 +280,8 @@ hook.Add("PlayerSay", "GRID_AdminChatCommands", function(ply, text)
         end
 
         target:AddMoney(math.floor(amount))
-        GRID.Notify(ply, string.format("Gave $%s to %s.", string.Comma(math.floor(amount)), target:Nick()), NOTIFY_GENERIC)
+        GRID.Notify(ply, string.format("Gave $%s to %s.", string.Comma(math.floor(amount)), target:Nick()),
+            NOTIFY_GENERIC)
         return ""
     end
 
@@ -308,7 +336,8 @@ hook.Add("PlayerSay", "GRID_AdminChatCommands", function(ply, text)
         end
 
         target:AddXP(math.floor(xp), "Admin Grant")
-        GRID.Notify(ply, string.format("Awarded %s XP to %s.", string.Comma(math.floor(xp)), target:Nick()), NOTIFY_GENERIC)
+        GRID.Notify(ply, string.format("Awarded %s XP to %s.", string.Comma(math.floor(xp)), target:Nick()),
+            NOTIFY_GENERIC)
         return ""
     end
 end)

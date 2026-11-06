@@ -1,5 +1,5 @@
 --[[
-    GridRP (GRID) by Toxic
+    GridRP (GRID) by Juicebox
     gamemode/init.lua - Server Gamemode Entry Point
 --]]
 
@@ -18,6 +18,7 @@ AddCSLuaFile("factions/sh_factions.lua")
 AddCSLuaFile("turf/sh_turf.lua")
 AddCSLuaFile("inventory/sh_inventory.lua")
 AddCSLuaFile("crafting/sh_crafting.lua")
+AddCSLuaFile("core/sh_scavenge_config.lua")
 
 -- Add Client Files to Client
 AddCSLuaFile("crafting/cl_crafting.lua")
@@ -55,6 +56,8 @@ include("inventory/sh_inventory.lua")
 include("inventory/sv_inventory.lua")
 include("crafting/sh_crafting.lua")
 include("crafting/sv_crafting.lua")
+include("core/sv_population_balancer.lua")
+include("core/sv_scavenge_spawner.lua")
 include("core/sv_admin.lua")
 
 function GM:Initialize()
@@ -62,7 +65,7 @@ function GM:Initialize()
     for i = 1, 5 do math.random() end
 
     print("==================================================")
-    print("           GridRP (by Toxic)                      ")
+    print("           GridRP (by Juicebox)                      ")
     print("   Gamemode Loaded Successfully!                  ")
     print("==================================================")
 
@@ -98,7 +101,8 @@ function GM:PlayerDisconnected(ply)
     -- Despawn active money-generating entities and job deployables on disconnect
     for _, ent in ipairs(ents.GetAll()) do
         if IsValid(ent) then
-            local isOwner = (ent.GRID_Owner == ply) or (ent:GetNWEntity("GRID_Owner") == ply) or (ent.PurchaserSteamID == ply:SteamID())
+            local isOwner = (ent.GRID_Owner == ply) or (ent:GetNWEntity("GRID_Owner") == ply) or
+            (ent.PurchaserSteamID == ply:SteamID())
             if isOwner then
                 local c = ent:GetClass()
                 if string.StartWith(c, "grid_printer_") or c == "grid_resource_machine" or c == "grid_clinic_pod" or c == "grid_computer" or c == "grid_shipment" or string.StartWith(c, "grid_network_switch") or ent.IsNetworkSwitch or c == "grid_wan_uplink" then
@@ -257,7 +261,8 @@ function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
     local def = GRID.Inventory and GRID.Inventory.GetItemData and GRID.Inventory.GetItemData(class)
     local reqLvl = (def and def.level) or (newWep.RequiredLevel or 1)
     if reqLvl > 1 and ply:GetLevel() < reqLvl then
-        GRID.Notify(ply, string.format("You must be Level %d to wield %s!", reqLvl, def and def.name or class), NOTIFY_ERROR)
+        GRID.Notify(ply, string.format("You must be Level %d to wield %s!", reqLvl, def and def.name or class),
+            NOTIFY_ERROR)
         return true -- Blocks switching to this weapon
     end
 end
@@ -279,7 +284,8 @@ function GM:PlayerDeath(victim, inflictor, attacker)
 
     -- Dynamic Anti-Inflation Resuscitation Fee (Hybrid Base + Wealth %)
     if GRID.Economy and GRID.Economy.CalculateDynamicFee then
-        local hospFee = GRID.Economy.CalculateDynamicFee(victim, GRID.Config.HospitalFeeBase or 50, GRID.Config.HospitalFeeWealthPct or 0.015)
+        local hospFee = GRID.Economy.CalculateDynamicFee(victim, GRID.Config.HospitalFeeBase or 50,
+            GRID.Config.HospitalFeeWealthPct or 0.015)
         if hospFee > 0 and victim:CanAfford(hospFee) then
             victim:AddMoney(-hospFee)
             GRID.Notify(victim, string.format("Emergency Medical Resuscitation Fee: -$%d", hospFee), NOTIFY_ERROR)
@@ -314,8 +320,8 @@ function GM:PlayerDeath(victim, inflictor, attacker)
     end
 
     net.Start("GRID_PlayerDied")
-        net.WriteString(killerName)
-        net.WriteUInt(respawnSecs, 8)
+    net.WriteString(killerName)
+    net.WriteUInt(respawnSecs, 8)
     net.Send(victim)
 
     -- Drop a small amount of cash on death
@@ -347,7 +353,8 @@ function GM:PlayerDeath(victim, inflictor, attacker)
             if attacker.AddXP then
                 attacker:AddXP(100, "Turf Defense: Incursion Repelled")
             end
-            GRID.Notify(attacker, string.format("[TURF DEFENDER] +$100 & +100 XP for eliminating Police in %s!", zone.name), NOTIFY_GENERIC)
+            GRID.Notify(attacker,
+                string.format("[TURF DEFENDER] +$100 & +100 XP for eliminating Police in %s!", zone.name), NOTIFY_GENERIC)
         end
     end
 end

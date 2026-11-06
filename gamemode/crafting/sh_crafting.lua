@@ -1,6 +1,6 @@
 --[[
     sh_crafting.lua - Shared Crafting System, Material Registries, Tints & Recipes
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -15,7 +15,7 @@ GRID.Crafting.Materials = {
         name = "Zinc Ingot",
         type = "material",
         subType = "Refined Ingot",
-        quality = 1, -- Common
+        quality = 1,                  -- Common
         model = "models/gangwars/crafting/ingot.mdl",
         color = Color(180, 215, 230), -- Bluish-Silver tint
         hasTint = true,
@@ -26,7 +26,7 @@ GRID.Crafting.Materials = {
         name = "Iron Ingot",
         type = "material",
         subType = "Structural Ingot",
-        quality = 2, -- Uncommon
+        quality = 2,                  -- Uncommon
         model = "models/gangwars/crafting/ingot.mdl",
         color = Color(120, 120, 125), -- Dark Gunmetal / Raw Iron tint
         hasTint = true,
@@ -37,18 +37,19 @@ GRID.Crafting.Materials = {
         name = "Steel Ingot",
         type = "material",
         subType = "Military Alloy Ingot",
-        quality = 3, -- Rare
+        quality = 3,                  -- Rare
         model = "models/gangwars/crafting/ingot.mdl",
         color = Color(245, 250, 255), -- Bright Polished Chrome tint
         hasTint = true,
-        desc = "High-carbon polished chrome steel alloy ingot. Required for military rifles, shotguns, and heavy trauma plates.",
+        desc =
+        "High-carbon polished chrome steel alloy ingot. Required for military rifles, shotguns, and heavy trauma plates.",
         stats = "High-Grade Military Alloy"
     },
     ["crafting_carbon_rod"] = {
         name = "Carbon Rod",
         type = "material",
         subType = "Composite Component",
-        quality = 4, -- Epic
+        quality = 4,                  -- Epic
         model = "models/gangwars/crafting/carbrod.mdl",
         color = Color(255, 255, 255), -- Default model texture, no tint
         hasTint = false,
@@ -130,7 +131,8 @@ local machineItemDef = {
     subType = "Automated Extractor",
     quality = 1, -- Common
     model = "models/props_c17/trappropeller_engine.mdl",
-    desc = "Legal industrial extractor and crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput.",
+    desc =
+    "Legal industrial extractor and crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput.",
     stats = "Legal Extractor & Workbench | Network Capable"
 }
 GRID.Inventory.Items["grid_resource_machine"] = machineItemDef
@@ -155,7 +157,7 @@ GRID.Crafting.DropTable = {
             "blueprint_ak47"
         }
     },
-    { id = "crafting_carbon_rod",  weight = 6 }
+    { id = "crafting_carbon_rod", weight = 6 }
 }
 
 function GRID.Crafting.RollRandomResource()
@@ -201,8 +203,8 @@ GRID.Crafting.Recipes = {
         model = "models/weapons/w_pist_glock18.mdl",
         desc = "Standard semi-automatic sidearm. Reliable 17-round capacity.",
         ingredients = {
-            { id = "blueprint_glock", name = "Blueprint: Glock-18", amount = 1 },
-            { id = "crafting_ingot_zinc", name = "Zinc Ingot", amount = 4 }
+            { id = "blueprint_glock",     name = "Blueprint: Glock-18", amount = 1 },
+            { id = "crafting_ingot_zinc", name = "Zinc Ingot",          amount = 4 }
         }
     },
     {
@@ -215,9 +217,9 @@ GRID.Crafting.Recipes = {
         model = "models/weapons/w_pist_deagle.mdl",
         desc = "Heavy caliber .50 magnum sidearm with heavy armor-piercing kinetic impact.",
         ingredients = {
-            { id = "blueprint_deagle", name = "Blueprint: Desert Eagle", amount = 1 },
-            { id = "crafting_ingot_iron", name = "Iron Ingot", amount = 4 },
-            { id = "crafting_ingot_zinc", name = "Zinc Ingot", amount = 2 }
+            { id = "blueprint_deagle",    name = "Blueprint: Desert Eagle", amount = 1 },
+            { id = "crafting_ingot_iron", name = "Iron Ingot",              amount = 4 },
+            { id = "crafting_ingot_zinc", name = "Zinc Ingot",              amount = 2 }
         }
     },
     {
@@ -230,9 +232,9 @@ GRID.Crafting.Recipes = {
         model = "models/weapons/w_shot_m3super90.mdl",
         desc = "Close-quarters combat pump shotgun delivering devastating buckshot spread.",
         ingredients = {
-            { id = "blueprint_shotgun", name = "Blueprint: SPAS-12", amount = 1 },
-            { id = "crafting_ingot_iron", name = "Iron Ingot", amount = 4 },
-            { id = "crafting_ingot_steel", name = "Steel Ingot", amount = 2 }
+            { id = "blueprint_shotgun",    name = "Blueprint: SPAS-12", amount = 1 },
+            { id = "crafting_ingot_iron",  name = "Iron Ingot",         amount = 4 },
+            { id = "crafting_ingot_steel", name = "Steel Ingot",        amount = 2 }
         }
     },
     {
@@ -245,9 +247,9 @@ GRID.Crafting.Recipes = {
         model = "models/weapons/w_rif_ak47.mdl",
         desc = "Full-auto gas-operated military assault rifle with high armor penetration.",
         ingredients = {
-            { id = "blueprint_ak47", name = "Blueprint: AK-47", amount = 1 },
-            { id = "crafting_ingot_steel", name = "Steel Ingot", amount = 5 },
-            { id = "crafting_ingot_iron", name = "Iron Ingot", amount = 3 }
+            { id = "blueprint_ak47",       name = "Blueprint: AK-47", amount = 1 },
+            { id = "crafting_ingot_steel", name = "Steel Ingot",      amount = 5 },
+            { id = "crafting_ingot_iron",  name = "Iron Ingot",       amount = 3 }
         }
     },
 
@@ -289,7 +291,7 @@ GRID.Crafting.Recipes = {
         desc = "Heavy-duty tactical rucksack expanding personal inventory by +16 slots.",
         ingredients = {
             { id = "crafting_ingot_steel", name = "Steel Ingot", amount = 4 },
-            { id = "crafting_ingot_iron", name = "Iron Ingot", amount = 2 }
+            { id = "crafting_ingot_iron",  name = "Iron Ingot",  amount = 2 }
         }
     },
 
@@ -344,6 +346,48 @@ GRID.Crafting.Recipes = {
         desc = "Ammunition pack replenishing pistol, rifle, buckshot, and magnum rounds.",
         ingredients = {
             { id = "crafting_ingot_zinc", name = "Zinc Ingot", amount = 3 }
+        }
+    },
+    -- Scavenging & Street Recycling Smelting Recipes
+    {
+        id = "craft_smelt_iron",
+        name = "Smelt Iron Ingot",
+        category = "Smelting",
+        resultType = "material",
+        resultId = "crafting_ingot_iron",
+        quality = 2,
+        model = "models/gangwars/crafting/ingot.mdl",
+        desc = "Smelt down salvaged industrial scrap metal into a dense structural iron ingot.",
+        ingredients = {
+            { id = "junk_scrap_metal", name = "Scrap Metal", amount = 3 }
+        }
+    },
+    {
+        id = "craft_handloaded_ammo",
+        name = "Handloaded Ammo Pack",
+        category = "Gear",
+        resultType = "ammo",
+        resultId = "ammo_universal",
+        quality = 1,
+        model = "models/items/boxsrounds.mdl",
+        desc = "Handload ammunition cartridges using salvaged gunpowder residue and scrap metal.",
+        ingredients = {
+            { id = "junk_gunpowder",   name = "Gunpowder Residue", amount = 2 },
+            { id = "junk_scrap_metal", name = "Scrap Metal",       amount = 2 }
+        }
+    },
+    {
+        id = "craft_salvage_undervolt",
+        name = "Undervolt Hardware Module",
+        category = "Electronics",
+        resultType = "module",
+        resultId = "grid_module_undervolt",
+        quality = 3,
+        model = "models/items/battery.mdl",
+        desc = "Fabricate an undervolt microcontroller module using salvaged electronics and refined zinc.",
+        ingredients = {
+            { id = "junk_electronics",    name = "Broken Electronics", amount = 2 },
+            { id = "crafting_ingot_zinc", name = "Zinc Ingot",         amount = 2 }
         }
     }
 }

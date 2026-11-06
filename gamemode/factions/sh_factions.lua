@@ -1,6 +1,6 @@
 --[[
     sh_factions.lua - Gangs & Comprehensive Job Hierarchy
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 GRID = GRID or {}
@@ -37,7 +37,8 @@ GRID.Jobs = {
         weapons = { "weapon_fists", "weapon_grid_medkit" },
         models = { "models/player/mossman.mdl", "models/player/mossman_arctic.mdl" },
         max = 3,
-        desc = "Clinical physician & bio-chemist. Deploys automated Triage Pods that sell combat buffs & heals for passive income, and administers field Adrenaline stims to allies."
+        desc =
+        "Clinical physician & bio-chemist. Deploys automated Triage Pods that sell combat buffs & heals for passive income, and administers field Adrenaline stims to allies."
     },
     ["cyber_engineer"] = {
         name = "Cyber Engineer",
@@ -48,7 +49,8 @@ GRID.Jobs = {
         armor = 10,
         models = { "models/player/kleiner.mdl", "models/player/magnusson.mdl" },
         max = 3,
-        desc = "High-tech network architect & infiltrator. Spawns with network wiring gear, can Supercharge hardware with a Cryo Calibrator, and holds root terminal exploit clearance."
+        desc =
+        "High-tech network architect & infiltrator. Spawns with network wiring gear, can Supercharge hardware with a Cryo Calibrator, and holds root terminal exploit clearance."
     },
     ["security_guard"] = {
         name = "Security Contractor",
@@ -91,14 +93,15 @@ GRID.Jobs = {
         faction = GRID.Factions.FACTION_GANG,
         salary = 10,
         weapons = { "weapon_fists" },
-        models = { 
-            "models/player/Group03/male_01.mdl", 
+        models = {
+            "models/player/Group03/male_01.mdl",
             "models/player/Group03/male_02.mdl",
             "models/player/Group03/male_06.mdl",
-            "models/player/Group03/male_07.mdl" 
+            "models/player/Group03/male_07.mdl"
         },
         max = 16,
-        desc = "Underworld soldier. Joins syndicates, purchases firearms from arms merchants, contests territory, and defends printers."
+        desc =
+        "Underworld soldier. Joins syndicates, purchases firearms from arms merchants, contests territory, and defends printers."
     },
     ["gang_boss"] = {
         name = "Gang Leader",
@@ -109,7 +112,8 @@ GRID.Jobs = {
         armor = 50,
         models = { "models/player/Group03/male_04.mdl", "models/player/Group03/male_09.mdl" },
         max = 4,
-        desc = "Commands a player syndicate. Heavy armor protection. Finances firearm shipments and coordinates base raids."
+        desc =
+        "Commands a player syndicate. Heavy armor protection. Finances firearm shipments and coordinates base raids."
     },
     ["thief"] = {
         name = "Thief",
@@ -119,7 +123,8 @@ GRID.Jobs = {
         weapons = { "weapon_fists", "weapon_grid_lockpick" },
         models = { "models/player/phoenix.mdl", "models/player/arctic.mdl" },
         max = 4,
-        desc = "Silent infiltrator. Spawns with tactical lockpick to breach enemy doors, extract contraband, and crack vaults."
+        desc =
+        "Silent infiltrator. Spawns with tactical lockpick to breach enemy doors, extract contraband, and crack vaults."
     },
     ["hitman"] = {
         name = "Hitman",
@@ -130,7 +135,8 @@ GRID.Jobs = {
         armor = 30,
         models = { "models/player/leet.mdl", "models/player/gman_high.mdl" },
         max = 2,
-        desc = "Cold-blooded contract assassin for hire. Contracts weapons from dealers to eliminate high-value targets across the city."
+        desc =
+        "Cold-blooded contract assassin for hire. Contracts weapons from dealers to eliminate high-value targets across the city."
     },
     ["black_market_dealer"] = {
         name = "Black Market Dealer",
@@ -140,7 +146,8 @@ GRID.Jobs = {
         weapons = { "weapon_fists" },
         models = { "models/player/eli.mdl" },
         max = 2,
-        desc = "Underground arms & contraband smuggler. Exclusive supplier of military firearms (AK-47, Deagle), wholesale Lockpick Crates, and Combat Adrenaline."
+        desc =
+        "Underground arms & contraband smuggler. Exclusive supplier of military firearms (AK-47, Deagle), wholesale Lockpick Crates, and Combat Adrenaline."
     },
 
     -- ========================================================
@@ -157,7 +164,8 @@ GRID.Jobs = {
         runSpeed = 350,
         models = { "models/player/police.mdl" },
         max = 6,
-        desc = "Rapid pursuit interceptor & detective. Top 350 sprint speed, exclusive contraband scanner, 5s rapid dispatch respawn, and +50% cash bounties on seized printers."
+        desc =
+        "Rapid pursuit interceptor & detective. Top 350 sprint speed, exclusive contraband scanner, 5s rapid dispatch respawn, and +50% cash bounties on seized printers."
     },
     ["police_chief"] = {
         name = "Police Chief",
@@ -170,7 +178,8 @@ GRID.Jobs = {
         runSpeed = 315,
         models = { "models/player/combine_soldier_prisonguard.mdl" },
         max = 1,
-        desc = "Supreme commander of Civil Protection. Directs street patrols, issues warrants, and initiates city lockdowns."
+        desc =
+        "Supreme commander of Civil Protection. Directs street patrols, issues warrants, and initiates city lockdowns."
     },
     ["swat_chief"] = {
         name = "SWAT Specialist",
@@ -183,7 +192,8 @@ GRID.Jobs = {
         runSpeed = 230,
         models = { "models/player/swat.mdl", "models/player/combine_soldier.mdl" },
         max = 2,
-        desc = "Heavy tactical siege breacher with 100 Armor and Battering Ram. Heavy ballistic plating heavily restricts mobility (160 walk / 230 sprint)."
+        desc =
+        "Heavy tactical siege breacher with 100 Armor and Battering Ram. Heavy ballistic plating heavily restricts mobility (160 walk / 230 sprint)."
     },
     ["mayor"] = {
         name = "Mayor",

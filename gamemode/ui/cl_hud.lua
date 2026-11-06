@@ -1,6 +1,6 @@
 --[[
     cl_hud.lua - Classic DarkRP / GridRP Bottom-Left HUD, Ammo Display & Hitmarkers
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -223,7 +223,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
         draw.RoundedBox(4, trackX, hpY, fillW, barH, Color(239, 68, 68, 225))
     end
     local hpStr = string.format("%d / %d", math.ceil(curHP), maxHP)
-    draw.SimpleText(hpStr, "GRID_UI_Badge", trackX + trackW - 7, hpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT,
+    draw.SimpleText(hpStr, "GRID_UI_Badge", trackX + trackW - 7, hpY + barH / 2 + 1, Color(0, 0, 0, 180),
+        TEXT_ALIGN_RIGHT,
         TEXT_ALIGN_CENTER)
     draw.SimpleText(hpStr, "GRID_UI_Badge", trackX + trackW - 8, hpY + barH / 2, Color(255, 255, 255, 240),
         TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
@@ -267,7 +268,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
         draw.RoundedBox(4, trackX, xpY, fillW, barH, Color(245, 158, 11, 225))
     end
     local xpStr = (curLevel >= maxLvl) and "MAX LEVEL" or string.format("%d / %d XP", math.ceil(curXP), maxXP)
-    draw.SimpleText(xpStr, "GRID_UI_Badge", trackX + trackW - 7, xpY + barH / 2 + 1, Color(0, 0, 0, 180), TEXT_ALIGN_RIGHT,
+    draw.SimpleText(xpStr, "GRID_UI_Badge", trackX + trackW - 7, xpY + barH / 2 + 1, Color(0, 0, 0, 180),
+        TEXT_ALIGN_RIGHT,
         TEXT_ALIGN_CENTER)
     draw.SimpleText(xpStr, "GRID_UI_Badge", trackX + trackW - 8, xpY + barH / 2, Color(255, 255, 255, 240),
         TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
@@ -286,7 +288,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
 
     local formatMoney = GRID.FormatMoney
     local moneyStr = formatMoney and formatMoney(ply:GetMoney()) or ("$" .. string.Comma(ply:GetMoney()))
-    draw.SimpleText(moneyStr, "GRID_UI_Sub", hudX + 44, econY + 12, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText(moneyStr, "GRID_UI_Sub", hudX + 44, econY + 12, Color(52, 211, 153), TEXT_ALIGN_LEFT,
+        TEXT_ALIGN_CENTER)
 
     -- Salary Pill (Right Aligned)
     local sal = jobData.salary or 0
@@ -299,7 +302,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
     draw.RoundedBox(4, salPillX, econY, salPillW, 24, Color(56, 189, 248, 25))
     surface.SetDrawColor(56, 189, 248, 120)
     surface.DrawOutlinedRect(salPillX, econY, salPillW, 24, 1)
-    draw.SimpleText(salaryStr, "GRID_UI_Badge", salPillX + salPillW / 2, econY + 12, Color(56, 189, 248), TEXT_ALIGN_CENTER,
+    draw.SimpleText(salaryStr, "GRID_UI_Badge", salPillX + salPillW / 2, econY + 12, Color(56, 189, 248),
+        TEXT_ALIGN_CENTER,
         TEXT_ALIGN_CENTER)
 
     -- Draw Floating XP Gain Popups (Cascading upward above the HUD)
@@ -371,7 +375,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
 
             -- Weapon Name Pill
             local wepName = wep:GetPrintName() or wep:GetClass()
-            local fitName = (GRID.UI.FitText and GRID.UI.FitText(string.upper(wepName), "GRID_UI_Badge", ammoW - 28)) or string.upper(wepName)
+            local fitName = (GRID.UI.FitText and GRID.UI.FitText(string.upper(wepName), "GRID_UI_Badge", ammoW - 28)) or
+            string.upper(wepName)
             draw.SimpleText(fitName, "GRID_UI_Badge", ammoX + 14, ammoY + 16, Color(148, 163, 184), TEXT_ALIGN_LEFT,
                 TEXT_ALIGN_CENTER)
 
@@ -500,6 +505,146 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
 
             draw.SimpleText(podTitle, "GRID_UI_Badge", tagX, tagY + 15, Color(248, 250, 252), TEXT_ALIGN_CENTER,
                 TEXT_ALIGN_CENTER)
+            -- Up-Close Raycast UI: Scavenge Nodes (Dumpsters, Trash Bins, Scrap Piles)
+        elseif distSqr <= (160 * 160) and (ent.IsScavengeNode or string.StartWith(ent:GetClass(), "grid_scavenge_")) then
+            local tagX = ScrW() / 2
+            local tagY = ScrH() / 2 + 36
+
+            local cardW = 340
+            local cardH = 92
+            local cardX = tagX - cardW / 2
+
+            local isLooted = ent.IsOnCooldown and ent:IsOnCooldown()
+            local isSearching = ent.GetIsSearching and ent:GetIsSearching()
+            local searcher = ent.GetSearcher and ent:GetSearcher()
+            local isMeSearching = (searcher == ply)
+
+            local tier = ent.GetNodeTier and ent:GetNodeTier() or "trashbin"
+            local entName = ent.PrintName or "Scavenge Node"
+            local tierSubtitles = {
+                ["dumpster"] = "Industrial Refuse  •  High Scrap & Tech",
+                ["trashbin"] = "Public Waste Bin  •  Recyclables & Cash",
+                ["scrappile"] = "Metal Salvage Debris  •  Scrap & Chemicals"
+            }
+            local subText = tierSubtitles[tier] or "Street Salvage Refuse"
+
+            local accentCol = isLooted and Color(239, 68, 68) or
+            (isSearching and Color(251, 191, 36) or Color(52, 211, 153))
+            local badgeText = isLooted and "PICKED CLEAN" or (isSearching and "SEARCHING" or "SALVAGEABLE")
+
+            surface.SetFont("GRID_UI_Badge")
+            local bTextW = surface.GetTextSize(badgeText)
+            local badgeW = bTextW + 16
+
+            -- Card Background
+            draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 200)
+            surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+
+            -- Top Accent Line
+            draw.RoundedBoxEx(8, cardX, tagY, cardW, 3, accentCol, true, true, false, false)
+
+            -- Row 1: Status Pill + Node Name
+            draw.RoundedBox(4, cardX + 8, tagY + 8, badgeW, 20, Color(accentCol.r, accentCol.g, accentCol.b, 40))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 160)
+            surface.DrawOutlinedRect(cardX + 8, tagY + 8, badgeW, 20, 1)
+            draw.SimpleText(badgeText, "GRID_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
+
+            draw.SimpleText(entName, "GRID_UI_Badge", cardX + badgeW + 16, tagY + 18, Color(248, 250, 252),
+                TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+            -- Row 2: Subtitle Info
+            draw.SimpleText(subText, "GRID_FontSmall", cardX + 12, tagY + 44, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+                TEXT_ALIGN_CENTER)
+
+            -- Row 3: Action Prompt or Progress Bar
+            if isSearching then
+                local duration = math.max(0.1, ent.GetSearchDuration and ent:GetSearchDuration() or 1.5)
+                local progress = math.Clamp(
+                (CurTime() - (ent.GetSearchStartTime and ent:GetSearchStartTime() or CurTime())) / duration, 0, 1)
+
+                local barW = cardW - 24
+                local barH = 16
+                local barX = cardX + 12
+                local barY = tagY + 62
+
+                draw.RoundedBox(4, barX, barY, barW, barH, Color(20, 29, 47, 240))
+                surface.SetDrawColor(50, 65, 90, 180)
+                surface.DrawOutlinedRect(barX, barY, barW, barH, 1)
+
+                if progress > 0 then
+                    local fillW = math.max(4, math.floor(barW * progress))
+                    draw.RoundedBox(3, barX + 1, barY + 1, fillW - 2, barH - 2, Color(245, 158, 11, 230))
+                end
+
+                local progressTxt = isMeSearching and string.format("RUMMAGING (%d%%)", math.floor(progress * 100)) or
+                "SEARCH IN PROGRESS"
+                draw.SimpleText(progressTxt, "GRID_UI_Badge", barX + barW / 2, barY + barH / 2, Color(255, 255, 255),
+                    TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            elseif isLooted then
+                local remain = ent.GetCooldownRemaining and ent:GetCooldownRemaining() or 0
+                local mins = math.floor(remain / 60)
+                local secs = remain % 60
+                local timeStr = (mins > 0) and string.format("%dm %02ds", mins, secs) or string.format("%ds", secs)
+                draw.SimpleText("Empty • Refreshes in " .. timeStr, "GRID_UI_Caption", cardX + 12, tagY + 68,
+                    Color(248, 113, 113), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            else
+                draw.SimpleText("[E] Hold to Rummage & Scavenge", "GRID_UI_Caption", cardX + 12, tagY + 68,
+                    Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            end
+            -- Up-Close Raycast UI: Street Recycling Depot
+        elseif distSqr <= (160 * 160) and ent:GetClass() == "grid_recycler_depot" then
+            local tagX = ScrW() / 2
+            local tagY = ScrH() / 2 + 36
+
+            local cardW = 340
+            local cardH = 92
+            local cardX = tagX - cardW / 2
+
+            local accentCol = Color(52, 211, 153)
+            local badgeText = "RECYCLER"
+
+            surface.SetFont("GRID_UI_Badge")
+            local bTextW = surface.GetTextSize(badgeText)
+            local badgeW = bTextW + 16
+
+            -- Card Background
+            draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 200)
+            surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+
+            -- Top Accent Line
+            draw.RoundedBoxEx(8, cardX, tagY, cardW, 3, accentCol, true, true, false, false)
+
+            -- Row 1: Badge + Name
+            draw.RoundedBox(4, cardX + 8, tagY + 8, badgeW, 20, Color(accentCol.r, accentCol.g, accentCol.b, 40))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 160)
+            surface.DrawOutlinedRect(cardX + 8, tagY + 8, badgeW, 20, 1)
+            draw.SimpleText(badgeText, "GRID_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
+
+            draw.SimpleText("Street Recycling Depot", "GRID_UI_Badge", cardX + badgeW + 16, tagY + 18,
+                Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+            -- Row 2: Subtitle / Inventory Status
+            local clientItems = GRID.Inventory and GRID.Inventory.ClientItems or {}
+            local recyclables = GRID.Scavenge and GRID.Scavenge.Recyclables or {}
+            local bagCount = 0
+            for _, it in ipairs(clientItems) do
+                if recyclables[it.item_id] and (tonumber(it.amount) or 0) > 0 then
+                    bagCount = bagCount + (tonumber(it.amount) or 0)
+                end
+            end
+
+            local subText = (bagCount > 0) and string.format("Bagged Junk: %d items ready to process", bagCount) or
+            "No recyclable junk in your bag"
+            local subCol = (bagCount > 0) and Color(74, 222, 128) or Color(148, 163, 184)
+            draw.SimpleText(subText, "GRID_FontSmall", cardX + 12, tagY + 44, subCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+            -- Row 3: Action Prompt
+            draw.SimpleText("[E] Access Recycler & Compactor", "GRID_UI_Caption", cardX + 12, tagY + 68,
+                Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         elseif distSqr <= (160 * 160) and ent.HasItemQuality and ent:HasItemQuality() then
             local qData = ent:GetItemQualityData()
             if qData then
@@ -635,13 +780,14 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     -- Bottom Status Summary Row
                     local subnet = ent.GetSubnetID and ent:GetSubnetID() or 1
                     local summaryY = isMultiRow and (tagY + 104) or (tagY + 75)
-                    local linksTxt = string.format("%d/%d Ports Active  •  Subnet: 192.168.%d.0/24  •  Gateway: 192.168.%d.1",
+                    local linksTxt = string.format(
+                        "%d/%d Ports Active  •  Subnet: 192.168.%d.0/24  •  Gateway: 192.168.%d.1",
                         activeCount, numPorts, subnet, subnet)
 
                     draw.SimpleText(linksTxt, "GRID_UI_Caption", cardX + cardW / 2, summaryY, Color(203, 213, 225),
                         TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-                -- Up-Close Raycast UI: Satellite WAN Uplink Gateway
+                    -- Up-Close Raycast UI: Satellite WAN Uplink Gateway
                 elseif ent:GetClass() == "grid_wan_uplink" then
                     local cardW = 360
                     local cardH = 92
@@ -668,7 +814,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
 
                     draw.SimpleText(string.format("Encryption Key: %s", key), "GRID_UI_BodyBold", cardX + 12, tagY + 40,
                         Color(56, 189, 248), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-                    draw.SimpleText(statusTxt, "GRID_UI_Badge", cardX + cardW - 12, tagY + 40, statusCol, TEXT_ALIGN_RIGHT,
+                    draw.SimpleText(statusTxt, "GRID_UI_Badge", cardX + cardW - 12, tagY + 40, statusCol,
+                        TEXT_ALIGN_RIGHT,
                         TEXT_ALIGN_CENTER)
 
                     -- Attachment and Hint Row
@@ -676,10 +823,11 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     local swTxt = IsValid(sw) and
                         string.format("Connected: L3 Switch Port %d (Active L3 Route)", ent:GetAssignedPort() or 0) or
                         "Unlinked: Connect to L3 Switch via Wire Tool"
-                    draw.SimpleText(swTxt, "GRID_UI_Caption", cardX + 12, tagY + 68, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+                    draw.SimpleText(swTxt, "GRID_UI_Caption", cardX + 12, tagY + 68, Color(148, 163, 184),
+                        TEXT_ALIGN_LEFT,
                         TEXT_ALIGN_CENTER)
 
-                -- Up-Close Raycast UI: Contraband Money Printers
+                    -- Up-Close Raycast UI: Contraband Money Printers
                 elseif ent.PrintAmount ~= nil or ent:GetClass():find("grid_printer_") then
                     local cardW = 340
                     local cardH = 102
@@ -732,7 +880,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     draw.SimpleText(effTxt, "GRID_UI_Caption", cardX + 12, tagY + 83, effCol, TEXT_ALIGN_LEFT,
                         TEXT_ALIGN_CENTER)
 
-                -- Standard Raycast Badge for Other In-World Entities
+                    -- Standard Raycast Badge for Other In-World Entities
                 else
                     local totalW = nameW + badgeW + 24
                     draw.RoundedBox(6, tagX - totalW / 2, tagY, totalW, 30, Color(11, 15, 25, 240))

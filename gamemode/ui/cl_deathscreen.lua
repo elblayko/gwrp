@@ -1,6 +1,6 @@
 --[[
     cl_deathscreen.lua - High-Legibility Death Screen & Respawn Countdown
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 local IsDead = false

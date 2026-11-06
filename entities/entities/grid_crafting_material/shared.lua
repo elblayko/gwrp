@@ -1,12 +1,12 @@
 --[[
     grid_crafting_material/shared.lua - Shared Crafting Material Entity
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Crafting Material"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Category = "GridRP"
 ENT.Spawnable = true
 ENT.AdminOnly = false

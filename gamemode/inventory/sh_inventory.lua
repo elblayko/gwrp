@@ -1,6 +1,6 @@
 --[[
     sh_inventory.lua - Shared Item Definitions, Quality Tiers & Bag Capacities
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -115,7 +115,8 @@ GRID.Inventory.Items = {
         subType = "Engineering Hardware",
         quality = 2, -- Uncommon
         model = "models/weapons/w_slam.mdl",
-        desc = "Handheld field calibrator. Cools overheating printers (-35°C), repairs integrity, and enables Cyber-Tuning.",
+        desc =
+        "Handheld field calibrator. Cools overheating printers (-35°C), repairs integrity, and enables Cyber-Tuning.",
         stats = "Primary: Flash-Cool (-100% Heat) | Secondary: Cyber-Tuning"
     },
     ["weapon_grid_scanner"] = {
@@ -125,7 +126,8 @@ GRID.Inventory.Items = {
         subType = "Investigative Device",
         quality = 3, -- Rare
         model = "models/weapons/w_toolgun.mdl",
-        desc = "Police acoustic & thermal scanner. Triangulates illegal money printers and broadcasts raid markers to dispatch.",
+        desc =
+        "Police acoustic & thermal scanner. Triangulates illegal money printers and broadcasts raid markers to dispatch.",
         stats = "Primary: Triangulate Signal | Secondary: Police Raid Dispatch"
     },
     ["weapon_grid_ram"] = {
@@ -146,7 +148,8 @@ GRID.Inventory.Items = {
         subType = "Network Appliance",
         quality = 2, -- Uncommon
         model = "models/props_lab/reciever01a.mdl",
-        desc = "Layer-3 hardware switch featuring 2 dedicated copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink.",
+        desc =
+        "Layer-3 hardware switch featuring 2 dedicated copper ports, Port 3 SFP combo (10G for switches/WAN or 1G for printers), and Port 4 10G SFP uplink.",
         stats = "2x Copper + 2x SFP (Combo + Uplink) | Layer-3 Switch"
     },
     ["grid_network_switch_7p"] = {
@@ -155,7 +158,8 @@ GRID.Inventory.Items = {
         subType = "Enterprise Switch",
         quality = 4, -- Epic
         model = "models/props_lab/reciever01a.mdl",
-        desc = "High-density enterprise Layer-3 switch featuring 5 dedicated copper ports, Port 6 SFP combo (10G/1G), and Port 7 dedicated 10G SFP uplink transceiver.",
+        desc =
+        "High-density enterprise Layer-3 switch featuring 5 dedicated copper ports, Port 6 SFP combo (10G/1G), and Port 7 dedicated 10G SFP uplink transceiver.",
         stats = "5x Copper + 2x SFP (Combo + Uplink) | Layer-3 Enterprise Switch"
     },
     ["grid_wan_uplink"] = {
@@ -164,7 +168,8 @@ GRID.Inventory.Items = {
         subType = "Wireless Gateway",
         quality = 3, -- Rare
         model = "models/props_rooftop/roof_dish001.mdl",
-        desc = "Encrypted satellite transceiver dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to establish long-range wireless mesh tunnels across the map.",
+        desc =
+        "Encrypted satellite transceiver dish. Plugs into an L3 switch (prefers Port 3 10G SFP) to establish long-range wireless mesh tunnels across the map.",
         stats = "Long-Range L3 Mesh | WPA3 Encrypted"
     },
     ["grid_module_undervolt"] = {
@@ -314,6 +319,53 @@ GRID.Inventory.Items = {
         model = "models/weapons/w_models/w_syringe.mdl",
         desc = "Illicit high-potency combat adrenaline injector. Maximizes speed and pain tolerance.",
         stats = "+40% Sprint Speed | 15% Damage Resist (20s)"
+    },
+
+    -- 6. Scavenged Street Refuse & Recyclables
+    ["junk_scrap_metal"] = {
+        name = "Scrap Metal",
+        type = "junk",
+        subType = "Scavenged Material",
+        quality = 1, -- Common
+        model = "models/props_c17/trap_propeller_lever.mdl",
+        desc = "Twisted industrial metal refuse. Recyclable at the depot or smeltable into iron ingots.",
+        stats = "Recyclable Refuse | Smeltable"
+    },
+    ["junk_gunpowder"] = {
+        name = "Gunpowder Residue",
+        type = "junk",
+        subType = "Chemical Salvage",
+        quality = 2, -- Uncommon
+        model = "models/props_lab/box01a.mdl",
+        desc = "Unspent propellant powder recovered from discarded cartridges. Used for ammo crafting or recycling.",
+        stats = "Recyclable Refuse | Ammo Component"
+    },
+    ["junk_electronics"] = {
+        name = "Broken Electronics",
+        type = "junk",
+        subType = "Cyber Salvage",
+        quality = 3, -- Rare
+        model = "models/props_lab/reciever_cartridge.mdl",
+        desc = "Fried logic boards and microcontrollers. High cash recycling value or module crafting component.",
+        stats = "High-Value Scrap | Module Salvage"
+    },
+    ["junk_plastic_bottle"] = {
+        name = "Plastic Bottle",
+        type = "junk",
+        subType = "Street Refuse",
+        quality = 1, -- Common
+        model = "models/props_junk/garbage_plasticbottle003a.mdl",
+        desc = "Empty beverage bottle eligible for recycling deposit refund at the depot.",
+        stats = "Recyclable Street Refuse"
+    },
+    ["junk_aluminum_can"] = {
+        name = "Aluminum Can",
+        type = "junk",
+        subType = "Street Refuse",
+        quality = 1, -- Common
+        model = "models/props_junk/PopCan01a.mdl",
+        desc = "Crushed aluminum soda can eligible for recycling deposit refund at the depot.",
+        stats = "Recyclable Street Refuse"
     }
 }
 

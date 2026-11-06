@@ -1,14 +1,15 @@
 --[[
     entities/weapons/weapon_grid_ram/shared.lua
     GridRP SWAT Tactical Battering Ram
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile()
 
 SWEP.PrintName = "Tactical Battering Ram"
-SWEP.Author = "Toxic"
-SWEP.Instructions = "Primary Fire: Deliver heavy kinetic blows to breach locked doors\nSecondary Fire: Sound raid megaphone siren"
+SWEP.Author = "Juicebox"
+SWEP.Instructions =
+"Primary Fire: Deliver heavy kinetic blows to breach locked doors\nSecondary Fire: Sound raid megaphone siren"
 SWEP.Category = "GridRP"
 
 SWEP.Spawnable = true
@@ -123,7 +124,8 @@ function SWEP:PrimaryAttack()
         local reqHits = ownerIsWanted and 2 or 3
 
         if hits < reqHits then
-            GRID.Notify(ply, string.format("[RAM] Kinetic Impact %d/%d! Keep striking to breach!", hits, reqHits), NOTIFY_HINT, 2)
+            GRID.Notify(ply, string.format("[RAM] Kinetic Impact %d/%d! Keep striking to breach!", hits, reqHits),
+                NOTIFY_HINT, 2)
             if IsValid(doorOwner) then
                 GRID.Notify(doorOwner, "WARNING: Your front door is being hammered by SWAT!", NOTIFY_ERROR, 3)
             end
@@ -193,7 +195,8 @@ if CLIENT then
         local ent = tr.Entity
 
         if IsValid(ent) and IsBreachable(ent) and tr.HitPos:DistToSqr(ply:EyePos()) < (110 * 110) then
-            draw.SimpleText("[ LEFT CLICK: RAM DOOR | RIGHT CLICK: MEGAPHONE ]", "GRID_UI_Caption", cx, cy + 35, Color(245, 158, 11), TEXT_ALIGN_CENTER)
+            draw.SimpleText("[ LEFT CLICK: RAM DOOR | RIGHT CLICK: MEGAPHONE ]", "GRID_UI_Caption", cx, cy + 35,
+                Color(245, 158, 11), TEXT_ALIGN_CENTER)
         end
     end
 end

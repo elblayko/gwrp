@@ -76,26 +76,8 @@ function GRID.Turf.LoadMapProfile()
             return
         end
 
-        -- 3. Check built-in template for this map
-        local defaults = GRID.Turf.DefaultTemplates and GRID.Turf.DefaultTemplates[mapKey]
-        if defaults then
-            local zones = {}
-            for id, zone in pairs(defaults) do
-                zones[id] = {
-                    id = id,
-                    name = zone.name,
-                    pos = Vector(zone.pos.x, zone.pos.y, zone.pos.z),
-                    radius = zone.radius,
-                    owner = zone.owner,
-                    progress = zone.progress or 100,
-                    tax_rate = tonumber(zone.tax_rate) or 10
-                }
-            end
-            applyAndSpawn(zones, "default template")
-            GRID.Turf.SaveMapProfile()
-        else
-            print(string.format("[GridRP-Turf] No saved profile for '%s'. Admins can use /turfsetup to create zones.", mapKey))
-        end
+        -- 3. If no profile exists, wait for admin setup
+        print(string.format("[GridRP-Turf] No saved turf profile for '%s'. Admins can use F4 Admin HUD -> Turf Setup to create zones.", mapKey))
     end
 
     -- 1. Try loading from MariaDB / SQLite database first (async-safe)
@@ -189,6 +171,14 @@ end
 function GRID.Turf.CaptureFlag(turfId, ply)
     local zone = GRID.Turf.Zones[turfId]
     if not zone or not IsValid(ply) then return end
+
+    if GRID.Population and GRID.Population.CanCaptureTurf then
+        local canCap, reason = GRID.Population.CanCaptureTurf()
+        if not canCap then
+            GRID.Notify(ply, reason, NOTIFY_ERROR)
+            return
+        end
+    end
 
     local faction = ply:GetFaction()
     if not faction or faction.id == "neutral" then

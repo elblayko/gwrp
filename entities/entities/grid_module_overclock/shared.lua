@@ -1,13 +1,13 @@
 --[[
     entities/entities/grid_module_overclock/shared.lua
     GridRP Overclock Hardware Module
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Overclock Module"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = true
 
 -- Central Item Quality

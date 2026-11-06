@@ -1,6 +1,6 @@
 --[[
     sh_buffs.lua - Buff & Debuff Core Framework
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 GRID = GRID or {}
@@ -33,7 +33,7 @@ function GRID.Buffs.Register(buffId, data)
     data.persistDeath = data.persistDeath or false
     data.tickOffline = data.tickOffline or false -- true = real-time wall clock countdown; false = freeze in-game time
     data.maxStacks = data.maxStacks or 1
-    data.duration = data.duration or 30 -- -1 for indefinite / permanent
+    data.duration = data.duration or 30          -- -1 for indefinite / permanent
     data.tickInterval = data.tickInterval or nil
 
     -- Icon visuals & styling

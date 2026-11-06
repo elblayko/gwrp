@@ -1,6 +1,6 @@
 --[[
     cl_bag.lua - High-Legibility Scaled Modern Bag & Container Interface
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -149,7 +149,8 @@ function GRID.UI.OpenBag()
         draw.RoundedBox(6, pillX, 18, pillW, 28, Color(6, 182, 212, 35))
         surface.SetDrawColor(6, 182, 212, 140)
         surface.DrawOutlinedRect(pillX, 18, pillW, 28, 1)
-        draw.SimpleText(countStr, "GRID_UI_Badge", pillX + pillW / 2, 32, Color(34, 211, 238), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(countStr, "GRID_UI_Badge", pillX + pillW / 2, 32, Color(34, 211, 238), TEXT_ALIGN_CENTER,
+            TEXT_ALIGN_CENTER)
 
         -- Bottom Wallet & Instructions Footer (56px)
         draw.RoundedBoxEx(10, 0, h - 56, w, 56, Color(17, 24, 39, 240), false, false, true, true)
@@ -158,8 +159,10 @@ function GRID.UI.OpenBag()
 
         local ply = LocalPlayer()
         local curMoney = IsValid(ply) and ply:GetMoney() or 0
-        draw.SimpleText("$" .. string.Comma(curMoney), "GRID_UI_Price", 20, h - 28, Color(74, 222, 128), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Drag out to drop", "GRID_UI_Caption", w - 20, h - 28, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("$" .. string.Comma(curMoney), "GRID_UI_Price", 20, h - 28, Color(74, 222, 128), TEXT_ALIGN_LEFT,
+            TEXT_ALIGN_CENTER)
+        draw.SimpleText("Drag out to drop", "GRID_UI_Caption", w - 20, h - 28, Color(148, 163, 184), TEXT_ALIGN_RIGHT,
+            TEXT_ALIGN_CENTER)
     end
 
     -- Close Button "X" (Top Right)
@@ -188,7 +191,8 @@ function GRID.UI.OpenBag()
         s.contentPanel:Clear()
 
         local activeBag = GRID.UI.ActiveBagIndex
-        local bagCap = (activeBag == 0) and 16 or GRID.Inventory.GetBagCapacity((GRID.Inventory.ClientBags or {})["bag" .. activeBag])
+        local bagCap = (activeBag == 0) and 16 or
+        GRID.Inventory.GetBagCapacity((GRID.Inventory.ClientBags or {})["bag" .. activeBag])
 
         -- 1. Slot Grid (4 Columns, Generous 84px Slots)
         local contW = s.contentPanel:GetWide()
@@ -233,8 +237,10 @@ function GRID.UI.OpenBag()
                     -- Stack Count Number
                     if item.amount and item.amount > 1 then
                         local amtText = "x" .. tostring(item.amount)
-                        draw.SimpleText(amtText, "GRID_UI_Sub", w - 7, h - 5, Color(0, 0, 0, 240), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
-                        draw.SimpleText(amtText, "GRID_UI_Sub", w - 8, h - 6, Color(248, 250, 252), TEXT_ALIGN_RIGHT, TEXT_ALIGN_BOTTOM)
+                        draw.SimpleText(amtText, "GRID_UI_Sub", w - 7, h - 5, Color(0, 0, 0, 240), TEXT_ALIGN_RIGHT,
+                            TEXT_ALIGN_BOTTOM)
+                        draw.SimpleText(amtText, "GRID_UI_Sub", w - 8, h - 6, Color(248, 250, 252), TEXT_ALIGN_RIGHT,
+                            TEXT_ALIGN_BOTTOM)
                     end
                 else
                     surface.SetDrawColor(30, 41, 59, isHover and 255 or 160)
@@ -325,7 +331,8 @@ function GRID.UI.OpenBag()
             draw.RoundedBox(8, 0, 0, w, h, Color(14, 18, 28, 220))
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
-            draw.SimpleText("Containers:", "GRID_UI_Sub", 14, h / 2, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Containers:", "GRID_UI_Sub", 14, h / 2, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+                TEXT_ALIGN_CENTER)
         end
 
         local bags = GRID.Inventory.ClientBags or {}
@@ -344,19 +351,24 @@ function GRID.UI.OpenBag()
             local isSelected = (activeBag == bIdx)
 
             btnBag.Paint = function(bb, w, h)
-                local bg = isSelected and Color(30, 41, 59, 255) or (isEquipped and Color(17, 24, 39, 220) or Color(11, 15, 25, 180))
+                local bg = isSelected and Color(30, 41, 59, 255) or
+                (isEquipped and Color(17, 24, 39, 220) or Color(11, 15, 25, 180))
                 draw.RoundedBox(6, 0, 0, w, h, bg)
 
-                local trimCol = isSelected and Color(6, 182, 212) or (isEquipped and Color(34, 211, 238, 120) or Color(30, 41, 59, 140))
+                local trimCol = isSelected and Color(6, 182, 212) or
+                (isEquipped and Color(34, 211, 238, 120) or Color(30, 41, 59, 140))
                 surface.SetDrawColor(trimCol.r, trimCol.g, trimCol.b, 255)
                 surface.DrawOutlinedRect(0, 0, w, h, isSelected and 2 or 1)
 
                 if bIdx == 0 then
-                    draw.SimpleText("MAIN", "GRID_UI_Badge", w / 2, h / 2, isSelected and Color(34, 211, 238) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("MAIN", "GRID_UI_Badge", w / 2, h / 2,
+                        isSelected and Color(34, 211, 238) or Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 elseif isEquipped then
-                    draw.SimpleText("B" .. bIdx, "GRID_UI_Sub", w / 2, h / 2, isSelected and Color(34, 211, 238) or Color(226, 232, 240), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("B" .. bIdx, "GRID_UI_Sub", w / 2, h / 2,
+                        isSelected and Color(34, 211, 238) or Color(226, 232, 240), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 else
-                    draw.SimpleText("+", "GRID_UI_Header", w / 2, h / 2 - 2, Color(75, 85, 99), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                    draw.SimpleText("+", "GRID_UI_Header", w / 2, h / 2 - 2, Color(75, 85, 99), TEXT_ALIGN_CENTER,
+                        TEXT_ALIGN_CENTER)
                 end
             end
 
@@ -420,7 +432,8 @@ hook.Add("DrawOverlay", "GRID_Bag_TooltipAndDragGhost", function()
         local qCol = GRID.Inventory.GetQualityColor(def.quality)
 
         local ttW = 340
-        local linesDesc = (GRID.UI.WrapText and GRID.UI.WrapText(def.desc or "", "GRID_UI_Body", ttW - 32)) or { def.desc or "" }
+        local linesDesc = (GRID.UI.WrapText and GRID.UI.WrapText(def.desc or "", "GRID_UI_Body", ttW - 32)) or
+        { def.desc or "" }
         local ttH = 136 + (#linesDesc * 22)
 
         local tx = math.Clamp(mx + 20, 10, ScrW() - ttW - 10)
@@ -437,12 +450,14 @@ hook.Add("DrawOverlay", "GRID_Bag_TooltipAndDragGhost", function()
         draw.SimpleText(def.name, "GRID_UI_Header", tx + 16, ty + 16, qCol, TEXT_ALIGN_LEFT)
 
         -- Row 2: Subtype / Classification & Level Requirement
-        draw.SimpleText(def.subType or "Stored Asset", "GRID_UI_Sub", tx + 16, ty + 44, Color(148, 163, 184), TEXT_ALIGN_LEFT)
+        draw.SimpleText(def.subType or "Stored Asset", "GRID_UI_Sub", tx + 16, ty + 44, Color(148, 163, 184),
+            TEXT_ALIGN_LEFT)
 
         local myLevel = LocalPlayer().GetLevel and LocalPlayer():GetLevel() or 1
         local reqLvl = def.level or 1
         local lvlCol = (myLevel >= reqLvl) and Color(148, 163, 184) or Color(248, 113, 113)
-        local lvlText = (myLevel >= reqLvl) and string.format("Requires: Level %d", reqLvl) or string.format("Requires: Level %d (Locked)", reqLvl)
+        local lvlText = (myLevel >= reqLvl) and string.format("Requires: Level %d", reqLvl) or
+        string.format("Requires: Level %d (Locked)", reqLvl)
         draw.SimpleText(lvlText, "GRID_UI_Sub", tx + ttW - 16, ty + 44, lvlCol, TEXT_ALIGN_RIGHT)
 
         -- Row 3: Stats Tag
@@ -458,10 +473,13 @@ hook.Add("DrawOverlay", "GRID_Bag_TooltipAndDragGhost", function()
         -- Row 5: Interaction Guidance
         local guideY = ty + ttH - 26
         if myLevel < reqLvl then
-            draw.SimpleText("<Level Too Low to Equip>", "GRID_UI_Badge", tx + 16, guideY, Color(239, 68, 68), TEXT_ALIGN_LEFT)
+            draw.SimpleText("<Level Too Low to Equip>", "GRID_UI_Badge", tx + 16, guideY, Color(239, 68, 68),
+                TEXT_ALIGN_LEFT)
         else
-            draw.SimpleText("<Right Click to Equip / Use>", "GRID_UI_Badge", tx + 16, guideY, Color(34, 211, 238), TEXT_ALIGN_LEFT)
+            draw.SimpleText("<Right Click to Equip / Use>", "GRID_UI_Badge", tx + 16, guideY, Color(34, 211, 238),
+                TEXT_ALIGN_LEFT)
         end
-        draw.SimpleText("<Drag to Move / Drop>", "GRID_UI_Badge", tx + ttW - 16, guideY, Color(148, 163, 184), TEXT_ALIGN_RIGHT)
+        draw.SimpleText("<Drag to Move / Drop>", "GRID_UI_Badge", tx + ttW - 16, guideY, Color(148, 163, 184),
+            TEXT_ALIGN_RIGHT)
     end
 end)

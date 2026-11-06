@@ -1,6 +1,6 @@
 --[[
     sv_doors.lua - Door Purchasing, Locking & Gang Sharing (Session-based)
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}

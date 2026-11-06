@@ -1,13 +1,13 @@
 --[[
     entities/weapons/weapon_grid_keys/shared.lua
     GridRP Hands & Key Utilities
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile()
 
 SWEP.PrintName = "Hands"
-SWEP.Author = "Toxic"
+SWEP.Author = "Juicebox"
 SWEP.Instructions = "Left Click: Lock Door\nRight Click: Unlock Door / Pickup Item to Inventory\nReload: Knock on Door"
 SWEP.Category = "GridRP"
 

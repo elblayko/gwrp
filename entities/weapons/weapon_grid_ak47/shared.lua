@@ -7,7 +7,7 @@ AddCSLuaFile()
 
 SWEP.Base = "weapon_grid_base"
 SWEP.PrintName = "AK-47"
-SWEP.Author = "Toxic"
+SWEP.Author = "Juicebox"
 SWEP.Instructions = "Primary: Fully Automatic Fire\nSecondary: Iron Sights\nReload: Reload"
 SWEP.Category = "GridRP"
 
@@ -35,7 +35,8 @@ SWEP.ViewModelFlip = false
 
 local hasCStrike = util.IsValidModel("models/weapons/cstrike/c_rif_ak47.mdl")
 SWEP.ViewModel = hasCStrike and "models/weapons/cstrike/c_rif_ak47.mdl" or "models/weapons/c_smg1.mdl"
-SWEP.WorldModel = util.IsValidModel("models/weapons/w_rif_ak47.mdl") and "models/weapons/w_rif_ak47.mdl" or "models/weapons/w_smg1.mdl"
+SWEP.WorldModel = util.IsValidModel("models/weapons/w_rif_ak47.mdl") and "models/weapons/w_rif_ak47.mdl" or
+"models/weapons/w_smg1.mdl"
 
 SWEP.IronSightsPos = hasCStrike and Vector(-6.6, -15, 2.6) or Vector(-6.43, -10, 1.05)
 SWEP.IronSightsAng = hasCStrike and Vector(2.4, 0.02, 0) or Vector(0, 0, 0)

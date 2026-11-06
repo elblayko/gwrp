@@ -1,6 +1,6 @@
 --[[
     grid_resource_machine/init.lua - Server Entity Extraction Engine, Thermal Regulation & Venting
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 AddCSLuaFile("cl_init.lua")
@@ -178,7 +178,8 @@ end
 function ENT:FinishExtraction()
     if self:GetHasReadyItem() or IsValid(self.CurrentItem) then return end
 
-    local matId = GRID.Crafting and GRID.Crafting.RollRandomResource and GRID.Crafting.RollRandomResource() or "crafting_ingot_zinc"
+    local matId = GRID.Crafting and GRID.Crafting.RollRandomResource and GRID.Crafting.RollRandomResource() or
+    "crafting_ingot_zinc"
     local def = GRID.Crafting and GRID.Crafting.Materials and GRID.Crafting.Materials[matId]
     local itemName = def and def.name or matId
 
@@ -208,7 +209,8 @@ function ENT:FinishExtraction()
         self:SetReadyItemName(itemName)
 
         -- Cycle Heat Surge (+4°C standard, +1°C undervolted, -25% tuned)
-        local heatRise = self:GetHasUndervolt() and (GRID.Config.PrinterHeatRiseUndervolted or 1) or (GRID.Config.PrinterHeatRiseStandard or 4)
+        local heatRise = self:GetHasUndervolt() and (GRID.Config.PrinterHeatRiseUndervolted or 1) or
+        (GRID.Config.PrinterHeatRiseStandard or 4)
         if self:GetIsTuned() then
             heatRise = math.max(1, math.floor(heatRise * 0.75))
         end
@@ -442,10 +444,10 @@ function ENT:Use(activator, caller)
     -- 2. If holding SPRINT (Shift), or if temp is at ambient (20°C): open Crafting Workbench!
     if activator:KeyDown(IN_SPEED) or curTemp <= 20 then
         net.Start("GRID_OpenCraftingUI")
-            net.WriteEntity(self)
-            net.WriteBool(self:GetHasReadyItem())
-            net.WriteString(self:GetReadyItemID())
-            net.WriteString(self:GetReadyItemName())
+        net.WriteEntity(self)
+        net.WriteBool(self:GetHasReadyItem())
+        net.WriteString(self:GetReadyItemID())
+        net.WriteString(self:GetReadyItemName())
         net.Send(activator)
         self:EmitSound("buttons/button14.wav", 60, 105)
         return

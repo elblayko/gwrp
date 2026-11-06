@@ -1,13 +1,13 @@
 --[[
     entities/entities/grid_clinic_pod/shared.lua
     GridRP Clinical Triage Pod
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Clinical Triage Pod"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = true
 ENT.Category = "GridRP"
 

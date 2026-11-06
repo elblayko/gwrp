@@ -1,6 +1,6 @@
 --[[
     sv_gangs.lua - Player-Created Gang Management with SQLite Persistence & UI Synchronization
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -19,7 +19,8 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         local gangName = string.Trim(table.concat(args, " "))
 
         if not ply:IsGangFaction() then
-            GRID.Notify(ply, "Only Street Gang members can create a gang! Switch to a Gang role in F4 first.", NOTIFY_ERROR)
+            GRID.Notify(ply, "Only Street Gang members can create a gang! Switch to a Gang role in F4 first.",
+                NOTIFY_ERROR)
             return ""
         end
 
@@ -34,7 +35,8 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         end
 
         if ply:HasStoredGang() then
-            GRID.Notify(ply, "You are already in a gang ('" .. ply:GetRawGang() .. "')! Use /leavegang first.", NOTIFY_ERROR)
+            GRID.Notify(ply, "You are already in a gang ('" .. ply:GetRawGang() .. "')! Use /leavegang first.",
+                NOTIFY_ERROR)
             return ""
         end
 
@@ -64,7 +66,7 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         GRID.Gangs.SendSync(ply)
         return ""
 
-    -- 2. Invite Player to Gang: /invitegang <target>
+        -- 2. Invite Player to Gang: /invitegang <target>
     elseif cmd == "/invitegang" or (cmd == "/gang" and string.lower(args[2] or "") == "invite") then
         local targetName = cmd == "/invitegang" and args[2] or args[3]
         if not targetName or targetName == "" then
@@ -73,7 +75,8 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         end
 
         if not ply:IsGangFaction() then
-            GRID.Notify(ply, "Your gang is inactive while off-duty. Switch to Street Gangs to invite members.", NOTIFY_ERROR)
+            GRID.Notify(ply, "Your gang is inactive while off-duty. Switch to Street Gangs to invite members.",
+                NOTIFY_ERROR)
             return ""
         end
 
@@ -97,7 +100,10 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         end
 
         if not target:IsGangFaction() then
-            GRID.Notify(ply, target:Nick() .. " cannot join a gang while playing as " .. target:GetJobData().name .. "! They must switch to Street Gangs first.", NOTIFY_ERROR)
+            GRID.Notify(ply,
+                target:Nick() ..
+                " cannot join a gang while playing as " ..
+                target:GetJobData().name .. "! They must switch to Street Gangs first.", NOTIFY_ERROR)
             return ""
         end
 
@@ -108,13 +114,16 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
 
         GRID.GangInvites[target:SteamID()] = gang
         GRID.Notify(ply, "Invited " .. target:Nick() .. " to join '" .. gang .. "'!", NOTIFY_GENERIC)
-        GRID.Notify(target, ply:Nick() .. " invited you to join gang '" .. gang .. "'! Type /acceptgang to join.", NOTIFY_HINT, 10)
+        GRID.Notify(target, ply:Nick() .. " invited you to join gang '" .. gang .. "'! Type /acceptgang to join.",
+            NOTIFY_HINT, 10)
         return ""
 
-    -- 3. Accept Gang Invite: /acceptgang
+        -- 3. Accept Gang Invite: /acceptgang
     elseif cmd == "/acceptgang" then
         if not ply:IsGangFaction() then
-            GRID.Notify(ply, "You cannot join a gang while playing as " .. ply:GetJobData().name .. "! Switch to Street Gangs in F4 first.", NOTIFY_ERROR)
+            GRID.Notify(ply,
+                "You cannot join a gang while playing as " ..
+                ply:GetJobData().name .. "! Switch to Street Gangs in F4 first.", NOTIFY_ERROR)
             return ""
         end
 
@@ -144,7 +153,7 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         GRID.Gangs.SendSync(ply)
         return ""
 
-    -- 4. Leave Gang: /leavegang (Allowed even while off-duty)
+        -- 4. Leave Gang: /leavegang (Allowed even while off-duty)
     elseif cmd == "/leavegang" then
         local storedGang = ply:GetRawGang()
         if storedGang == "" then
@@ -170,7 +179,7 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         GRID.Gangs.SendSync(ply)
         return ""
 
-    -- 5. Disband Gang: /disbandgang (Leader only)
+        -- 5. Disband Gang: /disbandgang (Leader only)
     elseif cmd == "/disbandgang" then
         if not ply:IsGangFaction() then
             GRID.Notify(ply, "You must be playing as a Street Gangster to manage your gang!", NOTIFY_ERROR)
@@ -203,13 +212,17 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         GRID.Gangs.SendSync(ply)
         return ""
 
-    -- 6. Gang Info & Vault Banking: /gang [deposit|withdraw|tax]
+        -- 6. Gang Info & Vault Banking: /gang [deposit|withdraw|tax]
     elseif cmd == "/gang" then
         if not ply:IsGangFaction() then
             if ply:HasStoredGang() then
-                GRID.Notify(ply, string.format("Your gang '%s' is temporarily suspended while on duty as %s. Switch to Street Gangs to participate.", ply:GetRawGang(), ply:GetJobData().name), NOTIFY_HINT, 6)
+                GRID.Notify(ply,
+                    string.format(
+                    "Your gang '%s' is temporarily suspended while on duty as %s. Switch to Street Gangs to participate.",
+                        ply:GetRawGang(), ply:GetJobData().name), NOTIFY_HINT, 6)
             else
-                GRID.Notify(ply, "You are not in a gang. Switch to Street Gangs and type /creategang <name> to form one!", NOTIFY_HINT)
+                GRID.Notify(ply, "You are not in a gang. Switch to Street Gangs and type /creategang <name> to form one!",
+                    NOTIFY_HINT)
             end
             return ""
         end
@@ -239,7 +252,8 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
             GRID.Gangs.SendSync(ply)
             return ""
         elseif sub == "withdraw" then
-            local isLeader = ply:GetNWBool("GRID_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
+            local isLeader = ply:GetNWBool("GRID_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or
+            ply:IsAdmin()
             if not isLeader then
                 GRID.Notify(ply, "Only the Gang Leader can withdraw funds from the gang vault!", NOTIFY_ERROR)
                 return ""
@@ -266,7 +280,9 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
             local rate = math.floor(tonumber(args[3]) or 0)
             local zone, zId = GRID.Turf and GRID.Turf.GetZoneAtPos and GRID.Turf.GetZoneAtPos(ply:GetPos())
             if not zone then
-                GRID.Notify(ply, "You must be standing inside a territory to set its tax rate! (Or press [E] on its flag pole)", NOTIFY_ERROR)
+                GRID.Notify(ply,
+                    "You must be standing inside a territory to set its tax rate! (Or press [E] on its flag pole)",
+                    NOTIFY_ERROR)
                 return ""
             end
             GRID.Turf.SetTaxRate(zId, rate, ply)
@@ -300,7 +316,7 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         GRID.Notify(ply, "Controlled Turfs: " .. (#turfs > 0 and table.concat(turfs, ", ") or "None"), NOTIFY_GENERIC)
         return ""
 
-    -- 7. Set Turf Tax: /settax <5-30> or /turftax <5-30>
+        -- 7. Set Turf Tax: /settax <5-30> or /turftax <5-30>
     elseif cmd == "/settax" or cmd == "/turftax" then
         if not ply:IsGangFaction() then
             GRID.Notify(ply, "You must be in an active street gang to configure territory taxes!", NOTIFY_ERROR)
@@ -321,7 +337,7 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         GRID.Gangs.SendSync(ply)
         return ""
 
-    -- 8. Private Gang Chat: /g <msg> or /gangchat <msg>
+        -- 8. Private Gang Chat: /g <msg> or /gangchat <msg>
     elseif cmd == "/g" or cmd == "/gangchat" then
         if not ply:IsGangFaction() then
             GRID.Notify(ply, "Gang chat is unavailable while playing as " .. ply:GetJobData().name .. "!", NOTIFY_ERROR)
@@ -341,9 +357,9 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
         for _, p in ipairs(player.GetAll()) do
             if p:GetGang() == gang then
                 net.Start("GRID_ChatMessage")
-                    net.WriteString(gang)
-                    net.WriteString(ply:Nick())
-                    net.WriteString(msg)
+                net.WriteString(gang)
+                net.WriteString(ply:Nick())
+                net.WriteString(msg)
                 net.Send(p)
             end
         end
@@ -402,7 +418,8 @@ function GRID.Gangs.BuildGangData(ply)
             local isOnline = IsValid(p)
             local name = isOnline and p:Nick() or (m.name or m.steamid)
             local jobName = isOnline and (p:GetJobData() and p:GetJobData().name or "Civilian") or "Offline"
-            local isRankLeader = (m.rank == "leader") or (payload.leaderSteamID ~= "" and m.steamid == payload.leaderSteamID)
+            local isRankLeader = (m.rank == "leader") or
+            (payload.leaderSteamID ~= "" and m.steamid == payload.leaderSteamID)
             table.insert(payload.members, {
                 steamid = m.steamid,
                 name = name,
@@ -445,7 +462,7 @@ function GRID.Gangs.SendSync(ply)
     local data = GRID.Gangs.BuildGangData(ply)
     local jsonStr = util.TableToJSON(data) or "{}"
     net.Start("GRID_SendGangData")
-        net.WriteString(jsonStr)
+    net.WriteString(jsonStr)
     net.Send(ply)
 end
 
@@ -468,7 +485,8 @@ local function HandleGangUIAction(len, ply)
     if action == "create" then
         local gangName = string.Trim(payload.name or "")
         if not ply:IsGangFaction() then
-            GRID.Notify(ply, "Only Street Gang members can create a gang! Switch to a Gang role in F4 first.", NOTIFY_ERROR)
+            GRID.Notify(ply, "Only Street Gang members can create a gang! Switch to a Gang role in F4 first.",
+                NOTIFY_ERROR)
             return
         end
         if #gangName < 2 or #gangName > 24 then
@@ -506,7 +524,7 @@ local function HandleGangUIAction(len, ply)
         GRID.NotifyAll(string.format("%s founded a new street gang: '%s'", ply:Nick(), gangName), NOTIFY_HINT, 6)
         GRID.Gangs.SendSync(ply)
 
-    -- 2. Vault Deposit
+        -- 2. Vault Deposit
     elseif action == "deposit" then
         if not ply:IsGangFaction() then
             GRID.Notify(ply, "You must be active on the Street Gang faction to access the vault!", NOTIFY_ERROR)
@@ -526,7 +544,7 @@ local function HandleGangUIAction(len, ply)
         GRID.Notify(ply, string.format("Deposited +$%s into the gang vault!", string.Comma(amt)), NOTIFY_GENERIC)
         GRID.Gangs.SendSync(ply)
 
-    -- 3. Vault Withdrawal
+        -- 3. Vault Withdrawal
     elseif action == "withdraw" then
         if not ply:IsGangFaction() then
             GRID.Notify(ply, "You must be active on the Street Gang faction to access the vault!", NOTIFY_ERROR)
@@ -534,7 +552,8 @@ local function HandleGangUIAction(len, ply)
         end
         local gang = ply:GetGang()
         if gang == "" then return end
-        local isLeader = ply:GetNWBool("GRID_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
+        local isLeader = ply:GetNWBool("GRID_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or
+        ply:IsAdmin()
         if not isLeader then
             GRID.Notify(ply, "Only the Gang Leader can withdraw funds from the gang vault!", NOTIFY_ERROR)
             return
@@ -554,7 +573,7 @@ local function HandleGangUIAction(len, ply)
         GRID.Notify(ply, string.format("Withdrew $%s from the gang vault!", string.Comma(amt)), NOTIFY_GENERIC)
         GRID.Gangs.SendSync(ply)
 
-    -- 4. Set Territory Tax Rate
+        -- 4. Set Territory Tax Rate
     elseif action == "settax" then
         if not ply:IsGangFaction() then return end
         local gang = ply:GetGang()
@@ -574,7 +593,7 @@ local function HandleGangUIAction(len, ply)
             end
         end
 
-    -- 5. Invite Player
+        -- 5. Invite Player
     elseif action == "invite" then
         if not ply:IsGangFaction() then
             GRID.Notify(ply, "Switch to Street Gangs to invite members.", NOTIFY_ERROR)
@@ -604,9 +623,10 @@ local function HandleGangUIAction(len, ply)
         end
         GRID.GangInvites[target:SteamID()] = gang
         GRID.Notify(ply, "Invited " .. target:Nick() .. " to '" .. gang .. "'!", NOTIFY_GENERIC)
-        GRID.Notify(target, ply:Nick() .. " invited you to join gang '" .. gang .. "'! Type /acceptgang to join.", NOTIFY_HINT, 10)
+        GRID.Notify(target, ply:Nick() .. " invited you to join gang '" .. gang .. "'! Type /acceptgang to join.",
+            NOTIFY_HINT, 10)
 
-    -- 6. Kick Member (Leader only)
+        -- 6. Kick Member (Leader only)
     elseif action == "kick" then
         if not ply:IsGangFaction() then return end
         local gang = ply:GetGang()
@@ -631,7 +651,7 @@ local function HandleGangUIAction(len, ply)
         GRID.Notify(ply, "Member removed from gang.", NOTIFY_GENERIC)
         GRID.Gangs.SendSync(ply)
 
-    -- 7. Leave Gang (Safe for off-duty as well)
+        -- 7. Leave Gang (Safe for off-duty as well)
     elseif action == "leave" then
         local storedGang = ply:GetRawGang()
         if storedGang == "" then return end
@@ -643,7 +663,7 @@ local function HandleGangUIAction(len, ply)
         GRID.Notify(ply, "You left the gang '" .. storedGang .. "'.", NOTIFY_GENERIC)
         GRID.Gangs.SendSync(ply)
 
-    -- 8. Disband Gang (Leader only)
+        -- 8. Disband Gang (Leader only)
     elseif action == "disband" then
         local gang = ply:GetRawGang()
         if gang == "" then return end

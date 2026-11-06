@@ -1,6 +1,6 @@
 --[[
     cl_buffs.lua - Buff & Debuff Interface (Unified GridRP Theme)
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 GRID = GRID or {}
@@ -168,7 +168,6 @@ local function DrawBuffIconContent(iconType, x, y, size, col)
         draw.RoundedBox(2, cx - 4, cy - 11, 8, 22, col)
         draw.RoundedBox(2, cx - 11, cy - 4, 22, 8, col)
         draw.RoundedBox(1, cx - 2, cy - 2, 4, 4, Color(248, 250, 252))
-
     elseif iconType == "speed" then
         -- Lightning Bolt / Adrenaline Flash
         local poly = {
@@ -183,7 +182,6 @@ local function DrawBuffIconContent(iconType, x, y, size, col)
         surface.SetDrawColor(col.r, col.g, col.b, 255)
         draw.NoTexture()
         surface.DrawPoly(poly)
-
     elseif iconType == "wanted" then
         -- 5-Point Law Enforcement Star Badge
         local rOuter = size * 0.36
@@ -203,7 +201,6 @@ local function DrawBuffIconContent(iconType, x, y, size, col)
 
         -- Center Star Core Pip
         draw.RoundedBox(2, cx - 3, cy - 3, 6, 6, Color(254, 240, 138))
-
     elseif iconType == "crippled" then
         -- Broken Bone Cross
         surface.SetDrawColor(col.r, col.g, col.b, 255)
@@ -213,21 +210,19 @@ local function DrawBuffIconContent(iconType, x, y, size, col)
         surface.DrawLine(cx - 7, cy + 9, cx + 9, cy - 7)
         draw.RoundedBox(2, cx - 11, cy - 11, 6, 6, col)
         draw.RoundedBox(2, cx + 6, cy + 6, 6, 6, col)
-
     elseif iconType == "poison" then
         -- Neurotoxin Skull
         draw.RoundedBox(4, cx - 9, cy - 10, 18, 13, col)
         draw.RoundedBox(2, cx - 6, cy + 2, 12, 7, col)
         draw.RoundedBox(1, cx - 6, cy - 5, 4, 4, Color(11, 15, 25))
         draw.RoundedBox(1, cx + 2, cy - 5, 4, 4, Color(11, 15, 25))
-
     elseif iconType == "fortitude" then
         -- Fortress Aegis Shield
         local poly = {
             { x = cx - 10, y = cy - 11 },
             { x = cx + 10, y = cy - 11 },
             { x = cx + 10, y = cy + 2 },
-            { x = cx, y = cy + 12 },
+            { x = cx,      y = cy + 12 },
             { x = cx - 10, y = cy + 2 }
         }
         surface.SetDrawColor(col.r, col.g, col.b, 255)
@@ -235,13 +230,12 @@ local function DrawBuffIconContent(iconType, x, y, size, col)
         surface.DrawPoly(poly)
         draw.RoundedBox(1, cx - 1, cy - 8, 2, 13, Color(248, 250, 252))
         draw.RoundedBox(1, cx - 7, cy - 4, 14, 2, Color(248, 250, 252))
-
     else
         -- Diamond Asset Glyph
         local poly = {
-            { x = cx, y = cy - 10 },
+            { x = cx,      y = cy - 10 },
             { x = cx + 10, y = cy },
-            { x = cx, y = cy + 10 },
+            { x = cx,      y = cy + 10 },
             { x = cx - 10, y = cy }
         }
         surface.SetDrawColor(col.r, col.g, col.b, 255)
@@ -276,7 +270,7 @@ local function DrawCooldownSweep(x, y, size, progress)
         local a2 = math.rad(-90 + math.min(sweepAngle, ((i + 1) / segments) * 360))
 
         local tri = {
-            { x = cx, y = cy },
+            { x = cx,                    y = cy },
             { x = cx + math.cos(a1) * r, y = cy + math.sin(a1) * r },
             { x = cx + math.cos(a2) * r, y = cy + math.sin(a2) * r }
         }
@@ -335,7 +329,8 @@ hook.Add("HUDPaint", "GRID_DrawBuffs", function()
             local slotY = startY + (row * iconSpacingY)
 
             -- Hover detection
-            local isHovered = isMouseActive and (mouseX >= slotX and mouseX <= slotX + iconSize and mouseY >= slotY and mouseY <= slotY + iconSize)
+            local isHovered = isMouseActive and
+            (mouseX >= slotX and mouseX <= slotX + iconSize and mouseY >= slotY and mouseY <= slotY + iconSize)
             if isHovered then
                 newHovered = {
                     id = buffId,
@@ -383,7 +378,8 @@ hook.Add("HUDPaint", "GRID_DrawBuffs", function()
                 draw.RoundedBox(4, slotX + iconSize - stW, slotY + iconSize - 16, stW, 16, Color(11, 15, 25, 240))
                 surface.SetDrawColor(borderCol.r, borderCol.g, borderCol.b, 180)
                 surface.DrawOutlinedRect(slotX + iconSize - stW, slotY + iconSize - 16, stW, 16, 1)
-                draw.SimpleText(stTxt, "GRID_UI_Badge", slotX + iconSize - (stW / 2), slotY + iconSize - 9, Color(254, 240, 138), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                draw.SimpleText(stTxt, "GRID_UI_Badge", slotX + iconSize - (stW / 2), slotY + iconSize - 9,
+                    Color(254, 240, 138), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
 
             -- 5. Remaining Duration (Unified Caption Capsule Pill Underneath)
@@ -404,7 +400,8 @@ hook.Add("HUDPaint", "GRID_DrawBuffs", function()
             draw.RoundedBox(4, pillX, pillY, pillW, 18, Color(11, 15, 25, 220))
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(pillX, pillY, pillW, 18, 1)
-            draw.SimpleText(timeStr, "GRID_UI_Caption", pillX + (pillW / 2), pillY + 9, timerCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText(timeStr, "GRID_UI_Caption", pillX + (pillW / 2), pillY + 9, timerCol, TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
 
             index = index + 1
         end
@@ -453,10 +450,12 @@ hook.Add("HUDPaint", "GRID_DrawBuffs", function()
         draw.RoundedBox(4, tx + 16, ty + 44, bW, 22, Color(badgeCol.r, badgeCol.g, badgeCol.b, 35))
         surface.SetDrawColor(badgeCol.r, badgeCol.g, badgeCol.b, 160)
         surface.DrawOutlinedRect(tx + 16, ty + 44, bW, 22, 1)
-        draw.SimpleText(badgeLabel, "GRID_UI_Badge", tx + 16 + (bW / 2), ty + 55, badgeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText(badgeLabel, "GRID_UI_Badge", tx + 16 + (bW / 2), ty + 55, badgeCol, TEXT_ALIGN_CENTER,
+            TEXT_ALIGN_CENTER)
 
         local durStr = (remaining > 0) and ("Duration: " .. FormatBuffTime(remaining)) or "Permanent"
-        draw.SimpleText(durStr, "GRID_UI_Caption", tx + ttW - 16, ty + 55, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(durStr, "GRID_UI_Caption", tx + ttW - 16, ty + 55, Color(148, 163, 184), TEXT_ALIGN_RIGHT,
+            TEXT_ALIGN_CENTER)
 
         -- Row 3: Horizontal Slate Divider Line
         surface.SetDrawColor(30, 41, 59, 220)
@@ -470,8 +469,10 @@ hook.Add("HUDPaint", "GRID_DrawBuffs", function()
         -- Row 5: Interaction Guidance Hint
         if def.canCancel then
             local guideY = ty + ttH - 22
-            draw.SimpleText("<Right Click to Dismiss>", "GRID_UI_Badge", tx + 16, guideY, Color(34, 211, 238), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText("Cancel Effect", "GRID_UI_Caption", tx + ttW - 16, guideY, Color(148, 163, 184), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("<Right Click to Dismiss>", "GRID_UI_Badge", tx + 16, guideY, Color(34, 211, 238),
+                TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Cancel Effect", "GRID_UI_Caption", tx + ttW - 16, guideY, Color(148, 163, 184),
+                TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
         end
     end
 end)
@@ -485,7 +486,7 @@ hook.Add("VGUIMousePressed", "GRID_BuffRightClickDismiss", function(pnl, mouseCo
         local hb = GRID.Buffs.HoveredBuff
         if hb.def and hb.def.canCancel then
             net.Start("GRID_CancelBuff")
-                net.WriteString(hb.id)
+            net.WriteString(hb.id)
             net.SendToServer()
             surface.PlaySound("buttons/button15.wav")
         end
@@ -497,7 +498,7 @@ hook.Add("PlayerButtonDown", "GRID_BuffMouseRawClick", function(ply, button)
         local hb = GRID.Buffs.HoveredBuff
         if hb.def and hb.def.canCancel then
             net.Start("GRID_CancelBuff")
-                net.WriteString(hb.id)
+            net.WriteString(hb.id)
             net.SendToServer()
             surface.PlaySound("buttons/button15.wav")
         end
@@ -521,8 +522,10 @@ hook.Add("HUDPaint", "GRID_DrawBuffCombatText", function()
 
             local scr = (item.pos + Vector(0, 0, offsetUp)):ToScreen()
             if scr.visible then
-                draw.SimpleText(item.text, "GRID_FontMedium", scr.x + 1, scr.y + 1, Color(11, 15, 25, alpha), TEXT_ALIGN_CENTER)
-                draw.SimpleText(item.text, "GRID_FontMedium", scr.x, scr.y, Color(item.color.r, item.color.g, item.color.b, alpha), TEXT_ALIGN_CENTER)
+                draw.SimpleText(item.text, "GRID_FontMedium", scr.x + 1, scr.y + 1, Color(11, 15, 25, alpha),
+                    TEXT_ALIGN_CENTER)
+                draw.SimpleText(item.text, "GRID_FontMedium", scr.x, scr.y,
+                    Color(item.color.r, item.color.g, item.color.b, alpha), TEXT_ALIGN_CENTER)
             end
         end
     end
@@ -556,13 +559,14 @@ hook.Add("PostPlayerDraw", "GRID_DrawOverheadWantedStatus", function(ply)
     local beaconCol = (flash > 0) and Color(239, 68, 68) or Color(6, 182, 212)
 
     cam.Start3D2D(headPos, Angle(0, ang.y, 90), 0.12)
-        local pillW, pillH = 170, 36
-        draw.RoundedBox(8, -pillW / 2, -pillH / 2, pillW, pillH, Color(11, 15, 25, 240))
-        surface.SetDrawColor(beaconCol.r, beaconCol.g, beaconCol.b, 255)
-        surface.DrawOutlinedRect(-pillW / 2, -pillH / 2, pillW, pillH, 2)
-        surface.SetDrawColor(30, 41, 59, 200)
-        surface.DrawOutlinedRect(-pillW / 2 + 2, -pillH / 2 + 2, pillW - 4, pillH - 4, 1)
+    local pillW, pillH = 170, 36
+    draw.RoundedBox(8, -pillW / 2, -pillH / 2, pillW, pillH, Color(11, 15, 25, 240))
+    surface.SetDrawColor(beaconCol.r, beaconCol.g, beaconCol.b, 255)
+    surface.DrawOutlinedRect(-pillW / 2, -pillH / 2, pillW, pillH, 2)
+    surface.SetDrawColor(30, 41, 59, 200)
+    surface.DrawOutlinedRect(-pillW / 2 + 2, -pillH / 2 + 2, pillW - 4, pillH - 4, 1)
 
-        draw.SimpleText("★ WANTED SUSPECT ★", "GRID_FontMedium", 0, -1, Color(254, 240, 138), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("★ WANTED SUSPECT ★", "GRID_FontMedium", 0, -1, Color(254, 240, 138), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
     cam.End3D2D()
 end)

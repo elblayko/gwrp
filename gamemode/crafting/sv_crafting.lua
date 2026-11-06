@@ -1,6 +1,6 @@
 --[[
     sv_crafting.lua - Server Crafting Validation, Ingredient Deduction & Execution
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -113,9 +113,11 @@ local function HandleCraftItem(len, ply)
     for _, ing in ipairs(recipe.ingredients) do
         local have = GRID.Crafting.GetPlayerMaterialCount(steamID, ing.id)
         if have < ing.amount then
-            local matDef = GRID.Crafting.Materials[ing.id] or (GRID.Inventory.GetItemData and GRID.Inventory.GetItemData(ing.id))
+            local matDef = GRID.Crafting.Materials[ing.id] or
+            (GRID.Inventory.GetItemData and GRID.Inventory.GetItemData(ing.id))
             local matName = matDef and matDef.name or ing.name or ing.id
-            GRID.Notify(ply, string.format("Missing materials: %s (%d/%d required)!", matName, have, ing.amount), NOTIFY_ERROR)
+            GRID.Notify(ply, string.format("Missing materials: %s (%d/%d required)!", matName, have, ing.amount),
+                NOTIFY_ERROR)
             ply:EmitSound("common/warning.wav", 65, 100)
             return
         end
@@ -155,7 +157,6 @@ local function HandleCraftItem(len, ply)
         else
             GRID.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
         end
-
     elseif rType == "bag" then
         local added = GRID.Database.AddInventoryItem(steamID, rId, "bag", 1, {})
         if not added then
@@ -170,7 +171,6 @@ local function HandleCraftItem(len, ply)
         else
             GRID.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
         end
-
     elseif rType == "consumable" then
         local added = GRID.Database.AddInventoryItem(steamID, rId, "consumable", 1, {})
         if not added then
@@ -178,7 +178,6 @@ local function HandleCraftItem(len, ply)
         else
             GRID.Notify(ply, "Crafted " .. recipe.name .. " into your bag!", NOTIFY_GENERIC)
         end
-
     elseif rType == "ammo" then
         ply:GiveAmmo(90, "Pistol", true)
         ply:GiveAmmo(120, "AR2", true)

@@ -5,7 +5,7 @@
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Cash Stack"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = false
 
 function ENT:SetupDataTables()

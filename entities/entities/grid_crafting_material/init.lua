@@ -1,6 +1,6 @@
 --[[
     grid_crafting_material/init.lua - Server Entity Logic for In-World Materials
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 AddCSLuaFile("cl_init.lua")

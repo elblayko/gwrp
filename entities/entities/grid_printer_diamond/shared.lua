@@ -6,7 +6,7 @@
 ENT.Type = "anim"
 ENT.Base = "grid_printer_base"
 ENT.PrintName = "Diamond Money Printer"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = true
 
 -- Configurable Item Quality

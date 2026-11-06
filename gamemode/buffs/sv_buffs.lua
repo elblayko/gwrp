@@ -1,6 +1,6 @@
 --[[
     sv_buffs.lua - Server-Side Buff Engine, State Machine, SQLite Persistence & Network Sync
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 GRID = GRID or {}
@@ -59,7 +59,7 @@ if meta then
                 appliedAtUnix = os.time()
             }
             self.GRID_ActiveBuffs[buffId] = inst
-                def.OnApplied(self, inst, true)
+            def.OnApplied(self, inst, true)
         end
 
         -- Recalculate movement speed if modifier is present
@@ -69,11 +69,11 @@ if meta then
 
         -- Network single addition to client
         net.Start("GRID_SyncBuffAdded")
-            net.WriteString(buffId)
-            net.WriteFloat(inst.duration)
-            net.WriteFloat(inst.expiresAt > 0 and (inst.expiresAt - now) or -1)
-            net.WriteUInt(inst.stacks or 1, 8)
-            net.WriteString(util.TableToJSON(inst.data or {}))
+        net.WriteString(buffId)
+        net.WriteFloat(inst.duration)
+        net.WriteFloat(inst.expiresAt > 0 and (inst.expiresAt - now) or -1)
+        net.WriteUInt(inst.stacks or 1, 8)
+        net.WriteString(util.TableToJSON(inst.data or {}))
         net.Send(self)
 
         -- Persist to SQLite if enabled
@@ -117,8 +117,8 @@ if meta then
 
         -- Network removal to client
         net.Start("GRID_SyncBuffRemoved")
-            net.WriteString(buffId)
-            net.WriteString(reason or "manual")
+        net.WriteString(buffId)
+        net.WriteString(reason or "manual")
         net.Send(self)
 
         -- Delete from SQLite
@@ -158,14 +158,14 @@ if meta then
         end
 
         net.Start("GRID_SyncAllBuffs")
-            net.WriteUInt(#list, 8)
-            for _, b in ipairs(list) do
-                net.WriteString(b.id)
-                net.WriteFloat(b.duration)
-                net.WriteFloat(b.remaining)
-                net.WriteUInt(b.stacks, 8)
-                net.WriteString(b.data)
-            end
+        net.WriteUInt(#list, 8)
+        for _, b in ipairs(list) do
+            net.WriteString(b.id)
+            net.WriteFloat(b.duration)
+            net.WriteFloat(b.remaining)
+            net.WriteUInt(b.stacks, 8)
+            net.WriteString(b.data)
+        end
         net.Send(self)
     end
 end
@@ -190,7 +190,7 @@ hook.Add("Think", "GRID_BuffsThinkEngine", function()
                     if inst.expiresAt > 0 and now >= inst.expiresAt then
                         ply:RemoveBuff(buffId, "expired")
 
-                    -- 2. Check Periodic Tick (e.g. HoT or DoT)
+                        -- 2. Check Periodic Tick (e.g. HoT or DoT)
                     elseif inst.nextTick and now >= inst.nextTick then
                         inst.nextTick = now + (def.tickInterval or 1.0)
                         def.OnTick(ply, inst)
@@ -389,7 +389,7 @@ hook.Add("PlayerSay", "GRID_BuffsPoliceCommands", function(ply, text)
         })
         return ""
 
-    -- /unwanted <player>
+        -- /unwanted <player>
     elseif string.StartWith(lower, "/unwanted ") or string.StartWith(lower, "!unwanted ") then
         if not ply:IsPolice() and not ply:IsAdmin() then
             GRID.Notify(ply, "Only Law Enforcement officers can revoke wanted status!", NOTIFY_ERROR)

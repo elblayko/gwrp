@@ -1,14 +1,15 @@
 --[[
     entities/weapons/weapon_grid_wiretool/shared.lua
     GridRP Copper Wiring Tool SWEP
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile()
 
 SWEP.PrintName = "Network Wiring Tool"
-SWEP.Author = "Toxic"
-SWEP.Instructions = "Left Click: Connect Device <-> Switch (Copper) or Switch <-> Switch (SFP Fiber)\nRight Click: Disconnect / Unplug entity\nReload: Clear selection"
+SWEP.Author = "Juicebox"
+SWEP.Instructions =
+"Left Click: Connect Device <-> Switch (Copper) or Switch <-> Switch (SFP Fiber)\nRight Click: Disconnect / Unplug entity\nReload: Clear selection"
 SWEP.Category = "GridRP"
 
 SWEP.Spawnable = true
@@ -124,7 +125,8 @@ function SWEP:PrimaryAttack()
         local maxFiberDist = GRID.Config.MaxFiberCableLength or 800
         if ent1:GetPos():DistToSqr(ent2:GetPos()) > (maxFiberDist * maxFiberDist) then
             if SERVER then
-                GRID.Notify(ply, "Distance is too far for SFP fiber optic cable (Max " .. maxFiberDist .. " units)!", NOTIFY_ERROR)
+                GRID.Notify(ply, "Distance is too far for SFP fiber optic cable (Max " .. maxFiberDist .. " units)!",
+                    NOTIFY_ERROR)
                 ply:EmitSound("buttons/button10.wav", 65, 100)
             end
             return
@@ -135,7 +137,9 @@ function SWEP:PrimaryAttack()
             local port2 = ent2.GetAvailableSwitchPort and ent2:GetAvailableSwitchPort()
 
             if not port1 then
-                GRID.Notify(ply, string.format("%s has no available SFP/Combo ports for uplink!", ent1.PrintName or "First switch"), NOTIFY_ERROR)
+                GRID.Notify(ply,
+                    string.format("%s has no available SFP/Combo ports for uplink!", ent1.PrintName or "First switch"),
+                    NOTIFY_ERROR)
                 ply:EmitSound("buttons/button10.wav", 65, 100)
                 self.SelectedEntity = nil
                 self:SetNWEntity("GRID_WireSrc", NULL)
@@ -143,7 +147,9 @@ function SWEP:PrimaryAttack()
             end
 
             if not port2 then
-                GRID.Notify(ply, string.format("%s has no available SFP/Combo ports for uplink!", ent2.PrintName or "Second switch"), NOTIFY_ERROR)
+                GRID.Notify(ply,
+                    string.format("%s has no available SFP/Combo ports for uplink!", ent2.PrintName or "Second switch"),
+                    NOTIFY_ERROR)
                 ply:EmitSound("buttons/button10.wav", 65, 100)
                 self.SelectedEntity = nil
                 self:SetNWEntity("GRID_WireSrc", NULL)
@@ -165,7 +171,9 @@ function SWEP:PrimaryAttack()
             if success then
                 ent1:EmitSound("ambient/energy/zap1.wav", 75, 130)
                 ent2:EmitSound("buttons/button9.wav", 75, 120)
-                GRID.Notify(ply, string.format("Linked switches via SFP 10G Optical Uplink (Port %d <-> Port %d)!", assignedPort1 or port1, assignedPort2 or port2), NOTIFY_GENERIC)
+                GRID.Notify(ply,
+                    string.format("Linked switches via SFP 10G Optical Uplink (Port %d <-> Port %d)!",
+                        assignedPort1 or port1, assignedPort2 or port2), NOTIFY_GENERIC)
             else
                 if IsValid(rope) then rope:Remove() end
                 GRID.Notify(ply, assignedPort1 or "Failed to connect switches", NOTIFY_ERROR)
@@ -182,7 +190,9 @@ function SWEP:PrimaryAttack()
     -- Case B: Neither entity is a switch
     if not isSwitch1 and not isSwitch2 then
         if SERVER then
-            GRID.Notify(ply, "You must connect a network device (Printer, WAN, Computer) to a Network Switch, or link two switches together via SFP!", NOTIFY_ERROR)
+            GRID.Notify(ply,
+                "You must connect a network device (Printer, WAN, Computer) to a Network Switch, or link two switches together via SFP!",
+                NOTIFY_ERROR)
             ply:EmitSound("buttons/button10.wav", 65, 100)
         end
         return
@@ -204,9 +214,11 @@ function SWEP:PrimaryAttack()
     end
 
     if SERVER then
-        local port = sw.GetAvailablePort and sw:GetAvailablePort(pr) or (sw.GetAvailableCopperPort and sw:GetAvailableCopperPort())
+        local port = sw.GetAvailablePort and sw:GetAvailablePort(pr) or
+        (sw.GetAvailableCopperPort and sw:GetAvailableCopperPort())
         if not port then
-            GRID.Notify(ply, string.format("All suitable ports on %s are occupied!", sw.PrintName or "Switch"), NOTIFY_ERROR)
+            GRID.Notify(ply, string.format("All suitable ports on %s are occupied!", sw.PrintName or "Switch"),
+                NOTIFY_ERROR)
             ply:EmitSound("buttons/button10.wav", 65, 100)
             self.SelectedEntity = nil
             self:SetNWEntity("GRID_WireSrc", NULL)
@@ -235,7 +247,8 @@ function SWEP:PrimaryAttack()
             sw:EmitSound("ambient/energy/zap1.wav", 70, 115)
             pr:EmitSound("buttons/button9.wav", 70, 100)
             local ipInfo = assignedIP and (" (IP: " .. assignedIP .. ")") or ""
-            local effInfo = (pr.PrintAmount ~= nil or string.find(pr:GetClass(), "printer") or pr:GetClass() == "grid_resource_machine") and string.format(" [%d%% eff]", pr.GetEfficiency and pr:GetEfficiency() or 60) or ""
+            local effInfo = (pr.PrintAmount ~= nil or string.find(pr:GetClass(), "printer") or pr:GetClass() == "grid_resource_machine") and
+            string.format(" [%d%% eff]", pr.GetEfficiency and pr:GetEfficiency() or 60) or ""
 
             local assignedDef = sw.GetPortDefinition and sw:GetPortDefinition(assignedOrErr)
             local modeTag
@@ -247,7 +260,9 @@ function SWEP:PrimaryAttack()
                 modeTag = string.format(" [Copper Port %d]", assignedOrErr)
             end
 
-            GRID.Notify(ply, string.format("Linked %s to %s%s%s%s!", pr.PrintName or "Device", sw.PrintName or "Switch", modeTag, effInfo, ipInfo), NOTIFY_GENERIC)
+            GRID.Notify(ply,
+                string.format("Linked %s to %s%s%s%s!", pr.PrintName or "Device", sw.PrintName or "Switch", modeTag,
+                    effInfo, ipInfo), NOTIFY_GENERIC)
         else
             if IsValid(rope) then rope:Remove() end
             GRID.Notify(ply, assignedOrErr or "Failed to connect", NOTIFY_ERROR)
@@ -285,7 +300,8 @@ function SWEP:SecondaryAttack()
                 ent:DisconnectFromSwitch()
             end
             ent:EmitSound("physics/metal/metal_box_impact_bullet1.wav", 65, 100)
-            GRID.Notify(ply, string.format("Unplugged %s from network switch.", ent.PrintName or "device"), NOTIFY_GENERIC)
+            GRID.Notify(ply, string.format("Unplugged %s from network switch.", ent.PrintName or "device"),
+                NOTIFY_GENERIC)
         end
 
         self.SelectedEntity = nil
@@ -350,8 +366,10 @@ if CLIENT then
                 promptText = "SWITCH UPLINK: Aim at target switch & Left-Click to link via SFP 10G Optical Port"
             end
 
-            draw.SimpleText(promptText, "GRID_FontSmall", cx, cy + 30, isFiber and Color(56, 189, 248) or Color(251, 191, 36), TEXT_ALIGN_CENTER)
-            draw.SimpleText("[Reload] Cancel Selection", "GRID_FontSmall", cx, cy + 46, GRID.Colors.Muted, TEXT_ALIGN_CENTER)
+            draw.SimpleText(promptText, "GRID_FontSmall", cx, cy + 30,
+                isFiber and Color(56, 189, 248) or Color(251, 191, 36), TEXT_ALIGN_CENTER)
+            draw.SimpleText("[Reload] Cancel Selection", "GRID_FontSmall", cx, cy + 46, GRID.Colors.Muted,
+                TEXT_ALIGN_CENTER)
         end
     end
 end

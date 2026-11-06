@@ -1,6 +1,6 @@
 --[[
     grid_crafting_material/cl_init.lua - Client Render & 3D HUD for In-World Materials
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 include("shared.lua")
@@ -52,7 +52,8 @@ function ENT:Draw()
     local def = GRID.Crafting and GRID.Crafting.Materials and GRID.Crafting.Materials[matId]
     local itemName = def and def.name or matId
     local itemAmount = self:GetAmount() or 1
-    local qColor = (GRID.Inventory and GRID.Inventory.GetQualityColor and GRID.Inventory.GetQualityColor(def and def.quality or 1)) or Color(248, 250, 252)
+    local qColor = (GRID.Inventory and GRID.Inventory.GetQualityColor and GRID.Inventory.GetQualityColor(def and def.quality or 1)) or
+    Color(248, 250, 252)
 
     local ang = ply:EyeAngles()
     ang:RotateAroundAxis(ang:Forward(), 90)
@@ -61,21 +62,23 @@ function ENT:Draw()
     local drawPos = myPos + Vector(0, 0, 14)
 
     cam.Start3D2D(drawPos, Angle(0, ang.y, 90), 0.08)
-        local w, h = 180, 50
-        local x, y = -w / 2, -h / 2
+    local w, h = 180, 50
+    local x, y = -w / 2, -h / 2
 
-        -- Glassmorphic container
-        draw.RoundedBox(6, x, y, w, h, Color(11, 15, 25, 230))
-        surface.SetDrawColor(30, 41, 59, 220)
-        surface.DrawOutlinedRect(x, y, w, h, 1)
+    -- Glassmorphic container
+    draw.RoundedBox(6, x, y, w, h, Color(11, 15, 25, 230))
+    surface.SetDrawColor(30, 41, 59, 220)
+    surface.DrawOutlinedRect(x, y, w, h, 1)
 
-        -- Top accent glow matching quality
-        draw.RoundedBox(2, x + 4, y + 3, w - 8, 2, qColor)
+    -- Top accent glow matching quality
+    draw.RoundedBox(2, x + 4, y + 3, w - 8, 2, qColor)
 
-        -- Title & count
-        draw.SimpleText(string.format("%dx %s", itemAmount, itemName), "GRID_UI_BodyBold", 0, y + 16, qColor, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Title & count
+    draw.SimpleText(string.format("%dx %s", itemAmount, itemName), "GRID_UI_BodyBold", 0, y + 16, qColor,
+        TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        -- Interaction prompt
-        draw.SimpleText("[E] Collect into Bag", "GRID_UI_Badge", 0, y + 36, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Interaction prompt
+    draw.SimpleText("[E] Collect into Bag", "GRID_UI_Badge", 0, y + 36, Color(148, 163, 184), TEXT_ALIGN_CENTER,
+        TEXT_ALIGN_CENTER)
     cam.End3D2D()
 end

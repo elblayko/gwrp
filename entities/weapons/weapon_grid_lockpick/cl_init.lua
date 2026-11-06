@@ -1,7 +1,7 @@
 --[[
     entities/weapons/weapon_grid_lockpick/cl_init.lua
     GridRP Tactical Lockpick - Client
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 include("shared.lua")

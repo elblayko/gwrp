@@ -4,7 +4,7 @@
 	"title"		"GridRP"
 	"maps"		"^rp_"
 	"menusystem"	"1"
-	"author_name"	"Toxic"
+	"author_name"	"Juicebox"
 	"author_email"	""
 	"author_url"	""
 	"icon"		""

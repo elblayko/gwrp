@@ -1,6 +1,6 @@
 --[[
     sh_buff_definitions.lua - Standard Buff & Debuff Definitions
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 -- ========================================================
@@ -38,9 +38,9 @@ GRID.Buffs.Register("healing_over_time", {
 
                 -- Visual Combat Text net event (green +X HP)
                 net.Start("GRID_BuffCombatText")
-                    net.WriteVector(ply:EyePos() + Vector(0, 0, 10))
-                    net.WriteString("+" .. healAmount .. " HP")
-                    net.WriteColor(Color(34, 197, 94))
+                net.WriteVector(ply:EyePos() + Vector(0, 0, 10))
+                net.WriteString("+" .. healAmount .. " HP")
+                net.WriteColor(Color(34, 197, 94))
                 net.Send(ply)
             end
         end
@@ -97,12 +97,12 @@ GRID.Buffs.Register("wanted", {
     name = "Wanted by Police",
     desc = "Actively pursued by Civil Protection and SWAT! Law enforcement officers have search and arrest authority.",
     isDebuff = true,
-    canCancel = false, -- Player CANNOT dismiss a criminal wanted debuff!
+    canCancel = false,   -- Player CANNOT dismiss a criminal wanted debuff!
     persist = true,
     persistDeath = true, -- Wanted status persists across death and respawn
     tickOffline = true,  -- Wanted timer ticks down in real-world wall clock time
     maxStacks = 1,
-    duration = 180, -- Default 3 minutes
+    duration = 180,      -- Default 3 minutes
     icon = "wanted",
     iconColor = Color(239, 68, 68),
     borderColor = Color(220, 38, 38),
@@ -119,7 +119,9 @@ GRID.Buffs.Register("wanted", {
             -- Notify all police officers
             for _, p in ipairs(player.GetAll()) do
                 if p:IsPolice() and p ~= ply then
-                    GRID.Notify(p, "[LSPD DISPATCH] " .. ply:Nick() .. " is now WANTED! Reason: " .. reason .. " (By " .. officer .. ")", NOTIFY_HINT, 10)
+                    GRID.Notify(p,
+                        "[LSPD DISPATCH] " ..
+                        ply:Nick() .. " is now WANTED! Reason: " .. reason .. " (By " .. officer .. ")", NOTIFY_HINT, 10)
                 end
             end
         end
@@ -178,7 +180,7 @@ GRID.Buffs.Register("crippled", {
 -- ========================================================
 GRID.Buffs.Register("poison", {
     name = "Lethal Neurotoxin",
-    desc = "Toxic chemical agent coursing through veins. Deals 4 damage every 2 seconds.",
+    desc = "Juicebox chemical agent coursing through veins. Deals 4 damage every 2 seconds.",
     isDebuff = true,
     canCancel = false,
     persist = true,
@@ -213,9 +215,9 @@ GRID.Buffs.Register("poison", {
 
             -- Visual Combat Text net event (purple -X HP)
             net.Start("GRID_BuffCombatText")
-                net.WriteVector(ply:EyePos() + Vector(0, 0, 10))
-                net.WriteString("-" .. dmg .. " HP")
-                net.WriteColor(Color(168, 85, 247))
+            net.WriteVector(ply:EyePos() + Vector(0, 0, 10))
+            net.WriteString("-" .. dmg .. " HP")
+            net.WriteColor(Color(168, 85, 247))
             net.Send(ply)
         end
     end
@@ -263,7 +265,8 @@ GRID.Buffs.Register("fortitude", {
 -- ========================================================
 GRID.Buffs.Register("illegal_adrenaline", {
     name = "Combat Adrenaline",
-    desc = "Black-market combat stimulant. Grants +40% Sprint/Walk Speed and 15% Incoming Damage Reduction for 20s. Causes brief crash upon wearing off.",
+    desc =
+    "Black-market combat stimulant. Grants +40% Sprint/Walk Speed and 15% Incoming Damage Reduction for 20s. Causes brief crash upon wearing off.",
     isDebuff = false,
     canCancel = true,
     persist = true,
@@ -341,7 +344,8 @@ GRID.Buffs.Register("stim_exhaustion", {
 -- ========================================================
 GRID.Buffs.Register("detox", {
     name = "Detox Recovery",
-    desc = "High-grade pharmaceutical antidote that neutralizes poisons, heals trauma, and cleanses debilitating status effects.",
+    desc =
+    "High-grade pharmaceutical antidote that neutralizes poisons, heals trauma, and cleanses debilitating status effects.",
     isDebuff = false,
     canCancel = true,
     persist = true,

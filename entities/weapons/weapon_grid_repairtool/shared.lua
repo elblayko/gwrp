@@ -1,14 +1,15 @@
 --[[
     entities/weapons/weapon_grid_repairtool/shared.lua
     GridRP Printer Maintenance Welder & Coolant Tool
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile()
 
 SWEP.PrintName = "Cryo-Thermal Calibrator"
-SWEP.Author = "Toxic"
-SWEP.Instructions = "Left Click: Flash-Cool & Repair Printer (Instant 20°C)\nRight Click: Cyber-Tune Printer (Cyber Engineer)"
+SWEP.Author = "Juicebox"
+SWEP.Instructions =
+"Left Click: Flash-Cool & Repair Printer (Instant 20°C)\nRight Click: Cyber-Tune Printer (Cyber Engineer)"
 SWEP.Category = "GridRP"
 
 SWEP.Spawnable = true
@@ -89,7 +90,9 @@ function SWEP:PrimaryAttack()
         spark:SetScale(1)
         util.Effect("Sparks", spark)
 
-        GRID.Notify(ply, string.format("Flash-Cooled printer instantly to optimal ambient temp (20°C)! (-%d°C dissipated)", coolDrop), NOTIFY_GENERIC)
+        GRID.Notify(ply,
+            string.format("Flash-Cooled printer instantly to optimal ambient temp (20°C)! (-%d°C dissipated)", coolDrop),
+            NOTIFY_GENERIC)
     end
 end
 
@@ -115,7 +118,9 @@ function SWEP:SecondaryAttack()
 
         local isTuned = ent.GetIsTuned and ent:GetIsTuned()
         if isTuned then
-            GRID.Notify(ply, string.format("%s is already Cyber-Tuned (+20%% Yield, -25%% Heat).", ent.PrintName or "Printer"), NOTIFY_HINT, 4)
+            GRID.Notify(ply,
+                string.format("%s is already Cyber-Tuned (+20%% Yield, -25%% Heat).", ent.PrintName or "Printer"),
+                NOTIFY_HINT, 4)
             return
         end
 
@@ -132,11 +137,15 @@ function SWEP:SecondaryAttack()
         spark:SetScale(1.5)
         util.Effect("Sparks", spark)
 
-        GRID.Notify(ply, string.format("Supercharged %s! Applied Cyber-Tuned calibration (+20%% Yield, -25%% Heat)!", ent.PrintName or "Printer"), NOTIFY_GENERIC, 6)
+        GRID.Notify(ply,
+            string.format("Supercharged %s! Applied Cyber-Tuned calibration (+20%% Yield, -25%% Heat)!",
+                ent.PrintName or "Printer"), NOTIFY_GENERIC, 6)
 
         local owner = ent.GetOwnerPlayer and ent:GetOwnerPlayer() or ent.OwnerPlayer
         if IsValid(owner) and owner:IsPlayer() and owner ~= ply then
-            GRID.Notify(owner, string.format("A Cyber Engineer fine-tuned your %s (+20%% Yield, -25%% Heat)!", ent.PrintName or "Printer"), NOTIFY_GENERIC, 6)
+            GRID.Notify(owner,
+                string.format("A Cyber Engineer fine-tuned your %s (+20%% Yield, -25%% Heat)!",
+                    ent.PrintName or "Printer"), NOTIFY_GENERIC, 6)
         end
     end
 end

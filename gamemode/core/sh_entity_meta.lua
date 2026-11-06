@@ -1,6 +1,6 @@
 --[[
     sh_entity_meta.lua - Metatable Extensions on Entity (Configurable Item Quality System)
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 local entMeta = FindMetaTable("Entity")

@@ -1,6 +1,6 @@
 --[[
     cl_inventory.lua - Client-Side Inventory Synchronization & Net Action Handlers
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -71,36 +71,36 @@ net.Receive("GRID_SyncInventory", HandleSyncInventory)
 
 function GRID.Inventory.MoveSlot(fromBag, fromSlot, toBag, toSlot)
     net.Start("GRID_MoveInventorySlot")
-        net.WriteUInt(fromBag, 8)
-        net.WriteUInt(fromSlot, 8)
-        net.WriteUInt(toBag, 8)
-        net.WriteUInt(toSlot, 8)
+    net.WriteUInt(fromBag, 8)
+    net.WriteUInt(fromSlot, 8)
+    net.WriteUInt(toBag, 8)
+    net.WriteUInt(toSlot, 8)
     net.SendToServer()
 end
 
 function GRID.Inventory.DropSlot(bagIndex, slotIndex)
     net.Start("GRID_DropInventorySlot")
-        net.WriteUInt(bagIndex, 8)
-        net.WriteUInt(slotIndex, 8)
+    net.WriteUInt(bagIndex, 8)
+    net.WriteUInt(slotIndex, 8)
     net.SendToServer()
 end
 
 function GRID.Inventory.UseSlot(bagIndex, slotIndex)
     net.Start("GRID_UseInventorySlot")
-        net.WriteUInt(bagIndex, 8)
-        net.WriteUInt(slotIndex, 8)
+    net.WriteUInt(bagIndex, 8)
+    net.WriteUInt(slotIndex, 8)
     net.SendToServer()
 end
 
 function GRID.Inventory.DropItem(rowId)
     net.Start("GRID_DropInventoryItem")
-        net.WriteUInt(rowId, 32)
+    net.WriteUInt(rowId, 32)
     net.SendToServer()
 end
 
 function GRID.Inventory.UseItem(rowId)
     net.Start("GRID_UseInventoryItem")
-        net.WriteUInt(rowId, 32)
+    net.WriteUInt(rowId, 32)
     net.SendToServer()
 end
 

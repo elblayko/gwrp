@@ -1,7 +1,7 @@
 --[[
     entities/entities/grid_network_switch_base/init.lua
     GridRP Layer-3 Modular Network Switch Abstract Base Server Logic
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 AddCSLuaFile("cl_init.lua")
@@ -44,9 +44,9 @@ function ENT:Initialize()
     if portCount <= 0 then
         -- Default to 4 ports if subclass did not define any
         self.PortDefinitions = {
-            { id = 1, type = "copper", speed = "1G",  name = "Port 1", allowSwitch = false, allowDevice = true, allowWAN = true },
-            { id = 2, type = "copper", speed = "1G",  name = "Port 2", allowSwitch = false, allowDevice = true, allowWAN = true },
-            { id = 3, type = "combo",  speed = "10G", name = "Port 3", allowSwitch = true,  allowDevice = true, allowWAN = true },
+            { id = 1, type = "copper", speed = "1G",  name = "Port 1", allowSwitch = false, allowDevice = true,  allowWAN = true },
+            { id = 2, type = "copper", speed = "1G",  name = "Port 2", allowSwitch = false, allowDevice = true,  allowWAN = true },
+            { id = 3, type = "combo",  speed = "10G", name = "Port 3", allowSwitch = true,  allowDevice = true,  allowWAN = true },
             { id = 4, type = "sfp",    speed = "10G", name = "Port 4", allowSwitch = true,  allowDevice = false, allowWAN = false },
         }
         portCount = 4
@@ -202,10 +202,13 @@ function ENT:ConnectSwitch(otherSwitch, rope, myPort, otherPort)
     otherPort = otherPort or (otherSwitch.GetAvailableSwitchPort and otherSwitch:GetAvailableSwitchPort())
 
     if not myPort then
-        return false, string.format("This switch (%s) has no available SFP/Combo ports for uplink!", self.PrintName or "Switch")
+        return false,
+            string.format("This switch (%s) has no available SFP/Combo ports for uplink!", self.PrintName or "Switch")
     end
     if not otherPort then
-        return false, string.format("Target switch (%s) has no available SFP/Combo ports for uplink!", otherSwitch.PrintName or "Switch")
+        return false,
+            string.format("Target switch (%s) has no available SFP/Combo ports for uplink!",
+                otherSwitch.PrintName or "Switch")
     end
 
     local myDef = self:GetPortDefinition(myPort)
@@ -279,7 +282,9 @@ function ENT:ConnectDevice(dev, rope, chosenPort)
 
     chosenPort = chosenPort or self:GetAvailablePort(dev)
     if not chosenPort then
-        return false, string.format("Switch ports are full! (%d/%d ports occupied)", self:GetConnectedCount() or 0, self:GetPortCount())
+        return false,
+            string.format("Switch ports are full! (%d/%d ports occupied)", self:GetConnectedCount() or 0,
+                self:GetPortCount())
     end
 
     local portDef = self:GetPortDefinition(chosenPort)
@@ -326,6 +331,7 @@ function ENT:ConnectDevice(dev, rope, chosenPort)
     self:RecalculateNetwork()
     return true, chosenPort, assignedIP, is10G
 end
+
 ENT.ConnectPrinter = ENT.ConnectDevice
 
 -- Generic Disconnect for any port ID
@@ -374,6 +380,7 @@ function ENT:DisconnectDevice(dev)
         end
     end
 end
+
 ENT.DisconnectPrinter = ENT.DisconnectDevice
 
 -- Disconnects first active SFP / switch uplink port
@@ -393,6 +400,7 @@ function ENT:DisconnectSFP()
         end
     end
 end
+
 ENT.DisconnectSwitch = ENT.DisconnectSFP
 
 -- Disconnects all linked ports
@@ -509,7 +517,8 @@ function ENT:RecalculateNetwork(visited)
     -- Update Resource Fabricator & Botnet state
     for _, dev in ipairs(validDevices) do
         if dev:GetClass() == "grid_resource_machine" then
-            local eff = (#allPrintersInDomain >= 2 or #validDevices >= 2) and (GRID.Config.PrinterNetworkEfficiency3 or 100) or (GRID.Config.PrinterNetworkEfficiency2 or 80)
+            local eff = (#allPrintersInDomain >= 2 or #validDevices >= 2) and
+            (GRID.Config.PrinterNetworkEfficiency3 or 100) or (GRID.Config.PrinterNetworkEfficiency2 or 80)
             dev:SetEfficiency(eff)
         elseif dev:GetClass() == "grid_computer" and dev.RefreshBotnetState then
             dev:RefreshBotnetState()
@@ -517,7 +526,8 @@ function ENT:RecalculateNetwork(visited)
     end
 
     local printerCount = #validPrinters
-    local avgEff = (printerCount > 0) and math.floor(totalEff / printerCount) or (GRID.Config.PrinterStandaloneEfficiency or 60)
+    local avgEff = (printerCount > 0) and math.floor(totalEff / printerCount) or
+    (GRID.Config.PrinterStandaloneEfficiency or 60)
     self:SetEfficiency(avgEff)
 
     self:UpdateWireOutputs()
@@ -547,7 +557,9 @@ function ENT:CheckCableDistances()
                     self:EmitSound(isFiber and "ambient/energy/zap2.wav" or "ambient/energy/spark1.wav", 75, 100)
 
                     self:DisconnectPort(portId)
-                    local msg = isFiber and string.format("An SFP 10G optical cable on Port %d snapped due to tension!", portId) or string.format("A copper network cable on Port %d snapped due to tension!", portId)
+                    local msg = isFiber and
+                    string.format("An SFP 10G optical cable on Port %d snapped due to tension!", portId) or
+                    string.format("A copper network cable on Port %d snapped due to tension!", portId)
                     GRID.NotifyAll(msg, NOTIFY_HINT)
                 end
             end
@@ -639,7 +651,9 @@ function ENT:Use(activator, caller)
         local baseBounty = GRID.Config.PoliceBountyPerSwitch or 300
         local bounty = isPatrol and math.floor(baseBounty * 1.5) or baseBounty
         activator:AddMoney(bounty)
-        local msg = isPatrol and string.format("Detective Perk: Network switch seized for +$%d (+50%% Patrol Bounty)!", bounty) or string.format("Contraband network switch confiscated for +$%d bounty!", bounty)
+        local msg = isPatrol and
+        string.format("Detective Perk: Network switch seized for +$%d (+50%% Patrol Bounty)!", bounty) or
+        string.format("Contraband network switch confiscated for +$%d bounty!", bounty)
         GRID.Notify(activator, msg, NOTIFY_GENERIC)
         activator:EmitSound("ambient/levels/labs/coinslot1.wav")
         self:DisconnectAll()
@@ -650,7 +664,9 @@ function ENT:Use(activator, caller)
         local subnet = self:GetSubnetID() or 1
         local gateway = self:GetIPAddress() ~= "" and self:GetIPAddress() or string.format("192.168.%d.1", subnet)
 
-        GRID.Notify(activator, string.format("%s: %d/%d Ports Linked | Subnet: 192.168.%d.0/24 (GW: %s)", self.PrintName or "L3 Switch", count, portCount, subnet, gateway), NOTIFY_HINT)
+        GRID.Notify(activator,
+            string.format("%s: %d/%d Ports Linked | Subnet: 192.168.%d.0/24 (GW: %s)", self.PrintName or "L3 Switch",
+                count, portCount, subnet, gateway), NOTIFY_HINT)
         self:EmitSound("buttons/button14.wav", 60, 100)
     end
 end
@@ -663,4 +679,3 @@ function ENT:OnRemove()
         WireLib.Remove(self)
     end
 end
-

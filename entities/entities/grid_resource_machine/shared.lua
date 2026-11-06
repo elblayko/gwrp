@@ -1,12 +1,12 @@
 --[[
     grid_resource_machine/shared.lua - Shared Resource Fabricator & Crafting Station
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Resource Fabricator"
-ENT.Author = "Toxic & Antigravity"
+ENT.Author = "Juicebox & Antigravity"
 ENT.Category = "GridRP"
 ENT.Spawnable = true
 ENT.AdminOnly = false
@@ -15,7 +15,8 @@ ENT.IsNetworkDevice = true
 ENT.ItemQuality = 1 -- Common
 ENT.ItemSubType = "Automated Extractor"
 ENT.Model = "models/props_c17/trappropeller_engine.mdl"
-ENT.Instructions = "Automated legal extractor and crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput."
+ENT.Instructions =
+"Automated legal extractor and crafting station. Generates ingots, blueprints, and carbon rods. Connects to L3 switch for accelerated throughput."
 ENT.Stats = "Extracts Metals & Blueprints | Network Capable | Crafting Station"
 ENT.MaxTemp = 100
 

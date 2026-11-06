@@ -1,10 +1,10 @@
 --[[
-    GridRP (GRID) by Toxic
+    GridRP (GRID) by Juicebox
     gamemode/shared.lua - Shared Gamemode Entry Point
 --]]
 
 GM.Name = "GridRP"
-GM.Author = "Toxic"
+GM.Author = "Juicebox"
 GM.Email = ""
 GM.Website = ""
 
@@ -23,9 +23,10 @@ include("buffs/sh_buff_definitions.lua")
 include("factions/sh_factions.lua")
 include("turf/sh_turf.lua")
 include("crafting/sh_crafting.lua")
+include("core/sh_scavenge_config.lua")
 
 function GM:Initialize()
-    print("[GridRP] Initializing GridRP by Toxic...")
+    print("[GridRP] Initializing GridRP by Juicebox...")
 end
 
 -- Disable sandbox noclip unless admin

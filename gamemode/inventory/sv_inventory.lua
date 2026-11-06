@@ -1,6 +1,6 @@
 --[[
     sv_inventory.lua - Server-Side Inventory Pickup, Slot Movement, Drop & Persistence Engine
-    Author: Toxic & Antigravity
+    Author: Juicebox & Antigravity
 --]]
 
 GRID = GRID or {}
@@ -36,7 +36,7 @@ function GRID.Inventory.Sync(ply)
     end
 
     net.Start("GRID_SyncInventory")
-        WriteSyncPayload()
+    WriteSyncPayload()
     net.Send(ply)
 end
 
@@ -101,7 +101,9 @@ function GRID.Inventory.PickupEntity(ply, ent)
         local added = GRID.Database.AddInventoryItem(ply:SteamID(), itemId, "weapon", 1, itemData)
         if not added then
             if ply:GetLevel() < reqLevel then
-                GRID.Notify(ply, string.format("Your bags are full and you must be Level %d to equip %s directly!", reqLevel, def and def.name or itemId), NOTIFY_ERROR)
+                GRID.Notify(ply,
+                    string.format("Your bags are full and you must be Level %d to equip %s directly!", reqLevel,
+                        def and def.name or itemId), NOTIFY_ERROR)
                 ply:EmitSound("common/warning.wav", 65, 100)
                 return false
             end
@@ -134,7 +136,8 @@ function GRID.Inventory.PickupEntity(ply, ent)
     if class == "grid_printer_bronze" or class == "grid_printer_silver" or class == "grid_printer_diamond" then
         local temp = ent.GetTemperature and ent:GetTemperature() or 20
         if temp > 35 then
-            GRID.Notify(ply, string.format("Printer is too hot to pocket (%d°C)! Allow it to cool below 35°C.", temp), NOTIFY_ERROR)
+            GRID.Notify(ply, string.format("Printer is too hot to pocket (%d°C)! Allow it to cool below 35°C.", temp),
+                NOTIFY_ERROR)
             ply:EmitSound("common/warning.wav", 65, 100)
             return false
         end
@@ -335,7 +338,6 @@ local function HandleDropInventorySlot(len, ply)
             if rawData.clip1 then spawnedEnt:SetClip1(rawData.clip1) end
             if rawData.clip2 then spawnedEnt:SetClip2(rawData.clip2) end
         end
-
     elseif itemType == "printer" or itemType == "switch" or itemId == "grid_resource_machine" then
         if itemType == "printer" then
             local maxPrinters = (GRID.Config and GRID.Config.MaxPrintersPerPlayer) or 4
@@ -347,7 +349,9 @@ local function HandleDropInventorySlot(len, ply)
                 end
             end
             if curPrinters >= maxPrinters then
-                GRID.Notify(ply, string.format("Cannot deploy: you have reached the maximum allowed active printers (%d/%d)!", curPrinters, maxPrinters), NOTIFY_ERROR)
+                GRID.Notify(ply,
+                    string.format("Cannot deploy: you have reached the maximum allowed active printers (%d/%d)!",
+                        curPrinters, maxPrinters), NOTIFY_ERROR)
                 return
             end
         end
@@ -365,7 +369,6 @@ local function HandleDropInventorySlot(len, ply)
                 spawnedEnt:SetHasUndervolt(true)
             end
         end
-
     elseif itemType == "material" or itemType == "blueprint" then
         spawnedEnt = ents.Create("grid_crafting_material")
         if IsValid(spawnedEnt) then
@@ -375,7 +378,6 @@ local function HandleDropInventorySlot(len, ply)
             spawnedEnt:Spawn()
             spawnedEnt:Activate()
         end
-
     elseif itemType == "shipment" then
         spawnedEnt = ents.Create("grid_shipment")
         if IsValid(spawnedEnt) then
@@ -387,7 +389,6 @@ local function HandleDropInventorySlot(len, ply)
             spawnedEnt:Spawn()
             spawnedEnt:Activate()
         end
-
     elseif itemType == "bag" then
         -- Bag drop: drops as physical suitcase/satchel
         spawnedEnt = ents.Create("prop_physics")
@@ -444,7 +445,8 @@ local function HandleUseInventorySlot(len, ply)
 
     local reqLevel = (def and def.level) or 1
     if ply:GetLevel() < reqLevel then
-        GRID.Notify(ply, string.format("You must be Level %d to use/equip %s!", reqLevel, def and def.name or itemId), NOTIFY_ERROR)
+        GRID.Notify(ply, string.format("You must be Level %d to use/equip %s!", reqLevel, def and def.name or itemId),
+            NOTIFY_ERROR)
         return
     end
 
@@ -468,7 +470,6 @@ local function HandleUseInventorySlot(len, ply)
         GRID.Database.RemoveInventoryItemAtSlot(steamID, bagIndex, slotIndex, 1)
         GRID.Notify(ply, "Equipped " .. def.name .. ".", NOTIFY_GENERIC)
         GRID.Inventory.Sync(ply)
-
     elseif itemType == "bag" then
         -- Equip into first free bag slot 1..4
         local bags = GRID.Database.GetPlayerBags(steamID)
@@ -492,7 +493,6 @@ local function HandleUseInventorySlot(len, ply)
         ply:EmitSound("items/ammocrate_open.wav", 65, 100)
         GRID.Notify(ply, "Equipped " .. def.name .. " into Bag Slot " .. equippedSlot .. "!", NOTIFY_GENERIC)
         GRID.Inventory.Sync(ply)
-
     elseif itemType == "consumable" then
         if def.buffId then
             ply:AddBuff(def.buffId, def.buffDuration)
@@ -501,7 +501,6 @@ local function HandleUseInventorySlot(len, ply)
             GRID.Notify(ply, "Consumed " .. def.name .. "!", NOTIFY_GENERIC)
             GRID.Inventory.Sync(ply)
         end
-
     elseif itemType == "printer" or itemType == "shipment" or itemType == "switch" or itemType == "module" then
         if itemType == "printer" then
             local maxPrinters = (GRID.Config and GRID.Config.MaxPrintersPerPlayer) or 4
@@ -513,7 +512,9 @@ local function HandleUseInventorySlot(len, ply)
                 end
             end
             if curPrinters >= maxPrinters then
-                GRID.Notify(ply, string.format("Cannot deploy: you have reached the maximum allowed active printers (%d/%d)!", curPrinters, maxPrinters), NOTIFY_ERROR)
+                GRID.Notify(ply,
+                    string.format("Cannot deploy: you have reached the maximum allowed active printers (%d/%d)!",
+                        curPrinters, maxPrinters), NOTIFY_ERROR)
                 return
             end
         end
@@ -592,7 +593,8 @@ local function HandleUseInventoryItem(len, ply)
                 if not ply:HasWeapon(itemId) then
                     ply:Give(itemId)
                     ply:SelectWeapon(itemId)
-                    GRID.Database.RemoveInventoryItemAtSlot(steamID, tonumber(r.bag_index) or 0, tonumber(r.slot_index) or 1, 1)
+                    GRID.Database.RemoveInventoryItemAtSlot(steamID, tonumber(r.bag_index) or 0,
+                        tonumber(r.slot_index) or 1, 1)
                     GRID.Inventory.Sync(ply)
                 end
             end

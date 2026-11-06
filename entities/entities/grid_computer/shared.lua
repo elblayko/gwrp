@@ -1,13 +1,13 @@
 --[[
     entities/entities/grid_computer/shared.lua
     GridRP CyberDeck Personal Computer (L3 Terminal Appliance)
-    Author: Toxic
+    Author: Juicebox
 --]]
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Personal Computer"
-ENT.Author = "Toxic"
+ENT.Author = "Juicebox"
 ENT.Spawnable = true
 
 -- Central Item Quality
