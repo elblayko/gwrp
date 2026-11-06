@@ -220,14 +220,6 @@ local function OpenWANConfigUI(uplinkEnt, currentKey, isOnline, peerCount, switc
         keyEntry:SetText("WAN-" .. code)
         surface.PlaySound("buttons/button15.wav")
     end
-
-    -- Wiremod note
-    local wireNote = vgui.Create("DLabel", frame)
-    wireNote:SetPos(16, 308)
-    wireNote:SetText("Tip: Wiremod supports dynamic key configuration via the EncryptionKey [STRING] input.")
-    wireNote:SetFont("GRID_UI_Caption")
-    wireNote:SetTextColor(Color(100, 116, 139))
-    wireNote:SizeToContents()
 end
 
 net.Receive("GRID_OpenWANConfig", function()

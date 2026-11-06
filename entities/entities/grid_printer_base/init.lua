@@ -44,22 +44,6 @@ function ENT:Initialize()
     self.HumSound:SetSoundLevel(40)
     if self.HumSound then self.HumSound:Play() end
 
-    -- Wiremod Support
-    if WireLib then
-        WireLib.CreateOutputs(self, {
-            "StoredCash",
-            "Temperature",
-            "Efficiency",
-            "YieldPerTick",
-            "IsNetworked",
-            "Overheating",
-            "HasUndervolt",
-            "IsTuned",
-            "LinkedSwitch [ENTITY]"
-        })
-        self:UpdateWireOutputs()
-    end
-
     -- Print cycle timer
     timer.Create("GRID_PrintTick_" .. self:EntIndex(), self.PrintInterval or 20.0, 0, function()
         if not IsValid(self) then return end
@@ -67,51 +51,20 @@ function ENT:Initialize()
     end)
 end
 
-function ENT:UpdateWireOutputs()
-    if not WireLib then return end
-    local eff = self:GetEfficiency()
-    if not eff or eff <= 0 then eff = 60 end
-    local printAmt = self.PrintAmount or 4
-    local yield = math.max(1, math.Round(printAmt * (eff / 100)))
-    local temp = self:GetTemperature()
-    local isNet = IsValid(self:GetConnectedSwitch()) and 1 or 0
-
-    WireLib.TriggerOutput(self, "StoredCash", self:GetStoredCash())
-    WireLib.TriggerOutput(self, "Temperature", temp)
-    WireLib.TriggerOutput(self, "Efficiency", eff)
-    WireLib.TriggerOutput(self, "YieldPerTick", yield)
-    WireLib.TriggerOutput(self, "IsNetworked", isNet)
-    WireLib.TriggerOutput(self, "Overheating", temp >= 75 and 1 or 0)
-    WireLib.TriggerOutput(self, "HasUndervolt", self:GetHasUndervolt() and 1 or 0)
-    WireLib.TriggerOutput(self, "IsTuned", self:GetIsTuned() and 1 or 0)
-    WireLib.TriggerOutput(self, "LinkedSwitch", self:GetConnectedSwitch())
-
-    local portStr = isNet == 1 and ("Port " .. self:GetAssignedPort()) or "Standalone"
-    local ipStr = (self.GetIPAddress and self:GetIPAddress() ~= "") and (" | IP: " .. self:GetIPAddress()) or ""
-    local uvStr = self:GetHasUndervolt() and " (UV)" or ""
-    local tuneStr = self:GetIsTuned() and " [TUNED]" or ""
-    WireLib.SetOverlayText(self,
-        string.format("[%s]%s%s\nStatus: %s%s (%d%% Eff)\nStored: $%d | Temp: %dC", self.PrintName, uvStr, tuneStr,
-            portStr, ipStr, eff, self:GetStoredCash(), temp))
-end
-
 function ENT:TunePrinter(ply)
     if self:GetIsTuned() then return false end
     self:SetIsTuned(true)
     self:EmitSound("ambient/energy/zap2.wav", 75, 120)
     self:EmitSound("buttons/button9.wav", 75, 110)
-    self:UpdateWireOutputs()
     return true
 end
 
 function ENT:InstallUndervoltModule(moduleEnt)
     self:SetHasUndervolt(true)
-    self:UpdateWireOutputs()
 end
 
 function ENT:InstallOverclockModule(moduleEnt)
     self:SetHasOverclock(true)
-    self:UpdateWireOutputs()
 end
 
 function ENT:CoolAndRepair(tempReduction)
@@ -125,7 +78,6 @@ function ENT:CoolAndRepair(tempReduction)
     self.ThermalTargetTemp = nil
     self:SetValveJammedUntil(0)
     self:EmitSound("ambient/levels/canals/steam_hiss2.wav", 70, 110)
-    self:UpdateWireOutputs()
 end
 
 function ENT:Think()
@@ -141,12 +93,6 @@ function ENT:Think()
                 local nextTemp = cur + 1
                 self:SetTemperature(nextTemp)
                 self.NextThermalTick = now + 0.12
-                self:UpdateWireOutputs()
-
-                local sw = self:GetConnectedSwitch()
-                if IsValid(sw) and sw.UpdateWireOutputs then
-                    sw:UpdateWireOutputs()
-                end
 
                 if nextTemp >= maxT then
                     self.ThermalTargetTemp = nil
@@ -157,12 +103,6 @@ function ENT:Think()
                 -- Lowering linearly (-1°C every 0.12s)
                 self:SetTemperature(cur - 1)
                 self.NextThermalTick = now + 0.12
-                self:UpdateWireOutputs()
-
-                local sw = self:GetConnectedSwitch()
-                if IsValid(sw) and sw.UpdateWireOutputs then
-                    sw:UpdateWireOutputs()
-                end
 
                 if (self.NextCoolSound or 0) <= now then
                     self.NextCoolSound = now + 0.5
@@ -212,7 +152,6 @@ function ENT:DisconnectFromSwitch()
         self:SetIPAddress("")
         self:SetNetworkedCount(1)
         self:SetEfficiency(GRID.Config.PrinterStandaloneEfficiency or 60)
-        self:UpdateWireOutputs()
     end
 end
 
@@ -238,14 +177,6 @@ function ENT:PrintCycle()
     self:SetStoredCash(self:GetStoredCash() + yield)
     self:SetTemperature(self:GetTemperature() + heatRise)
     self:EmitSound("ambient/levels/labs/coinslot1.wav", 60, 100, 0.4)
-
-    self:UpdateWireOutputs()
-
-    -- Inform connected switch if any
-    local sw = self:GetConnectedSwitch()
-    if IsValid(sw) and sw.UpdateWireOutputs then
-        sw:UpdateWireOutputs()
-    end
 
     local maxT = self.MaxTemp or 100
     if self:GetTemperature() >= maxT then
@@ -357,7 +288,6 @@ function ENT:Use(activator, caller)
 
             activator:EmitSound("ambient/levels/labs/coinslot1.wav")
             self:SetStoredCash(0)
-            self:UpdateWireOutputs()
         end
 
         local curTemp = self:GetTemperature()
@@ -408,8 +338,6 @@ function ENT:Use(activator, caller)
                     ed:SetNormal(Vector(0, 0, 1))
                     ed:SetScale(0.8)
                     util.Effect("WheelDust", ed)
-
-                    self:UpdateWireOutputs()
                 else
                     -- FAIL / SPAM: Electrical overload + Police radar flare + Valve Jam!
                     self:SetVentActive(false)
@@ -435,8 +363,6 @@ function ENT:Use(activator, caller)
                     ed:SetMagnitude(2)
                     ed:SetScale(1.5)
                     util.Effect("Sparks", ed)
-
-                    self:UpdateWireOutputs()
                 end
             else
                 -- Not active: Check if in valve reset cooldown
@@ -477,8 +403,4 @@ function ENT:OnRemove()
     timer.Remove("GRID_PrintTick_" .. self:EntIndex())
 
     self:DisconnectFromSwitch()
-
-    if WireLib then
-        WireLib.Remove(self)
-    end
 end

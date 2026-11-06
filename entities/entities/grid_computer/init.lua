@@ -47,45 +47,6 @@ function ENT:Initialize()
     self.BotnetCyclesCompleted = 0
     self.BotnetBuffer = 0
     self:SetNWInt("GRID_BotnetBuffer", 0)
-
-    -- Wiremod Support
-    if WireLib then
-        WireLib.CreateInputs(self, { "RunNmap" })
-        WireLib.CreateOutputs(self, {
-            "IsNetworked",
-            "AssignedPort",
-            "GatewaySwitch [ENTITY]",
-            "BotnetActive",
-            "BotnetYield",
-            "BotnetTotalEarned"
-        })
-        self:UpdateWireOutputs()
-    end
-end
-
-function ENT:TriggerInput(name, value)
-    if name == "RunNmap" and value ~= 0 then
-        -- Wire trigger can refresh network info
-        self:UpdateWireOutputs()
-    end
-end
-
-function ENT:UpdateWireOutputs()
-    if not WireLib then return end
-    local isNet = IsValid(self:GetConnectedSwitch()) and 1 or 0
-    WireLib.TriggerOutput(self, "IsNetworked", isNet)
-    WireLib.TriggerOutput(self, "AssignedPort", self:GetAssignedPort() or 0)
-    WireLib.TriggerOutput(self, "GatewaySwitch", self:GetConnectedSwitch())
-    WireLib.TriggerOutput(self, "BotnetActive", self:GetBotnetActive() and 1 or 0)
-    WireLib.TriggerOutput(self, "BotnetYield", self:GetBotnetYield() or 0)
-    WireLib.TriggerOutput(self, "BotnetTotalEarned", self:GetBotnetTotalEarned() or 0)
-
-    local ip = self:GetIPAddress()
-    local ipStr = (ip and ip ~= "") and ("IP: " .. ip) or "NO CARRIER"
-    local portStr = isNet == 1 and ("Port " .. self:GetAssignedPort()) or "Unlinked"
-    local botStr = self:GetBotnetActive() and string.format("\nBotnet C2: ACTIVE (+$%d/20s)", self:GetBotnetYield() or 0) or
-        ""
-    WireLib.SetOverlayText(self, string.format("[GridRP CyberDeck Terminal]\nStatus: %s\n%s%s", portStr, ipStr, botStr))
 end
 
 function ENT:PushTerminalLines(ply, lines)
@@ -162,7 +123,6 @@ function ENT:StopBotnet(reason)
     self:SetBotnetActive(false)
     self:SetBotnetYield(0)
     self.BotnetWANKey = ""
-    self:UpdateWireOutputs()
 
     if wasActive then
         self:EmitSound("buttons/button10.wav", 65, 95)
@@ -210,7 +170,6 @@ function ENT:RefreshBotnetState()
 
     local newYield = self:CalculateBotnetYield(operator)
     self:SetBotnetYield(newYield)
-    self:UpdateWireOutputs()
 end
 
 function ENT:BotnetCycle()
@@ -233,7 +192,6 @@ function ENT:BotnetCycle()
     local newTotal = (self:GetBotnetTotalEarned() or 0) + yield
     self:SetBotnetTotalEarned(newTotal)
     self.BotnetCyclesCompleted = (self.BotnetCyclesCompleted or 0) + 1
-    self:UpdateWireOutputs()
 
     self:EmitSound("ambient/levels/labs/coinslot1.wav", 58, 115)
 
@@ -289,7 +247,6 @@ function ENT:StartBotnet(ply)
 
     local yield, totalPrinters, countedPrinters, isEng = self:CalculateBotnetYield(ply)
     self:SetBotnetYield(yield)
-    self:UpdateWireOutputs()
 
     self:EmitSound("ambient/machines/thumper_startup1.wav", 65, 130)
 
@@ -322,7 +279,6 @@ function ENT:DisconnectFromSwitch()
         self:SetConnectedSwitch(NULL)
         self:SetAssignedPort(0)
         self:SetIPAddress("")
-        self:UpdateWireOutputs()
     end
 end
 
@@ -355,10 +311,6 @@ function ENT:OnRemove()
         self.BotnetBuffer = 0
     end
     self:DisconnectFromSwitch()
-
-    if WireLib then
-        WireLib.Remove(self)
-    end
 end
 
 -- Server Terminal Command Processor
@@ -1149,7 +1101,6 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
                                 if stolenCash > 0 then
                                     ply:AddMoney(stolenCash)
                                     printer:SetStoredCash(0)
-                                    if printer.UpdateWireOutputs then printer:UpdateWireOutputs() end
 
                                     -- Sound effects
                                     computer:EmitSound("ambient/levels/labs/coinslot1.wav", 75, 100)
@@ -1314,7 +1265,6 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
                                 end
 
                                 targetEnt:SetTemperature(98)
-                                if targetEnt.UpdateWireOutputs then targetEnt:UpdateWireOutputs() end
 
                                 GRID.Notify(ply,
                                     string.format("Thermal exploit injected into %s at %s! Detonation in 3 seconds!",

@@ -49,9 +49,6 @@ function ENT:InstallIntoPrinter(printer)
         printer:InstallUndervoltModule(self)
     else
         printer:SetHasUndervolt(true)
-        if printer.UpdateWireOutputs then
-            printer:UpdateWireOutputs()
-        end
     end
 
     -- Visual & sound effects

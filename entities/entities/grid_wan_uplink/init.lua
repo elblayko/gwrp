@@ -45,29 +45,7 @@ function ENT:Initialize()
     GRID.Network.WANUplinks = GRID.Network.WANUplinks or {}
     table.insert(GRID.Network.WANUplinks, self)
 
-    -- Wiremod support
-    if WireLib then
-        WireLib.CreateInputs(self, { "EncryptionKey [STRING]", "ResetKey" })
-        WireLib.CreateOutputs(self, {
-            "IsOnline",
-            "LinkedPeers",
-            "EncryptionKey [STRING]",
-            "LocalSubnet",
-            "AssignedPort",
-            "ConnectedSwitch [ENTITY]"
-        })
-        self:UpdateWireOutputs()
-    end
-
     GRID.Network.RecalculateWANMesh()
-end
-
-function ENT:TriggerInput(name, value)
-    if name == "EncryptionKey" and type(value) == "string" and value ~= "" then
-        self:UpdateKey(string.Trim(value))
-    elseif name == "ResetKey" and value ~= 0 then
-        self:UpdateKey(GenerateRandomKey())
-    end
 end
 
 function ENT:UpdateKey(newKey)
@@ -88,31 +66,6 @@ function ENT:UpdateKey(newKey)
     end
 
     GRID.Network.RecalculateWANMesh()
-    self:UpdateWireOutputs()
-end
-
-function ENT:UpdateWireOutputs()
-    if not WireLib then return end
-
-    local isOnline = self:GetIsOnline() and 1 or 0
-    local peers = self:GetLinkedPeerCount() or 0
-    local key = self:GetEncryptionKey() or ""
-    local sw = self:GetConnectedSwitch()
-    local subnet = IsValid(sw) and (sw.GetSubnetID and sw:GetSubnetID() or 1) or 0
-
-    WireLib.TriggerOutput(self, "IsOnline", isOnline)
-    WireLib.TriggerOutput(self, "LinkedPeers", peers)
-    WireLib.TriggerOutput(self, "EncryptionKey", key)
-    WireLib.TriggerOutput(self, "LocalSubnet", subnet)
-    WireLib.TriggerOutput(self, "AssignedPort", self:GetAssignedPort() or 0)
-    WireLib.TriggerOutput(self, "ConnectedSwitch", sw)
-
-    local statusStr = (isOnline == 1) and string.format("ONLINE (%d Peer%s)", peers, peers == 1 and "" or "s") or
-    "NO SIGNAL (Standalone)"
-    WireLib.SetOverlayText(self, string.format(
-        "[GridRP Satellite WAN Uplink]\nKey: %s\nStatus: %s\nLocal Subnet: 192.168.%d.0/24",
-        key, statusStr, subnet
-    ))
 end
 
 function ENT:DisconnectFromSwitch()
@@ -133,7 +86,6 @@ function ENT:DisconnectFromSwitch()
     end
 
     GRID.Network.RecalculateWANMesh()
-    self:UpdateWireOutputs()
 end
 
 function ENT:Use(activator, caller)
@@ -180,10 +132,6 @@ function ENT:OnRemove()
     if GRID.Network and GRID.Network.WANUplinks then
         table.RemoveByValue(GRID.Network.WANUplinks, self)
         GRID.Network.RecalculateWANMesh()
-    end
-
-    if WireLib then
-        WireLib.Remove(self)
     end
 end
 

@@ -209,9 +209,6 @@ function GRID.Network.RecalculateWANMesh()
         for _, uplink in ipairs(group) do
             uplink:SetIsOnline(isOnline)
             uplink:SetLinkedPeerCount(peerCount)
-            if uplink.UpdateWireOutputs then
-                uplink:UpdateWireOutputs()
-            end
         end
     end
 
@@ -222,9 +219,6 @@ function GRID.Network.RecalculateWANMesh()
         if normKey == "" or not keyGroups[normKey] or #keyGroups[normKey] < 2 then
             uplink:SetIsOnline(false)
             uplink:SetLinkedPeerCount(0)
-            if uplink.UpdateWireOutputs then
-                uplink:UpdateWireOutputs()
-            end
         end
     end
 end

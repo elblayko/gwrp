@@ -70,33 +70,6 @@ function ENT:Initialize()
         self.Ports[i] = nil
     end
 
-    -- Wiremod Support
-    if WireLib then
-        WireLib.CreateInputs(self, { "ClearLinks" })
-        WireLib.CreateOutputs(self, {
-            "ConnectedPrinters",
-            "NetworkEfficiency",
-            "IsOptimal",
-            "Port1Connected",
-            "Port2Connected",
-            "Port3Connected",
-            "Port3Is10G",
-            "Port3Mode [STRING]",
-            "Port4Connected",
-            "SFPUplink [ENTITY]",
-            "Port3Uplink [ENTITY]",
-            "Port1Efficiency",
-            "Port2Efficiency",
-            "Port3Efficiency",
-            "TotalStoredCash",
-            "MaxTemp",
-            "Printer1 [ENTITY]",
-            "Printer2 [ENTITY]",
-            "Printer3 [ENTITY]"
-        })
-        self:UpdateWireOutputs()
-    end
-
     -- Distance Cable Snapping Monitor
     local timerName = "GRID_SwitchCableMonitor_" .. self:EntIndex()
     timer.Create(timerName, 1.5, 0, function()
@@ -106,12 +79,6 @@ function ENT:Initialize()
         end
         self:CheckCableDistances()
     end)
-end
-
-function ENT:TriggerInput(name, value)
-    if name == "ClearLinks" and value ~= 0 then
-        self:DisconnectAll()
-    end
 end
 
 -- Retrieves next available port capable of switch-to-switch uplinks (dedicated SFP first, then Combo)
@@ -258,9 +225,6 @@ local function CleanDeviceParams(dev)
     end
     if dev.SetNetworkedCount then
         dev:SetNetworkedCount(1)
-    end
-    if dev.UpdateWireOutputs then
-        dev:UpdateWireOutputs()
     end
 end
 
@@ -507,9 +471,6 @@ function ENT:RecalculateNetwork(visited)
 
         printer:SetEfficiency(eff)
         printer:SetNetworkedCount(qualifyingCount)
-        if printer.UpdateWireOutputs then
-            printer:UpdateWireOutputs()
-        end
 
         totalEff = totalEff + eff
     end
@@ -529,8 +490,6 @@ function ENT:RecalculateNetwork(visited)
     local avgEff = (printerCount > 0) and math.floor(totalEff / printerCount) or
     (GRID.Config.PrinterStandaloneEfficiency or 60)
     self:SetEfficiency(avgEff)
-
-    self:UpdateWireOutputs()
 end
 
 -- Distance Cable Snapping Monitor
@@ -571,73 +530,6 @@ function ENT:GetBroadcastDomainDevices()
     return GRID.Network and GRID.Network.GetBroadcastDomain(self) or {}
 end
 
-function ENT:UpdateWireOutputs()
-    if not WireLib then return end
-
-    local count = self:GetConnectedCount() or 0
-    local eff = self:GetEfficiency() or 60
-    local portCount = self:GetPortCount()
-
-    local totalCash = 0
-    local maxTemp = 0
-    local allOptimal = (count >= 3)
-
-    local p1 = self.Ports[1] and self.Ports[1].printer or NULL
-    local p2 = self.Ports[2] and self.Ports[2].printer or NULL
-    local p3 = self.Ports[3] and self.Ports[3].printer or NULL
-
-    local eff1 = IsValid(p1) and (p1:GetEfficiency() or 60) or 0
-    local eff2 = IsValid(p2) and (p2:GetEfficiency() or 60) or 0
-    local eff3 = IsValid(p3) and (p3:GetEfficiency() or 60) or 0
-
-    for i = 1, portCount do
-        local p = self.Ports[i] and self.Ports[i].printer
-        if IsValid(p) then
-            totalCash = totalCash + (p:GetStoredCash() or 0)
-            local t = p:GetTemperature() or 20
-            if t > maxTemp then maxTemp = t end
-            if (p:GetEfficiency() or 60) < 100 then
-                allOptimal = false
-            end
-        end
-    end
-
-    local isOptimal = (count >= 3 and allOptimal) and 1 or 0
-    local p3Active = self:IsPortActive(3) and 1 or 0
-    local p3Is10G = self:IsPort10G(3)
-    local p3ModeStr = (p3Active == 1) and (p3Is10G and "10G SFP" or "1G Copper") or "EMPTY"
-    local sfpActive = self:IsPortActive(4) and 1 or 0
-
-    local uplinkSwitch4 = self:GetUplinkSwitch(4)
-    local uplinkSwitch3 = self:GetUplinkSwitch(3)
-
-    WireLib.TriggerOutput(self, "ConnectedPrinters", count)
-    WireLib.TriggerOutput(self, "NetworkEfficiency", eff)
-    WireLib.TriggerOutput(self, "IsOptimal", isOptimal)
-    WireLib.TriggerOutput(self, "Port1Connected", IsValid(p1) and 1 or 0)
-    WireLib.TriggerOutput(self, "Port2Connected", IsValid(p2) and 1 or 0)
-    WireLib.TriggerOutput(self, "Port3Connected", p3Active)
-    WireLib.TriggerOutput(self, "Port3Is10G", p3Is10G and 1 or 0)
-    WireLib.TriggerOutput(self, "Port3Mode", p3ModeStr)
-    WireLib.TriggerOutput(self, "Port4Connected", sfpActive)
-    WireLib.TriggerOutput(self, "SFPUplink", IsValid(uplinkSwitch4) and uplinkSwitch4 or NULL)
-    WireLib.TriggerOutput(self, "Port3Uplink", IsValid(uplinkSwitch3) and uplinkSwitch3 or NULL)
-    WireLib.TriggerOutput(self, "Port1Efficiency", eff1)
-    WireLib.TriggerOutput(self, "Port2Efficiency", eff2)
-    WireLib.TriggerOutput(self, "Port3Efficiency", eff3)
-    WireLib.TriggerOutput(self, "TotalStoredCash", totalCash)
-    WireLib.TriggerOutput(self, "MaxTemp", maxTemp)
-    WireLib.TriggerOutput(self, "Printer1", p1)
-    WireLib.TriggerOutput(self, "Printer2", p2)
-    WireLib.TriggerOutput(self, "Printer3", p3)
-
-    WireLib.SetOverlayText(self, string.format(
-        "[%s]\nPorts: %d/%d Active\nAvg Eff: %d%% | Net Cash: $%d | Peak Temp: %d°C",
-        self.PrintName or "GridRP L3 Switch",
-        count, portCount, eff, totalCash, maxTemp
-    ))
-end
-
 function ENT:Use(activator, caller)
     if not IsValid(activator) or not activator:IsPlayer() then return end
 
@@ -674,8 +566,4 @@ end
 function ENT:OnRemove()
     timer.Remove("GRID_SwitchCableMonitor_" .. self:EntIndex())
     self:DisconnectAll()
-
-    if WireLib then
-        WireLib.Remove(self)
-    end
 end
