@@ -72,6 +72,13 @@ function GRID.Database.Connect()
         return
     end
 
+    if not cfg then
+        ErrorNoHalt("[GRID DB WARNING] Database configuration is missing! Falling back to SQLite local emulation.\n")
+        GRID.Database.UseSQLiteFallback = true
+        GRID.Database.InitSQLiteFallback()
+        return
+    end
+
     print(string.format("[GRID DB] Connecting to MariaDB at %s:%d (Database: %s)...", cfg.Host, cfg.Port, cfg.Database))
 
     local db = mysqloo.connect(cfg.Host, cfg.User, cfg.Password, cfg.Database, cfg.Port, cfg.Socket)
