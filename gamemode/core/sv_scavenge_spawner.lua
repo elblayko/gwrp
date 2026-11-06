@@ -30,7 +30,11 @@ function GRID.Scavenge.ClearSpawned()
 end
 
 --- Spawns an individual scavenge entity, anchors it, and tracks it
-function GRID.Scavenge.SpawnNode(class, pos, ang)
+-- @param class Entity class name
+-- @param pos Vector position
+-- @param ang Angle orientation
+-- @param alignGround Boolean indicating whether pos is a ground hit contact point that needs upward model offset
+function GRID.Scavenge.SpawnNode(class, pos, ang, alignGround)
     local ent = ents.Create(class)
     if not IsValid(ent) then
         print(string.format("[GRID-Scavenge] Failed to create entity class '%s'", tostring(class)))
@@ -41,6 +45,16 @@ function GRID.Scavenge.SpawnNode(class, pos, ang)
     ent:SetAngles(ang)
     ent:Spawn()
     ent:Activate()
+
+    -- When spawned onto a floor surface (e.g. crosshair hit point),
+    -- elevate the entity by the bottom bound height so it rests flush on the ground instead of sinking.
+    if alignGround then
+        local mins = ent:OBBMins()
+        if mins and mins.z < -1 then
+            local elevation = math.abs(mins.z) + 1.0
+            ent:SetPos(pos + Vector(0, 0, elevation))
+        end
+    end
 
     local phys = ent:GetPhysicsObject()
     if IsValid(phys) then
@@ -190,7 +204,7 @@ concommand.Add("grid_scavenge_add", function(ply, cmd, args)
 
     if not tr.Hit then return end
 
-    local ent = GRID.Scavenge.SpawnNode(class, tr.HitPos + tr.HitNormal * 2, ang)
+    local ent = GRID.Scavenge.SpawnNode(class, tr.HitPos, ang, true)
     if IsValid(ent) then
         GRID.Scavenge.SaveMapProfile()
         GRID.Notify(ply, string.format("Spawned %s and saved to Database & Map JSON Profile.", class), NOTIFY_GENERIC)

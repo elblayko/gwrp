@@ -81,7 +81,8 @@ GRID.Jobs = {
         weapons = { "weapon_fists", "weapon_bugbait" },
         models = { "models/player/corpse1.mdl" },
         max = 4,
-        desc = "Destitute street vagrant. Free from the law, builds scrap shacks, and begs for change."
+        desc =
+        "Destitute street vagrant. Free from the law, builds scrap shacks, rummages through trash, and begs for change."
     },
 
     -- ========================================================

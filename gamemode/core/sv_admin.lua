@@ -157,7 +157,7 @@ local function HandleAdminDebugAction(len, ply)
         elseif string.StartWith(class, "grid_scavenge_") or class == "grid_recycler_depot" then
             local ang = Angle(0, ply:EyeAngles().y + 180, 0)
             local ent = (GRID.Scavenge and GRID.Scavenge.SpawnNode) and
-            GRID.Scavenge.SpawnNode(class, tr.HitPos + tr.HitNormal * 2, ang)
+                GRID.Scavenge.SpawnNode(class, tr.HitPos, ang, true)
             if IsValid(ent) then
                 if GRID.Scavenge and GRID.Scavenge.SaveMapProfile then
                     GRID.Scavenge.SaveMapProfile()
