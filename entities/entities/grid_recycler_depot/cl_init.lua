@@ -40,7 +40,7 @@ local function GetLocalRecyclables()
 
     local numCategories = table.Count(categories)
     local bonusPercent = (GRID.Scavenge and GRID.Scavenge.GetDepositBonus) and
-    GRID.Scavenge.GetDepositBonus(numCategories) or 0
+        GRID.Scavenge.GetDepositBonus(numCategories) or 0
     local finalCash = math.floor(baseCash * (1 + bonusPercent))
     local finalXP = math.floor(baseXP * (1 + bonusPercent))
 
@@ -162,7 +162,7 @@ net.Receive("GRID_OpenRecyclerMenu", function()
     loadAllBtn.Paint = function(s, bw, bh)
         local count = #availableItems
         local bg = (count > 0) and (s:IsHovered() and Color(16, 185, 129, 230) or Color(5, 150, 105, 190)) or
-        Color(30, 41, 59, 140)
+            Color(30, 41, 59, 140)
         draw.RoundedBox(6, 0, 0, bw, bh, bg)
         local txt = (count > 0) and "+ LOAD ALL JUNK INTO HOPPER" or "NO RECYCLABLES IN BAGS"
         local col = (count > 0) and COLOR_WHITE or COLOR_TEXT_MUTED
@@ -538,7 +538,7 @@ net.Receive("GRID_OpenRecyclerMenu", function()
         -- Summary Box (Bottom of Right Column)
         local numCats = table.Count(categories)
         local comboBonus = (GRID.Scavenge and GRID.Scavenge.GetDepositBonus) and GRID.Scavenge.GetDepositBonus(numCats) or
-        0
+            0
         local finalCash = math.floor(baseCash * (1 + comboBonus))
         local finalXP = math.floor(baseXP * (1 + comboBonus))
 
@@ -554,13 +554,13 @@ net.Receive("GRID_OpenRecyclerMenu", function()
                 12, 12, COLOR_WHITE, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 
             local comboText = (comboBonus > 0) and string.format("Combo Bonus: +%d%%", math.Round(comboBonus * 100)) or
-            "Combo Bonus: None (Mix categories for up to +25%)"
+                "Combo Bonus: None"
             local comboCol = (comboBonus > 0) and COLOR_AMBER or COLOR_TEXT_MUTED
             draw.SimpleText(comboText, "GRID_UI_Caption", 12, 34, comboCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
 
-            draw.SimpleText(string.format("Estimated Yield: +$%s Cash  •  +%d XP", string.Comma(finalCash), finalXP),
+            draw.SimpleText(string.format("Estimated Yield: $%s Cash, %d XP", string.Comma(finalCash), finalXP),
                 "GRID_UI_BodyBold", 12, 58, COLOR_ACCENT, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-            draw.SimpleText("★ Timed Compactor Sweet Spot awards an extra +25%!", "GRID_UI_Caption", 12, 84, COLOR_AMBER,
+            draw.SimpleText("Sweet spot awards an extra 25%!", "GRID_UI_Caption", 12, 84, COLOR_AMBER,
                 TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
         end
 

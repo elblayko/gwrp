@@ -327,7 +327,7 @@ GRID.Inventory.Items = {
         type = "junk",
         subType = "Scavenged Material",
         quality = 1, -- Common
-        model = "models/props_c17/trap_propeller_lever.mdl",
+        model = "models/props_debris/metal_panelchunk02e.mdl",
         desc = "Twisted industrial metal refuse. Recyclable at the depot or smeltable into iron ingots.",
         stats = "Recyclable Refuse | Smeltable"
     },
@@ -345,7 +345,7 @@ GRID.Inventory.Items = {
         type = "junk",
         subType = "Cyber Salvage",
         quality = 3, -- Rare
-        model = "models/props_lab/reciever_cartridge.mdl",
+        model = "models/props/cs_office/computer_caseb_p7a.mdl",
         desc = "Fried logic boards and microcontrollers. High cash recycling value or module crafting component.",
         stats = "High-Value Scrap | Module Salvage"
     },
