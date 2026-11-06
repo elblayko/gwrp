@@ -137,6 +137,7 @@ function GRID.Auction.OpenUI(isTerminal)
     frame:SetTitle("")
     frame:ShowCloseButton(false)
     frame:SetDraggable(true)
+    frame.IsTerminalSession = (isTerminal == true)
     frame:MakePopup()
     GRID.Auction.MainFrame = frame
 
@@ -153,26 +154,50 @@ function GRID.Auction.OpenUI(isTerminal)
         surface.SetDrawColor(30, 41, 59, 200)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-        -- Title & Terminal Mode Badge
-        draw.SimpleText("GRID AUCTION HOUSE", "GRID_UI_Title", 24, 20, Color(248, 250, 252), TEXT_ALIGN_LEFT)
-        local modeText = GRID.Auction.IsTerminalSession and "TERMINAL CONNECTED" or "REMOTE BROWSING"
-        local modeCol = GRID.Auction.IsTerminalSession and Color(74, 222, 128) or Color(251, 191, 36)
-        local modeBg = GRID.Auction.IsTerminalSession and Color(16, 185, 129, 35) or Color(245, 158, 11, 35)
+        -- Title & Dynamic Terminal Mode Badge Placement (No Overlap)
+        surface.SetFont("GRID_UI_Title")
+        local titleText = "GRID AUCTION HOUSE"
+        local titleW, titleH = surface.GetTextSize(titleText)
+        draw.SimpleText(titleText, "GRID_UI_Title", 24, 20, Color(248, 250, 252), TEXT_ALIGN_LEFT)
 
-        draw.RoundedBox(4, 280, 24, 180, 24, modeBg)
+        local isTerminal = frame.IsTerminalSession or GRID.Auction.IsTerminalSession
+        local modeText = isTerminal and "TERMINAL CONNECTED" or "REMOTE BROWSING"
+        local modeCol = isTerminal and Color(74, 222, 128) or Color(251, 191, 36)
+        local modeBg = isTerminal and Color(16, 185, 129, 35) or Color(245, 158, 11, 35)
+
+        surface.SetFont("GRID_UI_Badge")
+        local badgeTextW, badgeTextH = surface.GetTextSize(modeText)
+        local badgeW = badgeTextW + 18
+        local badgeH = 24
+        local badgeX = 24 + titleW + 14
+        local badgeY = 24
+
+        draw.RoundedBox(4, badgeX, badgeY, badgeW, badgeH, modeBg)
         surface.SetDrawColor(modeCol.r, modeCol.g, modeCol.b, 120)
-        surface.DrawOutlinedRect(280, 24, 180, 24, 1)
-        draw.SimpleText(modeText, "GRID_UI_Badge", 370, 36, modeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        surface.DrawOutlinedRect(badgeX, badgeY, badgeW, badgeH, 1)
+        draw.SimpleText(modeText, "GRID_UI_Badge", badgeX + badgeW / 2, badgeY + badgeH / 2, modeCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        -- Center Pill: Wallet & Cash Sink Info
+        -- Dynamic Pill: Wallet & Cash Sink Info
         local ply = LocalPlayer()
         local curMoney = IsValid(ply) and ply:GetMoney() or 0
         local pillText = "$" .. string.Comma(curMoney) .. "   |   Sales Tax: 7.5%   |   Max: 10 Listings"
-        local pillX = w / 2
-        draw.RoundedBox(18, pillX - 220, 14, 440, 42, Color(24, 32, 47, 240))
+        surface.SetFont("GRID_UI_Sub")
+        local pillTextW, pillTextH = surface.GetTextSize(pillText)
+        local pillW = pillTextW + 36
+        local pillH = 38
+        local pillY = 17
+
+        -- Safely position pill: center if space permits, otherwise right-align before the close button
+        local centerX = w / 2
+        local pillX = centerX - pillW / 2
+        if (pillX < (badgeX + badgeW + 18)) or (pillX + pillW > (w - 70)) then
+            pillX = w - 70 - pillW
+        end
+
+        draw.RoundedBox(19, pillX, pillY, pillW, pillH, Color(24, 32, 47, 240))
         surface.SetDrawColor(30, 41, 59, 220)
-        surface.DrawOutlinedRect(pillX - 220, 14, 440, 42, 1)
-        draw.SimpleText(pillText, "GRID_UI_Sub", pillX, 35, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        surface.DrawOutlinedRect(pillX, pillY, pillW, pillH, 1)
+        draw.SimpleText(pillText, "GRID_UI_Sub", pillX + pillW / 2, pillY + pillH / 2, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     -- Close Button
@@ -580,11 +605,18 @@ function GRID.Auction.RenderInstancesPane(parent, group)
         local card = instanceScroll:Add("DPanel")
         card:Dock(TOP)
         card:DockMargin(0, 0, 0, 8)
-        card:SetTall(96)
+        card:SetTall(102)
 
         local badges = GRID.Auction.GetItemAttributeBadges(inst.item_data)
         local timeLeft = GRID.Auction.FormatTimeRemaining(inst.expires_at_unix)
         local curBid = inst.current_bid > 0 and inst.current_bid or inst.start_bid
+        local hasBuyout = (inst.buyout_price > 0)
+        local hasHighBidder = inst.high_bidder_name and inst.high_bidder_name ~= "" and inst.high_bidder_name ~= "NULL" and inst.high_bidder_name ~= "nil" and inst.current_bid > 0
+        local isTerminal = GRID.Auction.IsTerminalSession
+
+        local btnBuy = nil
+        local btnBid = nil
+        local noticePill = nil
 
         card.Paint = function(s, w, h)
             local isHov = s:IsHovered()
@@ -592,14 +624,21 @@ function GRID.Auction.RenderInstancesPane(parent, group)
             surface.SetDrawColor(30, 41, 59, 180)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-            -- Seller & Time Remaining
+            -- Left Section: Seller & Status
             local sellerStr = "Seller: " .. inst.seller_name
-            draw.SimpleText(sellerStr, "GRID_UI_Sub", 14, 18, Color(248, 250, 252))
-            draw.SimpleText("Time Left: " .. timeLeft, "GRID_UI_Caption", 14, 38, Color(148, 163, 184))
+            draw.SimpleText(sellerStr, "GRID_UI_Sub", 14, 16, Color(248, 250, 252))
+
+            local statusSub = "Time Left: " .. timeLeft
+            if hasHighBidder then
+                statusSub = statusSub .. "   •   High Bidder: " .. inst.high_bidder_name
+            else
+                statusSub = statusSub .. "   •   No Bids Yet"
+            end
+            draw.SimpleText(statusSub, "GRID_UI_Caption", 14, 38, hasHighBidder and Color(56, 189, 248) or Color(148, 163, 184))
 
             -- Render Attribute Badges horizontally
             local bx = 14
-            local by = 60
+            local by = 64
             for _, b in ipairs(badges) do
                 surface.SetFont("GRID_UI_Badge")
                 local bw = surface.GetTextSize(b.text) + 14
@@ -608,32 +647,29 @@ function GRID.Auction.RenderInstancesPane(parent, group)
                 bx = bx + bw + 6
             end
 
-            -- Bid & Buyout Pricing Details
-            local priceX = w - 240
-            draw.SimpleText("Current Bid:", "GRID_UI_Caption", priceX, 16, Color(148, 163, 184))
-            draw.SimpleText("$" .. string.Comma(curBid), "GRID_UI_Price", priceX, 36, Color(248, 250, 252))
-            if inst.high_bidder_name ~= "" then
-                draw.SimpleText("High: " .. inst.high_bidder_name, "GRID_UI_Caption", priceX, 58, Color(56, 189, 248))
-            end
+            -- Right Columns: Pricing Details (Centered above matching action buttons)
+            local colW = 100
+            local buyoutX = w - 114
+            local bidX = hasBuyout and (w - 224) or (w - 114)
 
-            if inst.buyout_price > 0 then
-                local buyoutX = w - 120
-                draw.SimpleText("Buyout:", "GRID_UI_Caption", buyoutX, 16, Color(148, 163, 184))
-                draw.SimpleText("$" .. string.Comma(inst.buyout_price), "GRID_UI_Price", buyoutX, 36, Color(74, 222, 128))
+            -- Bid Column
+            local bidLabel = (inst.current_bid > 0) and "CURRENT BID" or "STARTING BID"
+            draw.SimpleText(bidLabel, "GRID_UI_Caption", bidX + colW / 2, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
+            draw.SimpleText("$" .. string.Comma(curBid), "GRID_UI_Price", bidX + colW / 2, 33, Color(248, 250, 252), TEXT_ALIGN_CENTER)
+
+            -- Buyout Column (if available)
+            if hasBuyout then
+                draw.SimpleText("BUYOUT PRICE", "GRID_UI_Caption", buyoutX + colW / 2, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
+                draw.SimpleText("$" .. string.Comma(inst.buyout_price), "GRID_UI_Price", buyoutX + colW / 2, 33, Color(74, 222, 128), TEXT_ALIGN_CENTER)
             end
         end
 
-        -- Action Buttons
-        if GRID.Auction.IsTerminalSession then
-            -- Terminal: Active Buyout & Bid
-            if inst.buyout_price > 0 then
-                local btnBuy = vgui.Create("DButton", card)
-                btnBuy:SetSize(80, 32)
-                btnBuy:SetPos(card:GetWide() - 94, 52)
+        -- Action Buttons or Remote Browsing Notice
+        if isTerminal then
+            if hasBuyout then
+                btnBuy = vgui.Create("DButton", card)
+                btnBuy:SetSize(100, 32)
                 btnBuy:SetText("")
-                card.PerformLayout = function(s, w, h)
-                    btnBuy:SetPos(w - 94, 52)
-                end
                 btnBuy.Paint = function(s, w, h)
                     local isHov = s:IsHovered()
                     draw.RoundedBox(4, 0, 0, w, h, isHov and Color(16, 185, 129, 220) or Color(16, 185, 129, 140))
@@ -656,16 +692,9 @@ function GRID.Auction.RenderInstancesPane(parent, group)
             end
 
             -- Bid Button
-            local btnBid = vgui.Create("DButton", card)
-            btnBid:SetSize(70, 32)
-            local buyOffset = inst.buyout_price > 0 and 172 or 94
-            btnBid:SetPos(card:GetWide() - buyOffset, 52)
+            btnBid = vgui.Create("DButton", card)
+            btnBid:SetSize(100, 32)
             btnBid:SetText("")
-            local origLayout = card.PerformLayout
-            card.PerformLayout = function(s, w, h)
-                if origLayout then origLayout(s, w, h) end
-                btnBid:SetPos(w - buyOffset, 52)
-            end
             btnBid.Paint = function(s, w, h)
                 local isHov = s:IsHovered()
                 draw.RoundedBox(4, 0, 0, w, h, isHov and Color(6, 182, 212, 220) or Color(6, 182, 212, 140))
@@ -694,17 +723,34 @@ function GRID.Auction.RenderInstancesPane(parent, group)
             end
         else
             -- Remote F4 Mode: Visual Notice Pill
-            local noticePill = vgui.Create("DPanel", card)
-            noticePill:SetSize(160, 26)
-            noticePill:SetPos(card:GetWide() - 174, 56)
-            card.PerformLayout = function(s, w, h)
-                noticePill:SetPos(w - 174, 56)
-            end
+            noticePill = vgui.Create("DPanel", card)
+            noticePill:SetSize(hasBuyout and 210 or 100, 30)
             noticePill.Paint = function(s, w, h)
                 draw.RoundedBox(4, 0, 0, w, h, Color(245, 158, 11, 35))
                 surface.SetDrawColor(245, 158, 11, 120)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
-                draw.SimpleText("Terminal Required to Bid", "GRID_UI_Caption", w / 2, h / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+                local noticeText = (w > 120) and "Terminal Required to Bid" or "Terminal Req."
+                draw.SimpleText(noticeText, "GRID_UI_Caption", w / 2, h / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+        end
+
+        card.PerformLayout = function(s, w, h)
+            local colW = 100
+            local buyoutX = w - 114
+            local bidX = hasBuyout and (w - 224) or (w - 114)
+
+            if IsValid(btnBuy) then
+                btnBuy:SetPos(buyoutX, 58)
+                btnBuy:SetSize(colW, 32)
+            end
+            if IsValid(btnBid) then
+                btnBid:SetPos(bidX, 58)
+                btnBid:SetSize(colW, 32)
+            end
+            if IsValid(noticePill) then
+                local pW = hasBuyout and 210 or colW
+                noticePill:SetPos(bidX, 59)
+                noticePill:SetSize(pW, 30)
             end
         end
     end
@@ -870,24 +916,25 @@ function GRID.Auction.RenderCreateTab(parent)
 
         -- Buyout Input
         local lblBuyout = vgui.Create("DLabel", formBody)
-        lblBuyout:SetPos(260, 74)
+        lblBuyout:SetPos(240, 74)
         lblBuyout:SetFont("GRID_UI_Sub")
         lblBuyout:SetTextColor(Color(226, 232, 240))
         lblBuyout:SetText("Buyout Price ($) [Optional]:")
         lblBuyout:SizeToContents()
 
         local inBuyout = vgui.Create("DTextEntry", formBody)
-        inBuyout:SetPos(260, 100)
+        inBuyout:SetPos(240, 100)
         inBuyout:SetSize(220, 36)
         inBuyout:SetFont("GRID_UI_Sub")
         inBuyout:SetNumeric(true)
         inBuyout:SetText(minBuy > 0 and tostring(minBuy) or "1000")
 
         -- Quick Undercut Buttons
+        local btnMatch = nil
+        local btnUndercut1 = nil
         if minBuy > 0 then
-            local btnMatch = vgui.Create("DButton", formBody)
-            btnMatch:SetPos(490, 100)
-            btnMatch:SetSize(110, 36)
+            btnMatch = vgui.Create("DButton", formBody)
+            btnMatch:SetSize(100, 30)
             btnMatch:SetText("")
             btnMatch.Paint = function(s, w, h)
                 local isHov = s:IsHovered()
@@ -900,9 +947,8 @@ function GRID.Auction.RenderCreateTab(parent)
                 inBuyout:SetText(tostring(minBuy))
             end
 
-            local btnUndercut1 = vgui.Create("DButton", formBody)
-            btnUndercut1:SetPos(610, 100)
-            btnUndercut1:SetSize(110, 36)
+            btnUndercut1 = vgui.Create("DButton", formBody)
+            btnUndercut1:SetSize(100, 30)
             btnUndercut1:SetText("")
             btnUndercut1.Paint = function(s, w, h)
                 local isHov = s:IsHovered()
@@ -918,11 +964,8 @@ function GRID.Auction.RenderCreateTab(parent)
 
         -- Cost Breakdown Card
         local breakdownCard = vgui.Create("DPanel", formBody)
-        breakdownCard:SetPos(0, 156)
-        breakdownCard:SetSize(formBody:GetWide() - 20, 96)
-        breakdownCard.PerformLayout = function(s, w, h)
-            s:SetWide(formBody:GetWide())
-        end
+        breakdownCard:SetPos(0, 180)
+        breakdownCard:SetSize(formBody:GetWide(), 96)
         breakdownCard.Paint = function(s, w, h)
             draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
             surface.SetDrawColor(30, 41, 59, 180)
@@ -935,19 +978,43 @@ function GRID.Auction.RenderCreateTab(parent)
             local netPayout = (bPrice > 0 and bPrice or sBid) - tax + dep
 
             draw.SimpleText("Required Upfront Deposit (Refunded on successful sale):", "GRID_UI_Caption", 16, 18, Color(148, 163, 184))
-            draw.SimpleText("$" .. string.Comma(dep), "GRID_UI_Sub", 380, 18, Color(251, 191, 36))
+            draw.SimpleText("$" .. string.Comma(dep), "GRID_UI_Sub", w - 20, 18, Color(251, 191, 36), TEXT_ALIGN_RIGHT)
 
             draw.SimpleText("House Sales Tax (7.5% burned on sale):", "GRID_UI_Caption", 16, 42, Color(148, 163, 184))
-            draw.SimpleText("$" .. string.Comma(tax), "GRID_UI_Sub", 380, 42, Color(239, 68, 68))
+            draw.SimpleText("$" .. string.Comma(tax), "GRID_UI_Sub", w - 20, 42, Color(239, 68, 68), TEXT_ALIGN_RIGHT)
 
             draw.SimpleText("Estimated Net Payout into Bank:", "GRID_UI_Sub", 16, 68, Color(248, 250, 252))
-            draw.SimpleText("$" .. string.Comma(netPayout), "GRID_UI_Header", 380, 68, Color(74, 222, 128))
+            draw.SimpleText("$" .. string.Comma(netPayout), "GRID_UI_Header", w - 20, 68, Color(74, 222, 128), TEXT_ALIGN_RIGHT)
         end
 
         -- Post Button
         local btnPost = vgui.Create("DButton", formBody)
-        btnPost:SetPos(0, 268)
-        btnPost:SetSize(220, 46)
+        btnPost:SetPos(0, 290)
+        btnPost:SetSize(220, 44)
+
+        formBody.PerformLayout = function(s, w, h)
+            local colW = math.Clamp((w - 20) / 2, 160, 260)
+            inStartBid:SetSize(colW, 36)
+            lblBuyout:SetPos(colW + 20, 74)
+            inBuyout:SetPos(colW + 20, 100)
+            inBuyout:SetSize(colW, 36)
+
+            local nextY = 150
+            if IsValid(btnMatch) and IsValid(btnUndercut1) then
+                local bW = (colW - 8) / 2
+                btnMatch:SetPos(colW + 20, 144)
+                btnMatch:SetSize(bW, 28)
+                btnUndercut1:SetPos(colW + 20 + bW + 8, 144)
+                btnUndercut1:SetSize(bW, 28)
+                nextY = 184
+            end
+
+            breakdownCard:SetPos(0, nextY)
+            breakdownCard:SetSize(w, 96)
+
+            btnPost:SetPos(0, nextY + 108)
+            btnPost:SetSize(math.min(w, 280), 44)
+        end
         btnPost:SetText("")
         btnPost.Paint = function(s, w, h)
             local isHov = s:IsHovered()

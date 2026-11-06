@@ -66,7 +66,11 @@ net.Receive("GRID_Auction_RequestListings", function(len, ply)
             net.WriteString(r.item_data or "{}")
             net.WriteUInt(tonumber(r.start_bid) or 0, 32)
             net.WriteUInt(tonumber(r.current_bid) or 0, 32)
-            net.WriteString(r.high_bidder_name or "")
+            local highName = r.high_bidder_name
+            if not highName or highName == "NULL" or highName == "nil" then
+                highName = ""
+            end
+            net.WriteString(highName)
             net.WriteUInt(tonumber(r.buyout_price) or 0, 32)
             net.WriteUInt(tonumber(r.expires_at_unix) or 0, 32)
         end
