@@ -200,11 +200,11 @@ net.Receive("GRID_Auction_CreateListing", function(len, ply)
             if status == "ERR_MAX_LISTINGS" then
                 GRID.Notify(ply, "You have reached the maximum of 10 active auction listings!", NOTIFY_ERROR)
             elseif status == "ERR_INSUFFICIENT_FUNDS" then
-                GRID.Notify(ply, "Insufficient funds to cover the listing deposit!", NOTIFY_ERROR)
+                GRID.Notify(ply, "You do not have enough funds to cover the listing deposit!", NOTIFY_ERROR)
             elseif status == "ERR_ITEM_NOT_FOUND" then
                 GRID.Notify(ply, "The selected item was not found in your inventory!", NOTIFY_ERROR)
             else
-                GRID.Notify(ply, "Failed to create listing: " .. tostring(status), NOTIFY_ERROR)
+                GRID.Notify(ply, "Could not create listing due to a server error. Please try again.", NOTIFY_ERROR)
             end
         end
     end)
@@ -239,12 +239,12 @@ net.Receive("GRID_Auction_PlaceBid", function(len, ply)
                 GRID.Notify(ply, "Your bid must be higher than the current bid!", NOTIFY_ERROR)
             elseif status == "ERR_SELF_BID" then
                 GRID.Notify(ply, "You cannot bid on your own auction!", NOTIFY_ERROR)
-            elseif status == "ERR_EXPIRED" then
-                GRID.Notify(ply, "This auction has already expired!", NOTIFY_ERROR)
+            elseif status == "ERR_EXPIRED" or status == "ERR_NOT_ACTIVE" then
+                GRID.Notify(ply, "This auction is no longer active!", NOTIFY_ERROR)
             elseif status == "ERR_INSUFFICIENT_FUNDS" then
                 GRID.Notify(ply, "Insufficient funds to cover your bid!", NOTIFY_ERROR)
             else
-                GRID.Notify(ply, "Bid failed: " .. tostring(status), NOTIFY_ERROR)
+                GRID.Notify(ply, "Could not place bid. Please try again.", NOTIFY_ERROR)
             end
         end
     end)
@@ -274,10 +274,12 @@ net.Receive("GRID_Auction_Buyout", function(len, ply)
                 GRID.Notify(ply, "You do not have enough funds for buyout!", NOTIFY_ERROR)
             elseif status == "ERR_SELF_BUY" then
                 GRID.Notify(ply, "You cannot buyout your own listing!", NOTIFY_ERROR)
-            elseif status == "ERR_EXPIRED" then
+            elseif status == "ERR_EXPIRED" or status == "ERR_NOT_ACTIVE" then
                 GRID.Notify(ply, "This auction has already expired or ended!", NOTIFY_ERROR)
+            elseif status == "ERR_NO_BUYOUT" then
+                GRID.Notify(ply, "This auction does not have an instant buyout price set!", NOTIFY_ERROR)
             else
-                GRID.Notify(ply, "Buyout failed: " .. tostring(status), NOTIFY_ERROR)
+                GRID.Notify(ply, "Could not complete buyout. Please try again.", NOTIFY_ERROR)
             end
         end
     end)
@@ -307,8 +309,10 @@ net.Receive("GRID_Auction_Cancel", function(len, ply)
                 GRID.Notify(ply, "Cannot cancel auction: An active bid already exists on this item!", NOTIFY_ERROR)
             elseif status == "ERR_NOT_OWNER" then
                 GRID.Notify(ply, "You do not own this auction!", NOTIFY_ERROR)
+            elseif status == "ERR_NOT_ACTIVE" then
+                GRID.Notify(ply, "This auction is no longer active!", NOTIFY_ERROR)
             else
-                GRID.Notify(ply, "Cancel failed: " .. tostring(status), NOTIFY_ERROR)
+                GRID.Notify(ply, "Could not cancel auction. Please try again.", NOTIFY_ERROR)
             end
         end
     end)
@@ -352,8 +356,14 @@ net.Receive("GRID_Auction_ClaimItem", function(len, ply)
         else
             if status == "ERR_COLLECTION_EXPIRED" then
                 GRID.Notify(ply, "This item has expired and can no longer be claimed!", NOTIFY_ERROR)
+            elseif status == "ERR_BAG_FULL" then
+                GRID.Notify(ply, "Your bags are full! Clear an inventory slot before claiming.", NOTIFY_ERROR)
+            elseif status == "ERR_ALREADY_CLAIMED" then
+                GRID.Notify(ply, "This item has already been claimed!", NOTIFY_ERROR)
+            elseif status == "ERR_NOT_FOUND" then
+                GRID.Notify(ply, "The requested collection item was not found.", NOTIFY_ERROR)
             else
-                GRID.Notify(ply, "Failed to claim item: " .. tostring(status), NOTIFY_ERROR)
+                GRID.Notify(ply, "Could not claim item. Please try again.", NOTIFY_ERROR)
             end
             GRID.Auction.SendCollection(ply)
         end

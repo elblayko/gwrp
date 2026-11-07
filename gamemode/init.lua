@@ -45,6 +45,8 @@ AddCSLuaFile("police/sh_jail.lua")
 AddCSLuaFile("police/cl_jail.lua")
 AddCSLuaFile("police/sh_voting.lua")
 AddCSLuaFile("police/cl_voting.lua")
+AddCSLuaFile("stocks/sh_stocks.lua")
+AddCSLuaFile("stocks/cl_stocks.lua")
 
 -- Server Includes
 include("shared.lua")
@@ -79,6 +81,8 @@ include("police/sh_jail.lua")
 include("police/sv_jail.lua")
 include("police/sh_voting.lua")
 include("police/sv_voting.lua")
+include("stocks/sh_stocks.lua")
+include("stocks/sv_stocks.lua")
 
 function GM:Initialize()
     math.randomseed(os.time() + math.floor(SysTime() * 1000))
@@ -222,10 +226,15 @@ function GM:PlayerSetHandsModel(ply, ent)
     end
 end
 
--- Ensure any existing spawned players receive their hands immediately on lua reload
+-- Ensure any existing spawned players receive their hands & database state immediately on lua reload
 for _, p in ipairs(player.GetAll()) do
-    if IsValid(p) and not IsValid(p:GetHands()) then
-        p:SetupHands()
+    if IsValid(p) then
+        if not IsValid(p:GetHands()) then
+            p:SetupHands()
+        end
+        if not p.GRID_DataLoaded and GRID.Database and GRID.Database.LoadPlayer then
+            GRID.Database.LoadPlayer(p)
+        end
     end
 end
 
@@ -335,6 +344,50 @@ function GM:PlayerDeath(victim, inflictor, attacker)
     local policeSecs = (GRID.Config and GRID.Config.PoliceRespawnTime) or 5
     local respawnSecs = (victim:GetJob() == "police_officer") and policeSecs or defaultSecs
     victim.NextSpawnTime = CurTime() + respawnSecs
+
+    -- Gang Stock Market Combat Multipliers & Trading Halts
+    if GRID.Stocks and IsValid(victim) then
+        local victimGang = victim:GetRawGang()
+        local isVictimLeader = victim:GetNWBool("GRID_IsGangLeader", false) or (victim.GetJob and victim:GetJob() == "gang_leader")
+        local cfg = GRID.Config.Stocks or {}
+
+        if victimGang ~= "" then
+            -- Track recent deaths for combat halt (2+ deaths within 60s)
+            GRID.Stocks.RecentDeaths[victimGang] = GRID.Stocks.RecentDeaths[victimGang] or {}
+            local now = CurTime()
+            table.insert(GRID.Stocks.RecentDeaths[victimGang], now)
+
+            local recentCount = 0
+            for i = #GRID.Stocks.RecentDeaths[victimGang], 1, -1 do
+                if (now - GRID.Stocks.RecentDeaths[victimGang][i]) <= 60 then
+                    recentCount = recentCount + 1
+                else
+                    table.remove(GRID.Stocks.RecentDeaths[victimGang], i)
+                end
+            end
+
+            if recentCount >= 2 then
+                GRID.Stocks.TriggerCombatHalt(victimGang, cfg.CombatHaltDuration or 90, "Multiple Gang Casualties")
+            end
+
+            -- Death Sentiment Drop
+            local dropPct = isVictimLeader and (cfg.LeaderDeathDrop or 0.12) or (cfg.MemberDeathDrop or 0.02)
+            GRID.Stocks.AdjustSentiment(victimGang, -dropPct, isVictimLeader and "leader_death" or "member_death")
+        end
+
+        if IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim then
+            local atkGang = attacker:GetRawGang()
+            if atkGang ~= "" and atkGang ~= victimGang and victimGang ~= "" then
+                -- Anti-Farm Cooldown (5 minutes per victim pair)
+                local pairKey = attacker:SteamID() .. "_" .. victim:SteamID()
+                local lastKill = GRID.Stocks.PairKills[pairKey] or 0
+                if (CurTime() - lastKill) >= (cfg.AntiFarmCooldown or 300) then
+                    GRID.Stocks.PairKills[pairKey] = CurTime()
+                    GRID.Stocks.AdjustSentiment(atkGang, cfg.KillBoost or 0.015, "rival_kill")
+                end
+            end
+        end
+    end
 
     local killerName = "Unknown"
     if IsValid(attacker) then

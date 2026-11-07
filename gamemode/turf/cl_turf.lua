@@ -259,7 +259,7 @@ function GRID.Turf.DrawHUD()
         -- Subtitle: Controlled vs Unclaimed
         if isOwned then
             if owner == "Police" then
-                local policeTxt = "Secured District  -  Law Enforcement Jurisdiction"
+                local policeTxt = "Secured District  -  Under Police Protection"
                 draw.SimpleText(policeTxt, "GRID_UI_Caption", cardX + cardW / 2, cardY + 38, Color(56, 189, 248, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             else
                 local taxCol
@@ -285,7 +285,7 @@ function GRID.Turf.DrawHUD()
                 draw.SimpleText(taxSuffix, "GRID_UI_Caption", startLineX + preW, cardY + 38, Color(taxCol.r, taxCol.g, taxCol.b, a), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             end
         else
-            local unclaimTxt = "Unclaimed Territory  -  Contest Flag Pole to Claim"
+            local unclaimTxt = "Unclaimed Territory  -  Capture flag pole to take control"
             draw.SimpleText(unclaimTxt, "GRID_UI_Caption", cardX + cardW / 2, cardY + 38, Color(251, 191, 36, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
     end

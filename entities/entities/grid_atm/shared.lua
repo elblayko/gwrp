@@ -28,25 +28,40 @@ ENT.OverheadConfig = {
         return Color(52, 211, 153)
     end,
     GetCustomText = function(self)
-        return "Personal Banking & Wire Vault"
+        if CLIENT and GRID.Stocks and GRID.Stocks.ClientListings then
+            local stocks = {}
+            for _, s in pairs(GRID.Stocks.ClientListings) do
+                table.insert(stocks, s)
+            end
+            if #stocks > 0 then
+                local idx = (math.floor(CurTime() / 4) % #stocks) + 1
+                local item = stocks[idx]
+                if item then
+                    local change = item.current_price - (item.price_24h_ago or item.current_price)
+                    local sign = change >= 0 and "+" or ""
+                    return string.format("EXCHANGE: %s $%s (%s%d)", item.ticker, string.Comma(item.current_price), sign, change)
+                end
+            end
+        end
+        return "Personal Banking & Stock Exchange"
     end
 }
 
 ENT.InteractionConfig = {
     Enabled = true,
     MaxUseDistance = 120,
-    Badge = "BANKING",
+    Badge = "FINANCE",
     GetBadgeColor = function(self, ply)
         return Color(52, 211, 153)
     end,
     GetTitle = function(self, ply)
-        return "Street ATM Terminal"
+        return "Street Financial Terminal"
     end,
     GetSubtext = function(self, ply)
         local bank = ply.GetBank and ply:GetBank() or 0
-        return string.format("Secure Wire Network  |  Vault Balance: $%s", string.Comma(bank))
+        return string.format("Secure Wire & Stock Exchange  |  Bank: $%s", string.Comma(bank))
     end,
-    PrimaryAction = "Access Bank",
+    PrimaryAction = "Access Terminal",
     PrimaryKey = "E",
     ShowProgressBar = false,
     CanUse = function(self, ply)

@@ -73,6 +73,22 @@ util.AddNetworkString("GRID_PoliceVoteEnd")
 util.AddNetworkString("GRID_EvidenceInvestigate")
 util.AddNetworkString("GRID_TurfLockdownAction")
 
+-- Gang Stock Market Network Protocols
+util.AddNetworkString("GRID_Stock_RequestListings")
+util.AddNetworkString("GRID_Stock_SendListings")
+util.AddNetworkString("GRID_Stock_RequestHistory")
+util.AddNetworkString("GRID_Stock_SendHistory")
+util.AddNetworkString("GRID_Stock_RequestPortfolio")
+util.AddNetworkString("GRID_Stock_SendPortfolio")
+util.AddNetworkString("GRID_Stock_Buy")
+util.AddNetworkString("GRID_Stock_Sell")
+util.AddNetworkString("GRID_Stock_ClaimDividends")
+util.AddNetworkString("GRID_Stock_IPO")
+util.AddNetworkString("GRID_Stock_IssueShares")
+util.AddNetworkString("GRID_Stock_LeaderBuyback")
+util.AddNetworkString("GRID_Stock_ClearArrears")
+util.AddNetworkString("GRID_Stock_Delisted")
+
 GRID = GRID or {}
 GRID.NetLimits = GRID.NetLimits or {}
 

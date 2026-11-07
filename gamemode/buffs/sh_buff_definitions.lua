@@ -380,3 +380,34 @@ GRID.Buffs.Register("detox", {
         end
     end
 })
+
+-- ========================================================
+-- 10. SYNDICATE INSOLVENCY DEBUFF (STOCK DEFAULT / JUNK)
+-- ========================================================
+GRID.Buffs.Register("syndicate_insolvency", {
+    name = "Gang Debt Default",
+    desc = "Your gang failed to pay stock dividends! Stock is in default, territory capture takes twice as long, and territory payouts go toward debt repayment.",
+    isDebuff = true,
+    canCancel = false,   -- Cannot dismiss while gang is in default
+    persist = true,
+    persistDeath = true, -- Persists across death until arrears are cleared
+    tickOffline = false,
+    maxStacks = 1,
+    duration = 0,        -- Indefinite duration until manually removed by clearing default
+    icon = "wanted",
+    iconColor = Color(239, 68, 68),
+    borderColor = Color(185, 28, 28),
+
+    OnApplied = function(ply, inst, isFirst)
+        if SERVER and isFirst then
+            ply:EmitSound("ambient/alarms/warningbell1.wav", 70, 95)
+            GRID.Notify(ply, "[UNPAID DEBT ALERT] Your gang failed to pay dividends! Territory capture takes twice as long until debt is paid.", NOTIFY_ERROR, 8)
+        end
+    end,
+
+    OnRemoved = function(ply, inst, reason)
+        if SERVER and IsValid(ply) then
+            GRID.Notify(ply, "Gang debt cleared! Territory capture speed and payouts restored.", NOTIFY_GENERIC, 6)
+        end
+    end
+})

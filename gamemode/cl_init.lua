@@ -35,6 +35,8 @@ include("police/sh_jail.lua")
 include("police/cl_jail.lua")
 include("police/sh_voting.lua")
 include("police/cl_voting.lua")
+include("stocks/sh_stocks.lua")
+include("stocks/cl_stocks.lua")
 
 function GM:Initialize()
     print("[GRID-Client] Initializing client interface & Source fonts...")

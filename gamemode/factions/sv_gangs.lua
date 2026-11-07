@@ -198,6 +198,15 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
             return ""
         end
 
+        -- Check Stock Market Disband Lock
+        if GRID.Stocks and GRID.Stocks.Listings and GRID.Stocks.Listings[gang] then
+            local stock = GRID.Stocks.Listings[gang]
+            if (stock.circulating_shares or 0) > 0 then
+                GRID.Notify(ply, string.format("Cannot disband gang: %d public shares of %s are still circulating! You must buy them back first.", stock.circulating_shares, stock.ticker), NOTIFY_ERROR)
+                return ""
+            end
+        end
+
         if GRID.Database and GRID.Database.DisbandGang then
             GRID.Database.DisbandGang(gang)
         end
@@ -276,6 +285,18 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
                 GRID.Notify(ply, string.format("The gang vault only contains $%d!", bank), NOTIFY_ERROR)
                 return ""
             end
+
+            -- Check Stock Market Vault Reserve Floor
+            if GRID.Stocks and GRID.Stocks.Listings and GRID.Stocks.Listings[gang] then
+                local stock = GRID.Stocks.Listings[gang]
+                local nextDivObligation = (stock.circulating_shares or 0) * math.max(1, math.Round((stock.current_price or 10) * (stock.dividend_rate or 0.03)))
+                local reserveFloor = (2 * nextDivObligation) + math.floor((stock.ipo_capital_raised or 0) * 0.25)
+                if (bank - amt) < reserveFloor then
+                    GRID.Notify(ply, string.format("Exchange Reserve Lock: Vault cannot dip below $%s (2x dividend obligation + 25%% IPO reserve)!", string.Comma(reserveFloor)), NOTIFY_ERROR)
+                    return ""
+                end
+            end
+
             if GRID.Database and GRID.Database.TransferGangVault then
                 GRID.Database.TransferGangVault(ply:SteamID(), gang, -amt)
             else
@@ -283,6 +304,9 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
                     GRID.Database.AddGangBank(gang, -amt)
                 end
                 ply:AddMoney(amt)
+            end
+            if GRID.Stocks and GRID.Stocks.RecalculateGangPrice then
+                GRID.Stocks.RecalculateGangPrice(gang, "vault_withdrawal")
             end
             if GRID.Telemetry and GRID.Telemetry.Log then
                 GRID.Telemetry.Log("ECONOMY", "GANG_VAULT_WITHDRAW", ply:SteamID(), gang, amt, {})
@@ -551,13 +575,12 @@ local function HandleGangUIAction(len, ply)
             GRID.Notify(ply, "Invalid amount or insufficient funds!", NOTIFY_ERROR)
             return
         end
-        if GRID.Database and GRID.Database.TransferGangVault then
-            GRID.Database.TransferGangVault(ply:SteamID(), gang, amt)
-        else
-            ply:AddMoney(-amt)
-            if GRID.Database and GRID.Database.AddGangBank then
-                GRID.Database.AddGangBank(gang, amt)
-            end
+        ply:AddMoney(-amt)
+        if GRID.Database and GRID.Database.AddGangBank then
+            GRID.Database.AddGangBank(gang, amt)
+        end
+        if GRID.Stocks and GRID.Stocks.RecalculateGangPrice then
+            GRID.Stocks.RecalculateGangPrice(gang, "vault_deposit")
         end
         if GRID.Telemetry and GRID.Telemetry.Log then
             GRID.Telemetry.Log("ECONOMY", "GANG_VAULT_DEPOSIT", ply:SteamID(), gang, amt, {})
@@ -587,13 +610,24 @@ local function HandleGangUIAction(len, ply)
             GRID.Notify(ply, string.format("The vault only contains $%s!", string.Comma(bank)), NOTIFY_ERROR)
             return
         end
-        if GRID.Database and GRID.Database.TransferGangVault then
-            GRID.Database.TransferGangVault(ply:SteamID(), gang, -amt)
-        else
-            if GRID.Database and GRID.Database.AddGangBank then
-                GRID.Database.AddGangBank(gang, -amt)
+
+        -- Check Stock Market Vault Reserve Floor
+        if GRID.Stocks and GRID.Stocks.Listings and GRID.Stocks.Listings[gang] then
+            local stock = GRID.Stocks.Listings[gang]
+            local nextDivObligation = (stock.circulating_shares or 0) * math.max(1, math.Round((stock.current_price or 10) * (stock.dividend_rate or 0.03)))
+            local reserveFloor = (2 * nextDivObligation) + math.floor((stock.ipo_capital_raised or 0) * 0.25)
+            if (bank - amt) < reserveFloor then
+                GRID.Notify(ply, string.format("Exchange Reserve Lock: Vault cannot dip below $%s (2x dividend obligation + 25%% IPO reserve)!", string.Comma(reserveFloor)), NOTIFY_ERROR)
+                return
             end
-            ply:AddMoney(amt)
+        end
+
+        if GRID.Database and GRID.Database.AddGangBank then
+            GRID.Database.AddGangBank(gang, -amt)
+        end
+        ply:AddMoney(amt)
+        if GRID.Stocks and GRID.Stocks.RecalculateGangPrice then
+            GRID.Stocks.RecalculateGangPrice(gang, "vault_withdrawal")
         end
         if GRID.Telemetry and GRID.Telemetry.Log then
             GRID.Telemetry.Log("ECONOMY", "GANG_VAULT_WITHDRAW", ply:SteamID(), gang, amt, {})
@@ -700,6 +734,16 @@ local function HandleGangUIAction(len, ply)
             GRID.Notify(ply, "Only the gang leader can disband the gang!", NOTIFY_ERROR)
             return
         end
+
+        -- Check Stock Market Disband Lock
+        if GRID.Stocks and GRID.Stocks.Listings and GRID.Stocks.Listings[gang] then
+            local stock = GRID.Stocks.Listings[gang]
+            if (stock.circulating_shares or 0) > 0 then
+                GRID.Notify(ply, string.format("Cannot disband gang: %d public shares of %s are still circulating! You must buy them back first.", stock.circulating_shares, stock.ticker), NOTIFY_ERROR)
+                return
+            end
+        end
+
         if GRID.Database and GRID.Database.DisbandGang then
             GRID.Database.DisbandGang(gang)
         end

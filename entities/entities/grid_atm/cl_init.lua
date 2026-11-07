@@ -1,117 +1,45 @@
 --[[
     entities/entities/grid_atm/cl_init.lua
-    GridRP Street ATM Banking Terminal - Client UI
+    GridRP Street ATM Banking Terminal & Stock Exchange Hub - Client UI
     Author: GRID Core Team & Antigravity
 --]]
 
 include("shared.lua")
 
--- ENT:Draw is inherited from grid_base_interactive, handling both ENT:DrawModel and ENT.OverheadConfig
-
--- --------------------------------------------------------
--- Interactive Banking Derma UI
--- --------------------------------------------------------
 local atmFrame = nil
 
-net.Receive("GRID_ATM_Open", function()
-    local atmEnt = net.ReadEntity()
-    local walletMoney = net.ReadUInt(32)
-    local bankMoney = net.ReadUInt(32)
+local function BuildBankingTab(container, frame)
+    container:Clear()
 
-    if IsValid(atmFrame) then
-        atmFrame.atmEnt = atmEnt
-        atmFrame.walletMoney = walletMoney
-        atmFrame.bankMoney = bankMoney
-        return
-    end
+    local p = LocalPlayer()
+    local subX = 16
+    local subY = 16
+    local subW = container:GetWide() - 32
+    if subW <= 0 then subW = 1048 end
+    local subH = 80
 
-    local fW, fH = 480, 360
-    atmFrame = vgui.Create("DFrame")
-    atmFrame:SetSize(fW, fH)
-    atmFrame:Center()
-    atmFrame:SetTitle("")
-    atmFrame:MakePopup()
-    atmFrame:ShowCloseButton(false)
-    atmFrame.atmEnt = atmEnt
-    atmFrame.walletMoney = walletMoney
-    atmFrame.bankMoney = bankMoney
-
-    -- Allow ESC to close cleanly
-    atmFrame.OnKeyCodePressed = function(s, key)
-        if key == KEY_ESCAPE then
-            s:Close()
-        end
-    end
-
-    atmFrame.Paint = function(s, w, h)
-        -- Primary Obsidian Background
-        draw.RoundedBox(8, 0, 0, w, h, Color(11, 15, 25, 252))
-        surface.SetDrawColor(30, 41, 59, 240)
+    -- Account Balances Sub-Card
+    local balanceCard = vgui.Create("DPanel", container)
+    balanceCard:SetPos(subX, subY)
+    balanceCard:SetSize(subW, subH)
+    balanceCard.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(20, 29, 47, 230))
+        surface.SetDrawColor(30, 41, 59, 200)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-        -- Header Strip
-        draw.RoundedBoxEx(8, 0, 0, w, 44, Color(17, 24, 39, 255), true, true, false, false)
-        surface.SetDrawColor(30, 41, 59, 255)
-        surface.DrawLine(0, 43, w, 43)
+        surface.DrawLine(w / 2, 10, w / 2, h - 10)
 
-        -- Top Emerald Accent Line
-        draw.RoundedBox(2, 0, 0, w, 3, Color(52, 211, 153))
+        draw.SimpleText("CARRIED WALLET", "GRID_UI_Caption", 24, 22, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("$" .. string.Comma(frame.walletMoney or 0), "GRID_UI_Price", 24, 52, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
-        -- Status Pill [ATM]
-        surface.SetFont("GRID_UI_Badge")
-        local badgeText = "ATM"
-        local bW = surface.GetTextSize(badgeText) + 16
-        draw.RoundedBox(4, 16, 11, bW, 22, Color(52, 211, 153, 40))
-        surface.SetDrawColor(52, 211, 153, 160)
-        surface.DrawOutlinedRect(16, 11, bW, 22, 1)
-        draw.SimpleText(badgeText, "GRID_UI_Badge", 16 + bW / 2, 22, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-
-        -- Header Title
-        draw.SimpleText("SECURE WIRE & BANK VAULT", "GRID_UI_Header", 16 + bW + 12, 22, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-        -- Account Balances Sub-Card
-        local subX = 16
-        local subY = 56
-        local subW = w - 32
-        local subH = 74
-        draw.RoundedBox(6, subX, subY, subW, subH, Color(20, 29, 47, 230))
-        surface.SetDrawColor(30, 41, 59, 200)
-        surface.DrawOutlinedRect(subX, subY, subW, subH, 1)
-
-        -- Vertical divider between wallet and bank
-        surface.DrawLine(subX + subW / 2, subY + 10, subX + subW / 2, subY + subH - 10)
-
-        -- Left: Wallet Cash
-        draw.SimpleText("CARRIED WALLET", "GRID_UI_Caption", subX + 16, subY + 20, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("$" .. string.Comma(s.walletMoney or 0), "GRID_UI_Price", subX + 16, subY + 48, Color(245, 158, 11), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-        -- Right: Bank Vault
-        draw.SimpleText("CLEAN VAULT BALANCE", "GRID_UI_Caption", subX + subW / 2 + 16, subY + 20, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("$" .. string.Comma(s.bankMoney or 0), "GRID_UI_Price", subX + subW / 2 + 16, subY + 48, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-    end
-
-    -- Close Button [X]
-    local closeBtn = vgui.Create("DButton", atmFrame)
-    closeBtn:SetSize(28, 28)
-    closeBtn:SetPos(fW - 38, 8)
-    closeBtn:SetText("X")
-    closeBtn:SetFont("GRID_UI_Btn")
-    closeBtn:SetTextColor(Color(203, 213, 225))
-    closeBtn.Paint = function(s, w, h)
-        if s:IsHovered() then
-            draw.RoundedBox(4, 0, 0, w, h, Color(239, 68, 68, 200))
-        else
-            draw.RoundedBox(4, 0, 0, w, h, Color(30, 41, 59, 140))
-        end
-    end
-    closeBtn.DoClick = function()
-        atmFrame:Close()
+        draw.SimpleText("CLEAN VAULT BALANCE", "GRID_UI_Caption", (w / 2) + 24, 22, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("$" .. string.Comma(frame.bankMoney or 0), "GRID_UI_Price", (w / 2) + 24, 52, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 
     -- Transaction Amount Input Field
-    local amountEntry = vgui.Create("DTextEntry", atmFrame)
-    amountEntry:SetPos(16, 142)
-    amountEntry:SetSize(fW - 32, 42)
+    local amountEntry = vgui.Create("DTextEntry", container)
+    amountEntry:SetPos(subX, subY + subH + 20)
+    amountEntry:SetSize(subW, 46)
     amountEntry:SetFont("GRID_UI_Header")
     amountEntry:SetPlaceholderText("Enter transaction amount ($)...")
     amountEntry:SetNumeric(true)
@@ -126,12 +54,13 @@ net.Receive("GRID_ATM_Open", function()
     end
 
     -- Quick Amount Shortcut Pills
-    local quickAmounts = { 500, 2500, 10000, "MAX" }
-    local pillW = (fW - 32 - 18) / 4
+    local quickAmounts = { 500, 2500, 10000, 50000, "MAX" }
+    local pillW = (subW - (4 * 10)) / 5
+    local pillY = subY + subH + 78
     for i, amt in ipairs(quickAmounts) do
-        local qBtn = vgui.Create("DButton", atmFrame)
-        qBtn:SetPos(16 + (i - 1) * (pillW + 6), 194)
-        qBtn:SetSize(pillW, 28)
+        local qBtn = vgui.Create("DButton", container)
+        qBtn:SetPos(subX + ((i - 1) * (pillW + 10)), pillY)
+        qBtn:SetSize(pillW, 32)
         local btnLabel = (amt == "MAX") and "MAX" or ("+$" .. string.Comma(amt))
         qBtn:SetText(btnLabel)
         qBtn:SetFont("GRID_UI_Badge")
@@ -144,7 +73,7 @@ net.Receive("GRID_ATM_Open", function()
         end
         qBtn.DoClick = function()
             if amt == "MAX" then
-                amountEntry:SetText(tostring(atmFrame.walletMoney or 0))
+                amountEntry:SetText(tostring(frame.walletMoney or 0))
             else
                 local cur = tonumber(amountEntry:GetValue()) or 0
                 amountEntry:SetText(tostring(cur + amt))
@@ -152,54 +81,55 @@ net.Receive("GRID_ATM_Open", function()
         end
     end
 
-    -- Primary Action: Deposit Cash
-    local btnDeposit = vgui.Create("DButton", atmFrame)
-    btnDeposit:SetPos(16, 234)
-    btnDeposit:SetSize((fW - 40) / 2, 46)
+    -- Primary Actions: Deposit Cash & Withdraw Cash
+    local actY = pillY + 48
+    local actW = (subW - 16) / 2
+
+    local btnDeposit = vgui.Create("DButton", container)
+    btnDeposit:SetPos(subX, actY)
+    btnDeposit:SetSize(actW, 52)
     btnDeposit:SetText("DEPOSIT CASH")
     btnDeposit:SetFont("GRID_UI_Btn")
     btnDeposit:SetTextColor(Color(248, 250, 252))
     btnDeposit.Paint = function(s, w, h)
-        local col = s:IsHovered() and Color(52, 211, 153, 240) or Color(16, 185, 129, 200)
-        draw.RoundedBox(6, 0, 0, w, h, col)
+        draw.RoundedBox(6, 0, 0, w, h, s:IsHovered() and Color(52, 211, 153, 240) or Color(16, 185, 129, 200))
     end
     btnDeposit.DoClick = function()
         local amt = tonumber(amountEntry:GetValue()) or 0
         if amt <= 0 then return end
         net.Start("GRID_ATM_Action")
-            net.WriteEntity(atmFrame.atmEnt)
-            net.WriteBool(true)
-            net.WriteUInt(amt, 32)
+        net.WriteEntity(frame.atmEnt)
+        net.WriteBool(true)
+        net.WriteUInt(amt, 32)
         net.SendToServer()
         amountEntry:SetText("")
     end
 
-    -- Primary Action: Withdraw Cash
-    local btnWithdraw = vgui.Create("DButton", atmFrame)
-    btnWithdraw:SetPos(24 + ((fW - 40) / 2), 234)
-    btnWithdraw:SetSize((fW - 40) / 2, 46)
+    local btnWithdraw = vgui.Create("DButton", container)
+    btnWithdraw:SetPos(subX + actW + 16, actY)
+    btnWithdraw:SetSize(actW, 52)
     btnWithdraw:SetText("WITHDRAW CASH")
     btnWithdraw:SetFont("GRID_UI_Btn")
     btnWithdraw:SetTextColor(Color(248, 250, 252))
     btnWithdraw.Paint = function(s, w, h)
-        local col = s:IsHovered() and Color(56, 189, 248, 240) or Color(6, 182, 212, 200)
-        draw.RoundedBox(6, 0, 0, w, h, col)
+        draw.RoundedBox(6, 0, 0, w, h, s:IsHovered() and Color(56, 189, 248, 240) or Color(6, 182, 212, 200))
     end
     btnWithdraw.DoClick = function()
         local amt = tonumber(amountEntry:GetValue()) or 0
         if amt <= 0 then return end
         net.Start("GRID_ATM_Action")
-            net.WriteEntity(atmFrame.atmEnt)
-            net.WriteBool(false)
-            net.WriteUInt(amt, 32)
+        net.WriteEntity(frame.atmEnt)
+        net.WriteBool(false)
+        net.WriteUInt(amt, 32)
         net.SendToServer()
         amountEntry:SetText("")
     end
 
-    -- Secondary Action: Deposit All
-    local btnDepositAll = vgui.Create("DButton", atmFrame)
-    btnDepositAll:SetPos(16, 292)
-    btnDepositAll:SetSize((fW - 40) / 2, 34)
+    -- Secondary Actions: Deposit All & Withdraw All
+    local secY = actY + 62
+    local btnDepositAll = vgui.Create("DButton", container)
+    btnDepositAll:SetPos(subX, secY)
+    btnDepositAll:SetSize(actW, 40)
     btnDepositAll:SetText("DEPOSIT ALL WALLET")
     btnDepositAll:SetFont("GRID_UI_Badge")
     btnDepositAll:SetTextColor(Color(203, 213, 225))
@@ -210,20 +140,19 @@ net.Receive("GRID_ATM_Open", function()
         surface.DrawOutlinedRect(0, 0, w, h, 1)
     end
     btnDepositAll.DoClick = function()
-        local curWallet = atmFrame.walletMoney or 0
-        if curWallet <= 0 then return end
+        local cur = frame.walletMoney or 0
+        if cur <= 0 then return end
         net.Start("GRID_ATM_Action")
-            net.WriteEntity(atmFrame.atmEnt)
-            net.WriteBool(true)
-            net.WriteUInt(curWallet, 32)
+        net.WriteEntity(frame.atmEnt)
+        net.WriteBool(true)
+        net.WriteUInt(cur, 32)
         net.SendToServer()
         amountEntry:SetText("")
     end
 
-    -- Secondary Action: Withdraw All
-    local btnWithdrawAll = vgui.Create("DButton", atmFrame)
-    btnWithdrawAll:SetPos(24 + ((fW - 40) / 2), 292)
-    btnWithdrawAll:SetSize((fW - 40) / 2, 34)
+    local btnWithdrawAll = vgui.Create("DButton", container)
+    btnWithdrawAll:SetPos(subX + actW + 16, secY)
+    btnWithdrawAll:SetSize(actW, 40)
     btnWithdrawAll:SetText("WITHDRAW ALL VAULT")
     btnWithdrawAll:SetFont("GRID_UI_Badge")
     btnWithdrawAll:SetTextColor(Color(203, 213, 225))
@@ -234,13 +163,146 @@ net.Receive("GRID_ATM_Open", function()
         surface.DrawOutlinedRect(0, 0, w, h, 1)
     end
     btnWithdrawAll.DoClick = function()
-        local curBank = atmFrame.bankMoney or 0
-        if curBank <= 0 then return end
+        local cur = frame.bankMoney or 0
+        if cur <= 0 then return end
         net.Start("GRID_ATM_Action")
-            net.WriteEntity(atmFrame.atmEnt)
-            net.WriteBool(false)
-            net.WriteUInt(curBank, 32)
+        net.WriteEntity(frame.atmEnt)
+        net.WriteBool(false)
+        net.WriteUInt(cur, 32)
         net.SendToServer()
         amountEntry:SetText("")
     end
+end
+
+net.Receive("GRID_ATM_Open", function()
+    local atmEnt = net.ReadEntity()
+    local walletMoney = net.ReadUInt(32)
+    local bankMoney = net.ReadUInt(32)
+
+    if IsValid(atmFrame) then
+        atmFrame.atmEnt = atmEnt
+        atmFrame.walletMoney = walletMoney
+        atmFrame.bankMoney = bankMoney
+        if atmFrame.CurrentTab == "bank" and IsValid(atmFrame.ContentPane) then
+            BuildBankingTab(atmFrame.ContentPane, atmFrame)
+        end
+        return
+    end
+
+    local fW, fH = 1080, 720
+    atmFrame = vgui.Create("DFrame")
+    atmFrame:SetSize(fW, fH)
+    atmFrame:Center()
+    atmFrame:SetTitle("")
+    atmFrame:MakePopup()
+    atmFrame:ShowCloseButton(false)
+    atmFrame.atmEnt = atmEnt
+    atmFrame.walletMoney = walletMoney
+    atmFrame.bankMoney = bankMoney
+    atmFrame.CurrentTab = "bank"
+
+    atmFrame.OnKeyCodePressed = function(s, key)
+        if key == KEY_ESCAPE then
+            s:Close()
+        end
+    end
+
+    atmFrame.Paint = function(s, w, h)
+        -- Primary Obsidian Background
+        draw.RoundedBox(8, 0, 0, w, h, Color(11, 15, 25, 252))
+        surface.SetDrawColor(30, 41, 59, 240)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+        -- Header Strip
+        draw.RoundedBoxEx(8, 0, 0, w, 52, Color(17, 24, 39, 255), true, true, false, false)
+        surface.SetDrawColor(30, 41, 59, 255)
+        surface.DrawLine(0, 51, w, 51)
+
+        -- Top Emerald Accent Line
+        draw.RoundedBox(2, 0, 0, w, 3, Color(52, 211, 153))
+
+        -- Status Pill [ATM / EXCHANGE]
+        local badgeText = "STREET TERMINAL"
+        draw.RoundedBox(4, 16, 14, 128, 24, Color(52, 211, 153, 40))
+        surface.SetDrawColor(52, 211, 153, 160)
+        surface.DrawOutlinedRect(16, 14, 128, 24, 1)
+        draw.SimpleText(badgeText, "GRID_UI_Badge", 80, 26, Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+        -- Header Title
+        draw.SimpleText("SECURE WIRE VAULT & GANG STOCK EXCHANGE", "GRID_UI_Header", 156, 26, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+
+    -- Close Button [X]
+    local closeBtn = vgui.Create("DButton", atmFrame)
+    closeBtn:SetSize(36, 36)
+    closeBtn:SetPos(fW - 46, 8)
+    closeBtn:SetText("X")
+    closeBtn:SetFont("GRID_UI_Header")
+    closeBtn:SetTextColor(Color(203, 213, 225))
+    closeBtn.Paint = function(s, w, h)
+        draw.RoundedBox(4, 0, 0, w, h, s:IsHovered() and Color(239, 68, 68, 220) or Color(30, 41, 59, 140))
+    end
+    closeBtn.DoClick = function()
+        atmFrame:Close()
+    end
+
+    -- Navigation Bar (Tabs: Bank Vault vs Stock Exchange)
+    local navBar = vgui.Create("DPanel", atmFrame)
+    navBar:SetPos(16, 60)
+    navBar:SetSize(fW - 32, 40)
+    navBar.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 220))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+    end
+
+    local contentPane = vgui.Create("DPanel", atmFrame)
+    contentPane:SetPos(16, 108)
+    contentPane:SetSize(fW - 32, fH - 124)
+    contentPane.Paint = function() end
+    atmFrame.ContentPane = contentPane
+
+    local function SwitchATMTab(tabKey)
+        atmFrame.CurrentTab = tabKey
+        contentPane:Clear()
+        if tabKey == "bank" then
+            BuildBankingTab(contentPane, atmFrame)
+        elseif tabKey == "stocks" then
+            if GRID.Stocks and GRID.Stocks.CreateExchangeTab then
+                GRID.Stocks.CreateExchangeTab(contentPane, atmEnt)
+            end
+        end
+    end
+
+    local tabButtons = {
+        { id = "bank", title = "PERSONAL BANKING & WIRE VAULT" },
+        { id = "stocks", title = "GANG STOCK EXCHANGE" }
+    }
+
+    local tW = (fW - 32 - 12) / 2
+    for i, t in ipairs(tabButtons) do
+        local btn = vgui.Create("DButton", navBar)
+        btn:SetPos((i - 1) * (tW + 12), 0)
+        btn:SetSize(tW, 40)
+        btn:SetText(t.title)
+        btn:SetFont("GRID_UI_Btn")
+
+        btn.Paint = function(s, w, h)
+            local isActive = (atmFrame.CurrentTab == t.id)
+            local bg = isActive and Color(30, 41, 59, 255) or (s:IsHovered() and Color(24, 32, 47, 200) or Color(0, 0, 0, 0))
+            draw.RoundedBox(6, 0, 0, w, h, bg)
+
+            if isActive then
+                draw.RoundedBox(2, 6, h - 3, w - 12, 3, Color(52, 211, 153))
+            end
+
+            s:SetTextColor(isActive and Color(248, 250, 252) or Color(148, 163, 184))
+        end
+
+        btn.DoClick = function()
+            SwitchATMTab(t.id)
+        end
+    end
+
+    SwitchATMTab("bank")
 end)

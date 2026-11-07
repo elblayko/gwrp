@@ -123,12 +123,31 @@ function ENT:Use(activator, caller)
 
     -- Begin progressive lockpick-style capture
     local duration = (GRID.Config and GRID.Config.TurfCaptureTime) or 15
+
+    -- Double capture duration if capturing player's gang is in default
+    if GRID.Stocks and GRID.Stocks.Listings and GRID.Stocks.Listings[claimant] then
+        if GRID.Stocks.Listings[claimant].is_defaulted then
+            duration = duration * 2
+            GRID.Notify(activator, "[SYNDICATE INSOLVENCY] Capture duration doubled due to defaulted stock status!", NOTIFY_ERROR, 5)
+        end
+    end
+
     self:SetIsCapturing(true)
     self:SetCaptureStartTime(CurTime())
     self:SetCaptureEndTime(CurTime() + duration)
     self:SetCapturingPlayer(activator)
     self:SetCapturingGang(claimant)
     self.NextBeep = CurTime() + 0.8
+
+    -- Trigger Combat Trading Halt for both contesting and defending gangs
+    if GRID.Stocks and GRID.Stocks.TriggerCombatHalt then
+        if claimant ~= "" and claimant ~= "Police" then
+            GRID.Stocks.TriggerCombatHalt(claimant, 90, "Contesting Territory: " .. zone.name)
+        end
+        if zone.owner and zone.owner ~= "" and zone.owner ~= "neutral" and zone.owner ~= "Police" then
+            GRID.Stocks.TriggerCombatHalt(zone.owner, 90, "Defending Territory: " .. zone.name)
+        end
+    end
 
     self:EmitSound("ambient/machines/thumper_startup1.wav", 75, 115)
     GRID.Notify(activator,

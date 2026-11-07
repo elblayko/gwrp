@@ -237,6 +237,17 @@ function ENT:Use(activator, caller)
             string.format("Printer confiscated for +$%d bounty!", bounty)
         GRID.Notify(activator, msg, NOTIFY_GENERIC)
         activator:EmitSound("ambient/levels/labs/coinslot1.wav")
+
+        -- Stock Market Raid Shock & Trading Halt on Contraband Seizure
+        local zone = GRID.Turf and GRID.Turf.GetZoneAtPos and GRID.Turf.GetZoneAtPos(self:GetPos())
+        local targetGang = (zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police") and zone.owner or ""
+        if targetGang == "" and self.GRID_Owner and IsValid(self.GRID_Owner) and self.GRID_Owner:IsPlayer() then
+            targetGang = self.GRID_Owner:GetRawGang()
+        end
+        if targetGang ~= "" and GRID.Stocks then
+            GRID.Stocks.TriggerCombatHalt(targetGang, 90, "Police Contraband Raid")
+            GRID.Stocks.AdjustSentiment(targetGang, -0.05, "printer_confiscated")
+        end
         if self.HumSound then self.HumSound:Stop() end
         timer.Remove("GRID_PrintTick_" .. self:EntIndex())
         self:SetVentActive(false)

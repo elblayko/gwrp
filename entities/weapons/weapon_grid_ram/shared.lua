@@ -144,6 +144,16 @@ function SWEP:PrimaryAttack()
                 if zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police" and GRID.Turf.SendIncursionAlert then
                     GRID.Turf.SendIncursionAlert(zone, "Police Incursion! SWAT breached a door in " .. zone.name .. "!")
                 end
+
+                -- Stock Market Circuit Breaker & Raid Shock on Door Breach
+                local targetGang = (zone and zone.owner and zone.owner ~= "neutral" and zone.owner ~= "Police") and zone.owner or ""
+                if targetGang == "" and IsValid(doorOwner) then
+                    targetGang = doorOwner:GetRawGang()
+                end
+                if targetGang ~= "" and GRID.Stocks then
+                    GRID.Stocks.TriggerCombatHalt(targetGang, 90, "SWAT Tactical Breach")
+                    GRID.Stocks.AdjustSentiment(targetGang, -0.05, "base_breached")
+                end
             elseif ent:GetClass() == "prop_physics" then
                 local phys = ent:GetPhysicsObject()
                 if IsValid(phys) then

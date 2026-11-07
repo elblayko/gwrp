@@ -30,11 +30,11 @@ GRID.Config.DefaultRespawnTime = 30 -- Baseline respawn time for all players (se
 GRID.Config.PoliceRespawnTime = 5   -- Rapid dispatch respawn for base police officer (seconds)
 
 -- Turf Warfare
-GRID.Config.TurfCaptureRadius = 450   -- Hammer units
-GRID.Config.TurfCaptureTime = 15      -- seconds of holding uncontested to capture
-GRID.Config.TurfDividendInterval = 90 -- seconds between turf payouts
-GRID.Config.TurfDividendAmount = 25   -- cash given to each online gang member per owned turf
-GRID.Config.TurfCaptureReward = 40    -- instant cash reward to capturing player
+GRID.Config.TurfCaptureRadius = 450       -- Hammer units
+GRID.Config.TurfCaptureTime = 15          -- seconds of holding uncontested to capture
+GRID.Config.TurfDividendInterval = 90     -- seconds between turf payouts
+GRID.Config.TurfDividendAmount = 25       -- cash given to each online gang member per owned turf
+GRID.Config.TurfCaptureReward = 40        -- instant cash reward to capturing player
 GRID.Config.AllowLowPopTurfCapture = true -- When true, permits territory capture during Low Pop mode (<4 players) for server launch & onboarding
 
 -- Contraband Money Printers & Networking
@@ -43,6 +43,32 @@ GRID.Config.PoliceBountyPerPrinter = 125
 GRID.Config.PoliceBountyPerSwitch = 50
 GRID.Config.PoliceBountyPerModule = 25
 GRID.Config.EntityHUDViewDistance = 380 -- Shared max 3D2D HUD visibility distance for printers & synthesizers
+
+-- Gang Stock Market & Exchange Dynamics
+GRID.Config.Stocks = {
+    TotalShares = 1000,
+    MaxSharesForSalePct = 0.49,    -- Up to 490 shares for sale to players
+    MaxPublicFloatPct = 0.49,      -- Backward compatibility alias
+    MinVaultForIPO = 10000,        -- Minimum gang vault to list on exchange
+    IPOListingFeeFlat = 1500,      -- Burned listing sink
+    IPOListingFeeVaultPct = 0.03,  -- 3% vault fee
+    TurfBaseValuation = 2500,      -- Value added to gang valuation per controlled turf
+    DividendInterval = 900,        -- 15 minutes per dividend cycle
+    HistorySnapshotInterval = 300, -- 5 minutes per historical snapshot
+    SentimentDecayRate = 0.10,     -- 10% decay per cycle toward fundamental 1.0x baseline (0.0 = no decay, 0.25 = rapid decay)
+    EntryBrokerFeePct = 0.05,      -- 5% fee burned on buy orders
+    ExitBrokerFeePct = 0.075,      -- 7.5% fee burned on sell orders
+    InsiderExtraExitFeePct = 0.02, -- +2% additional exit fee for gang insiders
+    StandardVestingSecs = 180,     -- 3 minute lock before resale
+    InsiderVestingSecs = 600,      -- 10 minutes lock for insiders
+    CombatHaltDuration = 30,       -- 90 seconds two-way trading halt on combat/raid/breach
+    KillBoost = 0.015,             -- +1.5% sentiment boost on rival gang kill
+    MemberDeathDrop = 0.02,        -- -2.0% sentiment drop on member death
+    LeaderDeathDrop = 0.12,        -- -12.0% sentiment shock on leader death
+    RaidPenalty = 0.05,            -- -5.0% sentiment shock on door breach / printer seizure
+    AntiFarmCooldown = 300,        -- 5 minutes victim pair cooldown
+    DefaultMultiplier = 0.50,      -- 50% valuation haircut while defaulted
+}
 
 -- Thermal Regulation & Undervolt Module
 GRID.Config.PrinterHeatRiseStandard = 4    -- +4C per cycle

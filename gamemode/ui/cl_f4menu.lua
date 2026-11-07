@@ -205,7 +205,8 @@ function GRID.UI.ToggleF4Menu()
             tabs = {
                 { id = "jobs",      title = "Careers & Jobs", badge = table.Count(GRID.Jobs or {}) },
                 { id = "inventory", title = "Inventory",      badge = invBadge },
-                { id = "auction",   title = "Auction House", badge = "AH" }
+                { id = "auction",   title = "Auction House",  badge = "AH" },
+                { id = "stocks",    title = "Stock Market",   badge = "STX" }
             }
         },
         {
@@ -270,6 +271,14 @@ function GRID.UI.ToggleF4Menu()
 
     local function SwitchTab(tabId)
         GRID.UI.ActiveF4Tab = tabId
+        if tabId == "gang" then
+            local now = CurTime()
+            if not GRID.UI.LastGangRequest or (now - GRID.UI.LastGangRequest) > 3 then
+                GRID.UI.LastGangRequest = now
+                net.Start("GRID_RequestGangData")
+                net.SendToServer()
+            end
+        end
         contentPanel:Clear()
         GRID.UI.RenderContentTab(contentPanel, tabId, frame)
     end
@@ -465,6 +474,8 @@ function GRID.UI.RenderContentTab(container, tabId, mainFrame)
         GRID.UI.PopulateInventoryGrid(scroll, mainFrame, "")
     elseif tabId == "police_dispatch" then
         GRID.UI.RenderPoliceDispatchContent(scroll, mainFrame)
+    elseif tabId == "stocks" then
+        GRID.UI.RenderStockMarketContent(scroll, mainFrame)
     else
         GRID.UI.PopulateGrid(scroll, tabId, mainFrame, "")
     end
@@ -553,20 +564,103 @@ function GRID.UI.RenderGuideContent(scroll)
 end
 
 -- ==========================================
+-- GANG STOCK MARKET OVERVIEW (F4 INTEGRATION)
+-- ==========================================
+
+function GRID.UI.RenderStockMarketContent(scroll, mainFrame)
+    local scrollW = scroll:GetWide() - 24
+
+    -- Marquee Ticker
+    if GRID.Stocks and GRID.Stocks.CreateTickerBar then
+        local ticker = GRID.Stocks.CreateTickerBar(scroll, scrollW, 36)
+        ticker:Dock(TOP)
+        ticker:DockMargin(0, 0, 0, 12)
+    end
+
+    -- Prompt card
+    local notice = scroll:Add("DPanel")
+    notice:Dock(TOP)
+    notice:DockMargin(0, 0, 0, 12)
+    notice:SetTall(48)
+    notice.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(20, 29, 47, 220))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+        draw.SimpleText("NOTICE: To buy shares, sell shares, or claim dividends, access any Street ATM terminal in the city.", "GRID_UI_Body", 16, h / 2, Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    end
+
+    -- Interactive Line Chart
+    if GRID.Stocks and GRID.Stocks.CreateChartPanel then
+        local chart = GRID.Stocks.CreateChartPanel(scroll, scrollW, 260)
+        chart:Dock(TOP)
+        chart:DockMargin(0, 0, 0, 14)
+
+        local firstListing = next(GRID.Stocks.ClientListings or {})
+        if firstListing then
+            chart:SetGang(firstListing)
+        end
+    end
+
+    -- Public listings grid
+    local listings = {}
+    for _, s in pairs(GRID.Stocks.ClientListings or {}) do
+        table.insert(listings, s)
+    end
+    table.sort(listings, function(a, b) return (a.current_price or 0) > (b.current_price or 0) end)
+
+    for _, s in ipairs(listings) do
+        local card = scroll:Add("DPanel")
+        card:Dock(TOP)
+        card:DockMargin(0, 0, 0, 8)
+        card:SetTall(60)
+        card.Paint = function(pnl, w, h)
+            draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+            local statusStr = "ACTIVE"
+            local statusCol = Color(52, 211, 153)
+            if s.is_defaulted then
+                statusStr = "DEFAULTED / JUNK"
+                statusCol = Color(239, 68, 68)
+            elseif s.is_halted then
+                statusStr = string.format("HALTED (%ds)", s.halt_secs or 0)
+                statusCol = Color(245, 158, 11)
+            end
+
+            draw.SimpleText(s.ticker, "GRID_UI_Header", 16, 20, Color(248, 250, 252))
+            draw.SimpleText(s.gang_name, "GRID_UI_Caption", 16, 42, Color(148, 163, 184))
+
+            draw.SimpleText("PRICE: $" .. string.Comma(s.current_price), "GRID_UI_Header", 220, 20, Color(52, 211, 153))
+            local chg = s.current_price - (s.price_24h_ago or s.current_price)
+            local pct = (s.price_24h_ago and s.price_24h_ago > 0) and ((chg / s.price_24h_ago) * 100) or 0
+            draw.SimpleText(string.format("24h: %s%.1f%%", chg >= 0 and "+" or "", pct), "GRID_UI_Caption", 220, 42, chg >= 0 and Color(74, 222, 128) or Color(248, 113, 113))
+
+            draw.SimpleText(string.format("FLOAT: %d / %d", s.circulating_shares, s.issued_shares), "GRID_UI_Body", 400, 20, Color(203, 213, 225))
+            draw.SimpleText(string.format("DIVIDEND: %.1f%%", (s.dividend_rate or 0.03) * 100), "GRID_UI_Caption", 400, 42, Color(148, 163, 184))
+
+            draw.SimpleText(statusStr, "GRID_UI_Badge", w - 16, h / 2, statusCol, TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        end
+    end
+end
+
+-- ==========================================
 -- GANG MANAGEMENT DASHBOARD (VIEW GANG)
 -- ==========================================
 
 function GRID.UI.RenderGangContent(scroll, mainFrame)
     local ply = LocalPlayer()
-
-    -- Request latest sync data from server
-    net.Start("GRID_RequestGangData")
-    net.SendToServer()
-
     local data = GRID.UI.ClientGangData
 
-    -- Loading Placeholder
+    -- Loading Placeholder (only request if data not cached yet)
     if not data then
+        local now = CurTime()
+        if not GRID.UI.LastGangRequest or (now - GRID.UI.LastGangRequest) > 3 then
+            GRID.UI.LastGangRequest = now
+            net.Start("GRID_RequestGangData")
+            net.SendToServer()
+        end
+
         local loading = scroll:Add("DPanel")
         loading:Dock(TOP)
         loading:SetTall(160)

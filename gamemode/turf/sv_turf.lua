@@ -254,6 +254,7 @@ function GRID.Turf.FinalizeCapture(turfId, ply, claimant)
     local zone = GRID.Turf.Zones[turfId]
     if not zone then return end
 
+    local oldOwner = zone.owner
     zone.owner = claimant
     zone.progress = 100
     zone.captured_at = os.time()
@@ -268,6 +269,18 @@ function GRID.Turf.FinalizeCapture(turfId, ply, claimant)
 
     if claimant == "Police" and GRID.Turf.IsLockdownActive() then
         GRID.Turf.EndLockdown("police_capture", zone.name)
+    end
+
+    -- Recalculate Stock Valuations for both gangs
+    if GRID.Stocks and GRID.Stocks.RecalculateGangPrice then
+        if oldOwner and oldOwner ~= "" and oldOwner ~= "neutral" and oldOwner ~= "Police" then
+            GRID.Stocks.AdjustSentiment(oldOwner, -0.05, "lost_turf_" .. zone.name)
+            GRID.Stocks.RecalculateGangPrice(oldOwner, "lost_turf")
+        end
+        if claimant ~= "" and claimant ~= "neutral" and claimant ~= "Police" then
+            GRID.Stocks.AdjustSentiment(claimant, 0.05, "captured_turf_" .. zone.name)
+            GRID.Stocks.RecalculateGangPrice(claimant, "captured_turf")
+        end
     end
 
     local reward = (GRID.Config and GRID.Config.TurfCaptureReward) or 40
@@ -301,11 +314,29 @@ function GRID.Turf.DistributeDividends()
 
         if claim ~= "" and payouts[string.lower(claim)] then
             local amount = payouts[string.lower(claim)]
-            ply:AddMoney(amount)
-            if ply.AddXP then
-                ply:AddXP((GRID.Config and GRID.Config.Level and GRID.Config.Level.XP_TurfHoldTick) or 25, "Territory Domination")
+
+            -- Stock Market Check: Garnish dividends if syndicate is in default arrears
+            local garnished = false
+            if GRID.Stocks and GRID.Stocks.Listings and GRID.Stocks.Listings[claim] then
+                local stock = GRID.Stocks.Listings[claim]
+                if stock.is_defaulted and (stock.dividend_arrears or 0) > 0 then
+                    garnished = true
+                    GRID.Stocks.GarnishRevenue(claim, amount, "Turf Dividends")
+                    GRID.Notify(ply, string.format("[DEBT PAYMENT] Territory payout ($%d) was applied toward paying off your gang's unpaid debt (%s)!", amount, claim), NOTIFY_ERROR, 5)
+                else
+                    -- Healthy listed syndicate: 15% matched liquidity contribution to AMM Reserve
+                    local ammInjection = math.floor(amount * 0.15)
+                    stock.amm_reserve = (stock.amm_reserve or 0) + ammInjection
+                end
             end
-            GRID.Notify(ply, string.format("Earned +$%d dividend from controlled territories (%s)", amount, claim), NOTIFY_GENERIC)
+
+            if not garnished then
+                ply:AddMoney(amount)
+                if ply.AddXP then
+                    ply:AddXP((GRID.Config and GRID.Config.Level and GRID.Config.Level.XP_TurfHoldTick) or 25, "Territory Domination")
+                end
+                GRID.Notify(ply, string.format("Earned +$%d dividend from controlled territories (%s)", amount, claim), NOTIFY_GENERIC)
+            end
         end
     end
 end
@@ -591,9 +622,9 @@ function GRID.Turf.EndLockdown(reason, extra)
 
     local msg = "[LOCKDOWN LIFTED] The citywide martial law lockdown has concluded."
     if reason == "police_capture" then
-        msg = string.format("[LOCKDOWN LIFTED] Civil Protection reclaimed %s! Normal law enforcement protocols restored.", extra or "territory")
+        msg = string.format("[LOCKDOWN LIFTED] Police recaptured %s! Normal laws have been restored.", extra or "territory")
     elseif reason == "mayor_death" then
-        msg = "[LOCKDOWN TERMINATED] The Mayor was eliminated in the line of duty! Citywide martial law has been suspended."
+        msg = "[LOCKDOWN TERMINATED] The Mayor was killed! Citywide martial law has ended."
     elseif reason == "mayor_manual" then
         msg = "[LOCKDOWN LIFTED] The Mayor has officially terminated the citywide lockdown."
     elseif reason == "admin" then

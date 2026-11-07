@@ -161,7 +161,7 @@ function GRID.Auction.OpenUI(isTerminal)
         draw.SimpleText(titleText, "GRID_UI_Title", 24, 20, Color(248, 250, 252), TEXT_ALIGN_LEFT)
 
         local isTerminal = frame.IsTerminalSession or GRID.Auction.IsTerminalSession
-        local modeText = isTerminal and "TERMINAL CONNECTED" or "REMOTE BROWSING"
+        local modeText = isTerminal and "IN-PERSON TERMINAL" or "REMOTE ACCESS"
         local modeCol = isTerminal and Color(74, 222, 128) or Color(251, 191, 36)
         local modeBg = isTerminal and Color(16, 185, 129, 35) or Color(245, 158, 11, 35)
 
@@ -310,13 +310,13 @@ function GRID.Auction.OpenUI(isTerminal)
         surface.SetDrawColor(30, 41, 59, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-        draw.SimpleText("Terminal Protocol:", "GRID_UI_Badge", 10, 10, Color(34, 211, 238))
+        draw.SimpleText("Terminal Status:", "GRID_UI_Badge", 10, 10, Color(34, 211, 238))
         if GRID.Auction.IsTerminalSession then
-            draw.SimpleText("Full Transaction Enabled", "GRID_UI_Caption", 10, 32, Color(74, 222, 128))
-            draw.SimpleText("Post, bid & claim active", "GRID_UI_Caption", 10, 52, Color(148, 163, 184))
+            draw.SimpleText("In-Person Terminal", "GRID_UI_Caption", 10, 32, Color(74, 222, 128))
+            draw.SimpleText("Buy, sell, and claim freely", "GRID_UI_Caption", 10, 52, Color(148, 163, 184))
         else
-            draw.SimpleText("Remote View Only", "GRID_UI_Caption", 10, 32, Color(251, 191, 36))
-            draw.SimpleText("Visit terminal to bid/sell", "GRID_UI_Caption", 10, 52, Color(148, 163, 184))
+            draw.SimpleText("Remote Viewing", "GRID_UI_Caption", 10, 32, Color(251, 191, 36))
+            draw.SimpleText("Visit a terminal to bid or sell", "GRID_UI_Caption", 10, 52, Color(148, 163, 184))
         end
     end
 
@@ -729,7 +729,7 @@ function GRID.Auction.RenderInstancesPane(parent, group)
                 draw.RoundedBox(4, 0, 0, w, h, Color(245, 158, 11, 35))
                 surface.SetDrawColor(245, 158, 11, 120)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
-                local noticeText = (w > 120) and "Terminal Required to Bid" or "Terminal Req."
+                local noticeText = (w > 120) and "Terminal Required to Bid" or "Terminal Required"
                 draw.SimpleText(noticeText, "GRID_UI_Caption", w / 2, h / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             end
         end
@@ -856,7 +856,7 @@ function GRID.Auction.RenderCreateTab(parent)
             draw.RoundedBox(6, 0, 0, w, h, Color(24, 32, 47, 220))
             surface.SetDrawColor(6, 182, 212, 100)
             surface.DrawOutlinedRect(0, 0, w, h, 1)
-            draw.SimpleText("MARKET INTELLIGENCE", "GRID_UI_Badge", 16, 12, Color(34, 211, 238))
+            draw.SimpleText("MARKET PRICE GUIDE", "GRID_UI_Badge", 16, 12, Color(34, 211, 238))
             local infoStr = string.format("Lowest Active Buyout: %s   |   7-Day Average: %s", minBuy > 0 and ("$" .. string.Comma(minBuy)) or "None", avg7d > 0 and ("$" .. string.Comma(avg7d)) or "None")
             draw.SimpleText(infoStr, "GRID_UI_Sub", 16, 38, Color(248, 250, 252))
         end

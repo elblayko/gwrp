@@ -84,6 +84,7 @@ function GRID.Database.Connect()
     local db = mysqloo.connect(cfg.Host, cfg.User, cfg.Password, cfg.Database, cfg.Port, cfg.Socket)
 
     function db:onConnected()
+        GRID.Database.HasEverConnected = true
         print("[GRID DB] Successfully connected to MariaDB engine! Ensuring schema...")
 
         GRID.Database.InitMariaDBSchema(db, function()
@@ -110,6 +111,13 @@ function GRID.Database.Connect()
     function db:onConnectionFailed(err)
         GRID.Database.Connected = false
         ErrorNoHalt(string.format("[GRID DB ERROR] MariaDB connection failed: %s\n", tostring(err)))
+        -- If running in singleplayer or MariaDB has never successfully connected, fail over to SQLite immediately!
+        if game.SinglePlayer() or not GRID.Database.HasEverConnected then
+            print("[GRID DB] MariaDB unavailable in singleplayer/local test. Activating SQLite local fallback...")
+            GRID.Database.UseSQLiteFallback = true
+            GRID.Database.InitSQLiteFallback()
+            return
+        end
         -- Retry connection in 10 seconds
         timer.Simple(10, function()
             if not GRID.Database.Connected then
@@ -422,6 +430,39 @@ GRID.Database.MariaDBDirectProcedures = {
             { p[2], p[1] }
         ))
     end,
+    grid_stock_upsert = function(p, run)
+        -- p = { gang_name, ticker, total_shares, issued_shares, circulating_shares, amm_reserve, ipo_capital_raised, base_price, current_price, price_24h_ago, sentiment_mult, dividend_rate, dividend_arrears, is_defaulted, unix_time }
+        run(GRID.Database.FormatQuery([[
+            INSERT INTO grid_gang_stocks (gang_name, ticker, total_shares, issued_shares, circulating_shares, amm_reserve, ipo_capital_raised, base_price, current_price, price_24h_ago, sentiment_mult, dividend_rate, dividend_arrears, is_defaulted, created_at_unix, updated_at_unix)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                ticker = VALUES(ticker),
+                issued_shares = VALUES(issued_shares),
+                circulating_shares = VALUES(circulating_shares),
+                amm_reserve = VALUES(amm_reserve),
+                ipo_capital_raised = VALUES(ipo_capital_raised),
+                base_price = VALUES(base_price),
+                current_price = VALUES(current_price),
+                price_24h_ago = VALUES(price_24h_ago),
+                sentiment_mult = VALUES(sentiment_mult),
+                dividend_rate = VALUES(dividend_rate),
+                dividend_arrears = VALUES(dividend_arrears),
+                is_defaulted = VALUES(is_defaulted),
+                updated_at_unix = VALUES(updated_at_unix);
+        ]], {
+            p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15], p[15]
+        }))
+    end,
+    grid_stock_log_history = function(p, run)
+        -- p = { gang_name, timestamp, price, volume }
+        GRID.Database.Execute(GRID.Database.FormatQuery(
+            "INSERT INTO grid_stock_history (gang_name, timestamp_unix, price, volume) VALUES (?, ?, ?, ?);",
+            p
+        ), function()
+            local cutoff = (tonumber(p[2]) or os.time()) - 604800 -- 7 days retention
+            run(GRID.Database.FormatQuery("DELETE FROM grid_stock_history WHERE timestamp_unix < ?;", { cutoff }))
+        end)
+    end,
 }
 
 -- Direct MariaDB SQL queries for views, used if the DB user lacks CREATE VIEW privileges or if SQLite is active.
@@ -436,6 +477,9 @@ GRID.Database.DirectViews = {
     v_auctions = "grid_auctions",
     v_auction_collection = "grid_auction_collection",
     v_grid_map_spawns = "grid_map_entities",
+    v_gang_stocks = "grid_gang_stocks",
+    v_stock_portfolios = "grid_stock_portfolios",
+    v_stock_history = "grid_stock_history",
 }
 
 -- SQLite has no stored procedures (no CALL). Emulate the ones needed for local dev.
@@ -487,12 +531,18 @@ GRID.Database.SQLiteProcedures = {
         sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET money = ?, bank = ?, last_seen = ? WHERE steamid = ?;", { m, b, now, steamID }))
         return string.format("SELECT 'SUCCESS' AS status, %d AS money, %d AS bank;", m, b)
     end,
+    grid_add_gang_bank = function(p)
+        local gangName = p[1]
+        local amt = tonumber(p[2]) or 0
+        sql.Query(GRID.Database.FormatQuery("UPDATE grid_gangs SET bank = MAX(0, bank + ?) WHERE name = ?;", { amt, gangName }))
+        return "SELECT 1;"
+    end,
     grid_transfer_gang_vault = function(p)
         local steamID = p[1]
         local gangName = p[2]
         local delta = tonumber(p[3]) or 0
         local now = tonumber(p[4]) or os.time()
-        local pr = sql.Query(GRID.Database.FormatQuery("SELECT money FROM grid_players WHERE steamid = ? LIMIT 1;", { steamID }))
+        local pr = nil
         local gr = sql.Query(GRID.Database.FormatQuery("SELECT bank FROM grid_gangs WHERE name = ? LIMIT 1;", { gangName }))
         local m = tonumber(pr and pr[1] and pr[1].money) or 0
         local gb = tonumber(gr and gr[1] and gr[1].bank) or 0
@@ -572,6 +622,22 @@ GRID.Database.SQLiteProcedures = {
             "INSERT INTO grid_map_entities (map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data) SELECT ?, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data FROM grid_map_entities WHERE map_name = ?;",
             { p[2], p[1] }
         )
+    end,
+    grid_stock_upsert = function(p)
+        return GRID.Database.FormatQuery([[
+            INSERT OR REPLACE INTO grid_gang_stocks (gang_name, ticker, total_shares, issued_shares, circulating_shares, amm_reserve, ipo_capital_raised, base_price, current_price, price_24h_ago, sentiment_mult, dividend_rate, dividend_arrears, is_defaulted, created_at_unix, updated_at_unix)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+        ]], {
+            p[1], p[2], p[3], p[4], p[5], p[6], p[7], p[8], p[9], p[10], p[11], p[12], p[13], p[14], p[15], p[15]
+        })
+    end,
+    grid_stock_log_history = function(p)
+        sql.Query(GRID.Database.FormatQuery(
+            "INSERT INTO grid_stock_history (gang_name, timestamp_unix, price, volume) VALUES (?, ?, ?, ?);",
+            p
+        ))
+        local cutoff = (tonumber(p[2]) or os.time()) - 604800
+        return GRID.Database.FormatQuery("DELETE FROM grid_stock_history WHERE timestamp_unix < ?;", { cutoff })
     end,
 }
 GRID.Database.SQLiteWarned = GRID.Database.SQLiteWarned or {}
@@ -821,6 +887,47 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             custom_data JSON DEFAULT NULL,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_map_name (map_name)
+        ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_gang_stocks (
+            gang_name VARCHAR(32) NOT NULL PRIMARY KEY,
+            ticker VARCHAR(6) NOT NULL UNIQUE,
+            total_shares INT UNSIGNED NOT NULL DEFAULT 1000,
+            issued_shares INT UNSIGNED NOT NULL DEFAULT 0,
+            circulating_shares INT UNSIGNED NOT NULL DEFAULT 0,
+            amm_reserve BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            ipo_capital_raised BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            base_price INT UNSIGNED NOT NULL DEFAULT 10,
+            current_price INT UNSIGNED NOT NULL DEFAULT 10,
+            price_24h_ago INT UNSIGNED NOT NULL DEFAULT 10,
+            sentiment_mult DECIMAL(6, 4) NOT NULL DEFAULT 1.0000,
+            dividend_rate DECIMAL(5, 4) NOT NULL DEFAULT 0.0300,
+            dividend_arrears BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            is_defaulted TINYINT(1) NOT NULL DEFAULT 0,
+            created_at_unix INT UNSIGNED NOT NULL DEFAULT 0,
+            updated_at_unix INT UNSIGNED NOT NULL DEFAULT 0,
+            INDEX idx_stock_ticker (ticker),
+            INDEX idx_stock_defaulted (is_defaulted)
+        ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_stock_portfolios (
+            steamid VARCHAR(20) NOT NULL,
+            gang_name VARCHAR(32) NOT NULL,
+            shares_owned INT UNSIGNED NOT NULL DEFAULT 0,
+            avg_buy_price INT UNSIGNED NOT NULL DEFAULT 0,
+            last_purchase_unix INT UNSIGNED NOT NULL DEFAULT 0,
+            unclaimed_dividends BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (steamid, gang_name),
+            INDEX idx_portfolio_gang (gang_name)
+        ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;]],
+
+        [[CREATE TABLE IF NOT EXISTS grid_stock_history (
+            id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+            gang_name VARCHAR(32) NOT NULL,
+            timestamp_unix INT UNSIGNED NOT NULL,
+            price INT UNSIGNED NOT NULL,
+            volume INT UNSIGNED NOT NULL DEFAULT 0,
+            INDEX idx_stock_hist_gang_time (gang_name, timestamp_unix)
         ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4;]]
     }
 
@@ -891,7 +998,19 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
         [[CREATE OR REPLACE VIEW v_auction_collection AS
             SELECT collection_id, steamid, item_id, item_type, amount, item_data,
                    source_reason, source_auction_id, created_at_unix, claimed, claimed_at_unix
-            FROM grid_auction_collection;]]
+            FROM grid_auction_collection;]],
+        [[CREATE OR REPLACE VIEW v_gang_stocks AS
+            SELECT gang_name, ticker, total_shares, issued_shares, circulating_shares, amm_reserve,
+                   ipo_capital_raised, base_price, current_price, price_24h_ago, sentiment_mult,
+                   dividend_rate, dividend_arrears, is_defaulted, created_at_unix, updated_at_unix
+            FROM grid_gang_stocks;]],
+        [[CREATE OR REPLACE VIEW v_stock_portfolios AS
+            SELECT steamid, gang_name, shares_owned, avg_buy_price, last_purchase_unix, unclaimed_dividends
+            FROM grid_stock_portfolios;]],
+        [[CREATE OR REPLACE VIEW v_stock_history AS
+            SELECT id, gang_name, timestamp_unix, price, volume
+            FROM grid_stock_history
+            ORDER BY timestamp_unix ASC;]]
     }
 
     local procDDLs = {
@@ -1759,9 +1878,82 @@ function GRID.Database.InitSQLiteFallback()
             custom_data TEXT DEFAULT NULL,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+        CREATE TABLE IF NOT EXISTS grid_gang_stocks (
+            gang_name TEXT PRIMARY KEY,
+            ticker TEXT UNIQUE,
+            total_shares INTEGER DEFAULT 1000,
+            issued_shares INTEGER DEFAULT 0,
+            circulating_shares INTEGER DEFAULT 0,
+            amm_reserve INTEGER DEFAULT 0,
+            ipo_capital_raised INTEGER DEFAULT 0,
+            base_price INTEGER DEFAULT 10,
+            current_price INTEGER DEFAULT 10,
+            price_24h_ago INTEGER DEFAULT 10,
+            sentiment_mult REAL DEFAULT 1.0,
+            dividend_rate REAL DEFAULT 0.03,
+            dividend_arrears INTEGER DEFAULT 0,
+            is_defaulted INTEGER DEFAULT 0,
+            created_at_unix INTEGER DEFAULT 0,
+            updated_at_unix INTEGER DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS grid_stock_portfolios (
+            steamid TEXT NOT NULL,
+            gang_name TEXT NOT NULL,
+            shares_owned INTEGER DEFAULT 0,
+            avg_buy_price INTEGER DEFAULT 0,
+            last_purchase_unix INTEGER DEFAULT 0,
+            unclaimed_dividends INTEGER DEFAULT 0,
+            PRIMARY KEY (steamid, gang_name)
+        );
+        CREATE TABLE IF NOT EXISTS grid_stock_history (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            gang_name TEXT NOT NULL,
+            timestamp_unix INTEGER NOT NULL,
+            price INTEGER NOT NULL,
+            volume INTEGER DEFAULT 0
+        );
     ]])
 
+    -- Automatic SQLite Schema Migrations for existing local databases
+    local function SQLiteEnsureColumn(tbl, col, def)
+        local info = sql.Query("PRAGMA table_info(" .. tbl .. ");")
+        if not info then return end
+        for _, c in ipairs(info) do
+            if c.name == col then return end
+        end
+        print(string.format("[GRID DB] Migrating SQLite table '%s': adding column '%s'...", tbl, col))
+        sql.Query("ALTER TABLE " .. tbl .. " ADD COLUMN " .. col .. " " .. def .. ";")
+    end
+
+    SQLiteEnsureColumn("grid_players", "bank", "INTEGER DEFAULT 0")
+    SQLiteEnsureColumn("grid_players", "onboarding_stage", "INTEGER DEFAULT 0")
+    SQLiteEnsureColumn("grid_gangs", "bank", "INTEGER DEFAULT 0")
+    SQLiteEnsureColumn("grid_gangs", "respect", "INTEGER DEFAULT 0")
+    SQLiteEnsureColumn("grid_gangs", "created_at", "INTEGER")
+    SQLiteEnsureColumn("grid_auctions", "deposit_amount", "INTEGER DEFAULT 0")
+
     GRID.Database.Connected = true
+
+    -- Preload caches for SQLite
+    GRID.Database.PreloadCaches()
+
+    -- Flush queued database operations into SQLite
+    if #GRID.Database.Queue > 0 then
+        print(string.format("[GRID DB] Flushing %d queued operations into SQLite fallback...", #GRID.Database.Queue))
+        local queued = GRID.Database.Queue
+        GRID.Database.Queue = {}
+        for _, item in ipairs(queued) do
+            GRID.Database.Execute(item.Query, item.Callback, item.ErrorCallback)
+        end
+    end
+
+    -- Automatically load players already connected to the server
+    for _, ply in ipairs(player.GetAll()) do
+        if IsValid(ply) then
+            GRID.Database.LoadPlayer(ply)
+        end
+    end
+
     hook.Run("GRID_DatabaseConnected")
 end
 
@@ -1929,8 +2121,15 @@ function GRID.Database.SavePlayerBank(ply, amount)
 end
 
 function GRID.Database.TransferPersonalBank(ply, delta, callback)
-    if not IsValid(ply) or not ply.GRID_DataLoaded then
-        if callback then callback(false, "ERR_NOT_LOADED") end
+    if not IsValid(ply) then return end
+    if not ply.GRID_DataLoaded then
+        GRID.Database.LoadPlayer(ply, function()
+            if IsValid(ply) and ply.GRID_DataLoaded then
+                GRID.Database.TransferPersonalBank(ply, delta, callback)
+            elseif callback then
+                callback(false, "ERR_NOT_LOADED")
+            end
+        end)
         return
     end
     local steamID = ply:SteamID()
@@ -2185,10 +2384,20 @@ end
 
 function GRID.Database.AddGangBank(gangName, amount)
     local amt = tonumber(amount) or 0
+    if amt == 0 then return end
     GRID.Database.CallProcedure("grid_add_gang_bank", { gangName, amt })
-    if GRID.Database.Cache.Gangs[gangName] then
-        local cur = tonumber(GRID.Database.Cache.Gangs[gangName].bank) or 0
-        GRID.Database.Cache.Gangs[gangName].bank = math.max(0, cur + amt)
+    local g = GRID.Database.GetGang(gangName)
+    if g then
+        g.bank = math.max(0, (tonumber(g.bank) or 0) + amt)
+        GRID.Database.Cache.Gangs[gangName] = g
+    else
+        GRID.Database.Cache.Gangs[gangName] = {
+            name = gangName,
+            bank = math.max(0, amt),
+            respect = 0,
+            leader_steamid = "",
+            created_at = os.time()
+        }
     end
 end
 
@@ -2201,9 +2410,18 @@ function GRID.Database.TransferGangVault(steamID, gangName, delta)
         d,
         os.time()
     })
-    if GRID.Database.Cache.Gangs[gangName] then
-        local cur = tonumber(GRID.Database.Cache.Gangs[gangName].bank) or 0
-        GRID.Database.Cache.Gangs[gangName].bank = math.max(0, cur + d)
+    local g = GRID.Database.GetGang(gangName)
+    if g then
+        g.bank = math.max(0, (tonumber(g.bank) or 0) + d)
+        GRID.Database.Cache.Gangs[gangName] = g
+    else
+        GRID.Database.Cache.Gangs[gangName] = {
+            name = gangName,
+            bank = math.max(0, d),
+            respect = 0,
+            leader_steamid = steamID,
+            created_at = os.time()
+        }
     end
     GRID.Database.SyncOnlinePlayerMoneyDelta(steamID, -d)
     return true
@@ -3506,6 +3724,126 @@ function GRID.Database.ResetPlayer(steamID, callback, errback)
     end, function(err)
         ErrorNoHalt(string.format("[GRID DB ERROR] ResetPlayer failed for %s: %s\n", steamID, tostring(err)))
         if errback then errback(err) end
+    end)
+end
+
+-- ========================================================
+-- 12. GANG STOCK MARKET PERSISTENCE & ANALYTICS
+-- ========================================================
+
+function GRID.Database.LoadAllStocks(callback)
+    GRID.Database.QueryView("v_gang_stocks", nil, nil, function(rows)
+        if callback then callback(rows or {}) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID STOCKS DB ERROR] LoadAllStocks failed: %s\n", tostring(err)))
+        if callback then callback({}) end
+    end)
+end
+
+function GRID.Database.SaveStockListing(stockData, callback)
+    if not stockData or not stockData.gang_name then return end
+    local now = os.time()
+    local params = {
+        stockData.gang_name,
+        stockData.ticker,
+        stockData.total_shares or 1000,
+        stockData.issued_shares or 0,
+        stockData.circulating_shares or 0,
+        stockData.amm_reserve or 0,
+        stockData.ipo_capital_raised or 0,
+        stockData.base_price or 10,
+        stockData.current_price or 10,
+        stockData.price_24h_ago or 10,
+        stockData.sentiment_mult or 1.0,
+        stockData.dividend_rate or 0.03,
+        stockData.dividend_arrears or 0,
+        stockData.is_defaulted and 1 or 0,
+        now
+    }
+
+    GRID.Database.CallProcedure("grid_stock_upsert", params, function()
+        if callback then callback(true) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID STOCKS DB ERROR] SaveStockListing failed for %s: %s\n", stockData.gang_name, tostring(err)))
+        if callback then callback(false) end
+    end)
+end
+
+function GRID.Database.LogStockHistory(gangName, price, volume, callback)
+    if not gangName or gangName == "" then return end
+    local now = os.time()
+    GRID.Database.CallProcedure("grid_stock_log_history", {
+        gangName,
+        now,
+        price,
+        volume or 0
+    }, function()
+        if callback then callback(true) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID STOCKS DB ERROR] LogStockHistory failed: %s\n", tostring(err)))
+        if callback then callback(false) end
+    end)
+end
+
+function GRID.Database.LoadStockHistory(gangName, sinceUnix, callback)
+    sinceUnix = tonumber(sinceUnix) or (os.time() - 604800)
+    local whereClause = "gang_name = ? AND timestamp_unix >= ? ORDER BY timestamp_unix ASC"
+    GRID.Database.QueryView("v_stock_history", whereClause, { gangName, sinceUnix }, function(rows)
+        if callback then callback(rows or {}) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID STOCKS DB ERROR] LoadStockHistory failed for %s: %s\n", gangName, tostring(err)))
+        if callback then callback({}) end
+    end)
+end
+
+function GRID.Database.LoadStockPortfolios(steamID, callback)
+    GRID.Database.QueryView("v_stock_portfolios", "steamid = ?", { steamID }, function(rows)
+        if callback then callback(rows or {}) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID STOCKS DB ERROR] LoadStockPortfolios failed for %s: %s\n", steamID, tostring(err)))
+        if callback then callback({}) end
+    end)
+end
+
+function GRID.Database.SaveStockPortfolio(steamID, gangName, shares, avgPrice, lastBuyUnix, unclaimedDivs, callback)
+    if not steamID or not gangName then return end
+    local q
+    if GRID.Database.UseSQLiteFallback then
+        q = GRID.Database.FormatQuery([[
+            INSERT OR REPLACE INTO grid_stock_portfolios (steamid, gang_name, shares_owned, avg_buy_price, last_purchase_unix, unclaimed_dividends)
+            VALUES (?, ?, ?, ?, ?, ?);
+        ]], { steamID, gangName, shares, avgPrice, lastBuyUnix, unclaimedDivs })
+    else
+        q = GRID.Database.FormatQuery([[
+            INSERT INTO grid_stock_portfolios (steamid, gang_name, shares_owned, avg_buy_price, last_purchase_unix, unclaimed_dividends)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                shares_owned = VALUES(shares_owned),
+                avg_buy_price = VALUES(avg_buy_price),
+                last_purchase_unix = VALUES(last_purchase_unix),
+                unclaimed_dividends = VALUES(unclaimed_dividends);
+        ]], { steamID, gangName, shares, avgPrice, lastBuyUnix, unclaimedDivs })
+    end
+
+    GRID.Database.Execute(q, function()
+        if callback then callback(true) end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID STOCKS DB ERROR] SaveStockPortfolio failed: %s\n", tostring(err)))
+        if callback then callback(false) end
+    end)
+end
+
+function GRID.Database.DeleteStockListing(gangName, callback)
+    if not gangName or gangName == "" then return end
+    local q1 = GRID.Database.FormatQuery("DELETE FROM grid_gang_stocks WHERE LOWER(gang_name) = LOWER(?);", { gangName })
+    local q2 = GRID.Database.FormatQuery("DELETE FROM grid_stock_portfolios WHERE LOWER(gang_name) = LOWER(?);", { gangName })
+    GRID.Database.Execute(q1, function()
+        GRID.Database.Execute(q2, function()
+            if callback then callback(true) end
+        end)
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID STOCKS DB ERROR] DeleteStockListing failed for %s: %s\n", gangName, tostring(err)))
+        if callback then callback(false) end
     end)
 end
 
