@@ -98,8 +98,6 @@ local function GetCurrentObjectiveTarget(stage)
         targetClass = "grid_deaddrop_locker"
     elseif stage == GRID.Onboarding.STAGE_DEAD_DROP then
         targetClass = "grid_practice_stash"
-    elseif stage == GRID.Onboarding.STAGE_STASH then
-        targetClass = "grid_combat_target"
     else
         return nil
     end
@@ -169,7 +167,7 @@ local function DrawAmberWaypoint(targetEnt, stage)
     local trans = GRID.Onboarding.Transmissions[stage]
     local markerLabel = trans and trans.markerText or "OBJECTIVE"
 
-    draw.SimpleText("📍 " .. markerLabel, "GRID_Waypoint_Large", drawX + (boxW / 2), drawY + 12, COLOR_AMBER, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("[*] " .. markerLabel, "GRID_Waypoint_Large", drawX + (boxW / 2), drawY + 12, COLOR_AMBER, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     draw.SimpleText(string.format("%dm away", distMeters), "GRID_Waypoint_Dist", drawX + (boxW / 2), drawY + 30, COLOR_TEXT_WHITE, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end
 
@@ -193,10 +191,10 @@ local function DrawBurnerPager(stage, targetEnt)
 
     -- Header bar
     draw.RoundedBoxEx(6, pagerX, pagerY, pagerW, 30, Color(245, 158, 11, 40), true, true, false, false)
-    draw.SimpleText("📟 FIXER BURNER PAGER // ENCRYPTED", "GRID_Pager_Title", pagerX + 12, pagerY + 15, COLOR_AMBER, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+    draw.SimpleText("[MSG] FIXER BURNER PAGER // ENCRYPTED", "GRID_Pager_Title", pagerX + 12, pagerY + 15, COLOR_AMBER, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Progress Step Badge
-    local stepText = string.format("STEP %d/3", stage + 1)
+    local stepText = string.format("STEP %d/2", stage + 1)
     draw.RoundedBox(4, pagerX + pagerW - 74, pagerY + 6, 62, 18, COLOR_AMBER)
     draw.SimpleText(stepText, "GRID_Pager_Badge", pagerX + pagerW - 43, pagerY + 15, COLOR_BG_DARK, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
@@ -247,7 +245,7 @@ local function DrawCelebrationBanner()
     surface.SetDrawColor(34, 197, 94, alpha)
     surface.DrawOutlinedRect(bannerX, bannerY, bannerW, bannerH, 2)
 
-    draw.SimpleText("🎉 [SYNDICATE VERIFIED - LEVEL 2]", "GRID_UI_Header", bannerX + (bannerW / 2), bannerY + 26, Color(34, 197, 94, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.SimpleText("[!] [SYNDICATE VERIFIED - LEVEL 2]", "GRID_UI_Header", bannerX + (bannerW / 2), bannerY + 26, Color(34, 197, 94, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     draw.SimpleText(string.format("+$%s Clean Bank Secured! Base Building, Careers & Auction House Unlocked!", string.Comma(celebrationBanner.bonus or 3500)), "GRID_UI_Sub", bannerX + (bannerW / 2), bannerY + 56, Color(248, 250, 252, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end
 

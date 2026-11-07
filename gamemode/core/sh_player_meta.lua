@@ -223,7 +223,7 @@ if meta then
                     net.WriteInt(rewardCash, 32)
                 net.Send(self)
 
-                GRID.Notify(self, string.format("★ LEVEL UP! You reached Level %d! Awarded +$%s & Health Restored!", curLvl, string.Comma(rewardCash)), NOTIFY_GENERIC, 6)
+                GRID.Notify(self, string.format("[*] LEVEL UP! You reached Level %d! Awarded +$%s & Health Restored!", curLvl, string.Comma(rewardCash)), NOTIFY_GENERIC, 6)
             end
         end
     end

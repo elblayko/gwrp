@@ -284,7 +284,7 @@ end
 -- ========================================================
 
 local function FormatBuffTime(sec)
-    if sec <= 0 then return "∞" end
+    if sec <= 0 then return "INF" end
     if sec >= 3600 then
         return math.floor(sec / 3600) .. "h"
     elseif sec >= 60 then
@@ -566,7 +566,7 @@ hook.Add("PostPlayerDraw", "GRID_DrawOverheadWantedStatus", function(ply)
     surface.SetDrawColor(30, 41, 59, 200)
     surface.DrawOutlinedRect(-pillW / 2 + 2, -pillH / 2 + 2, pillW - 4, pillH - 4, 1)
 
-    draw.SimpleText("★ WANTED SUSPECT ★", "GRID_FontMedium", 0, -1, Color(254, 240, 138), TEXT_ALIGN_CENTER,
+    draw.SimpleText("[*] WANTED SUSPECT [*]", "GRID_FontMedium", 0, -1, Color(254, 240, 138), TEXT_ALIGN_CENTER,
         TEXT_ALIGN_CENTER)
     cam.End3D2D()
 end)

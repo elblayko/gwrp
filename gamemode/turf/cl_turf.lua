@@ -138,7 +138,7 @@ function GRID.Turf.DrawHUD()
 
         -- Controller & Color-Coded Extortion Tax Subtext
         surface.SetFont("GRID_UI_Caption")
-        local prefix = string.format("Controlled by %s   •   Extortion Tax: ", owner)
+        local prefix = string.format("Controlled by %s   -   Extortion Tax: ", owner)
         local taxSuffix = string.format("%d%%", taxRate)
         local preW = surface.GetTextSize(prefix)
         local sufW = surface.GetTextSize(taxSuffix)

@@ -86,7 +86,7 @@ function ENT:Draw()
         if isOc then table.insert(tags, "OC") end
         if isTuned then table.insert(tags, "TUNED") end
         local modTag = #tags > 0 and (" (" .. table.concat(tags, "+") .. ")") or ""
-        local tempTxt = "Temp: " .. temp .. "°C" .. modTag
+        local tempTxt = "Temp: " .. temp .. "C" .. modTag
         draw.SimpleText(tempTxt, "GRID_FontSmall", -90, 24, tempCol, TEXT_ALIGN_LEFT)
         draw.SimpleText("Eff: " .. eff .. "%", "GRID_FontSmall", 90, 24, effCol, TEXT_ALIGN_RIGHT)
     end

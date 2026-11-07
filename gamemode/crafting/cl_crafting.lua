@@ -96,7 +96,7 @@ function GRID.Crafting.OpenCraftingMenu(machine)
     closeBtn.Paint = function(s, w, h)
         local bg = s:IsHovered() and Color(239, 68, 68, 200) or Color(30, 41, 59, 150)
         draw.RoundedBox(6, 0, 0, w, h, bg)
-        draw.SimpleText("✕", "GRID_UI_BodyBold", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("X", "GRID_UI_BodyBold", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     closeBtn.DoClick = function()
         frame:Close()
@@ -135,7 +135,7 @@ function GRID.Crafting.OpenCraftingMenu(machine)
         local tempStatus = (curTemp >= 75) and "CRITICAL" or ((curTemp >= 50) and "ELEVATED" or "OPTIMAL")
         draw.SimpleText("CORE THERMAL", "GRID_UI_Badge", 220, 16, Color(148, 163, 184), TEXT_ALIGN_LEFT,
             TEXT_ALIGN_CENTER)
-        draw.SimpleText(string.format("%d°C / 100°C [%s]", curTemp, tempStatus), "GRID_UI_BodyBold", 220, 36, tempCol,
+        draw.SimpleText(string.format("%dC / 100C [%s]", curTemp, tempStatus), "GRID_UI_BodyBold", 220, 36, tempCol,
             TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
         -- 3. Network line

@@ -68,7 +68,7 @@ net.Receive("GRID_ATM_Open", function()
         surface.DrawOutlinedRect(0, 0, w, h, 2)
 
         draw.RoundedBoxEx(8, 0, 0, w, 44, Color(34, 197, 94, 40), true, true, false, false)
-        draw.SimpleText("🏦 STREET ATM & PERSONAL VAULT", "GRID_UI_Header", 16, 22, COLOR_GREEN, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("[ATM] STREET ATM & PERSONAL VAULT", "GRID_UI_Header", 16, 22, COLOR_GREEN, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
         -- Wallet & Bank Displays
         draw.RoundedBox(6, 16, 60, w - 32, 70, Color(30, 41, 59, 200))
@@ -82,7 +82,7 @@ net.Receive("GRID_ATM_Open", function()
     local closeBtn = vgui.Create("DButton", atmFrame)
     closeBtn:SetSize(28, 28)
     closeBtn:SetPos(fW - 36, 8)
-    closeBtn:SetText("✕")
+    closeBtn:SetText("X")
     closeBtn:SetFont("GRID_UI_Btn")
     closeBtn:SetTextColor(Color(248, 250, 252))
     closeBtn.Paint = function(s, w, h)

@@ -152,7 +152,7 @@ function ENT:RefreshBotnetState()
 
     local curKey = string.Trim(string.upper(uplink:GetEncryptionKey() or ""))
     if curKey == "" or (self.BotnetWANKey ~= "" and curKey ~= self.BotnetWANKey) then
-        self:StopBotnet("Satellite WAN encryption key changed — C2 tunnel dropped.")
+        self:StopBotnet("Satellite WAN encryption key changed -- C2 tunnel dropped.")
         return
     end
 
@@ -466,7 +466,7 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
                     table.insert(responseLines, { text = "PORT     STATE SERVICE      VERSION", color = "muted" })
                     table.insert(responseLines,
                         {
-                            text = string.format("8080/tcp OPEN  http-proxy   MoneyFab Daemon (%d%% eff, %d°C)%s", eff,
+                            text = string.format("8080/tcp OPEN  http-proxy   MoneyFab Daemon (%d%% eff, %dC)%s", eff,
                                 temp, uv),
                             color = "green"
                         })
@@ -499,7 +499,7 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
                     table.insert(responseLines,
                         {
                             text = string.format(
-                                "502/tcp  OPEN  modbus       Modbus/TCP OT Synthesizer PLC (%d%% eff, %d°C)", eff, temp),
+                                "502/tcp  OPEN  modbus       Modbus/TCP OT Synthesizer PLC (%d%% eff, %dC)", eff, temp),
                             color =
                             "yellow"
                         })
@@ -1219,7 +1219,7 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
                                     table.insert(responseLines,
                                         {
                                             text =
-                                            "[!] CRITICAL: Core temperature spiked past 100°C! Meltdown initiated!",
+                                            "[!] CRITICAL: Core temperature spiked past 100C! Meltdown initiated!",
                                             color =
                                             "red"
                                         })
@@ -1247,7 +1247,7 @@ net.Receive("GRID_RunComputerCommand", function(len, ply)
                                     table.insert(responseLines,
                                         {
                                             text =
-                                            "[!] CRITICAL: Core temperature spiked past 100°C! Meltdown initiated!",
+                                            "[!] CRITICAL: Core temperature spiked past 100C! Meltdown initiated!",
                                             color =
                                             "red"
                                         })

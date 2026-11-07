@@ -65,7 +65,7 @@ function GRID.Population.CheckPopulation()
         if newMode == "low" then
             GRID.NotifyAll(
                 string.format(
-                "[GRID BALANCER] Low Pop Mode Active (%d/%d Players) • Scavenge respawns +50%% faster • +25%% Loot Yield • %s",
+                "[GRID BALANCER] Low Pop Mode Active (%d/%d Players) - Scavenge respawns +50%% faster - +25%% Loot Yield - %s",
                     count, GRID.Population.Threshold, turfStatus),
                 NOTIFY_HINT,
                 5
@@ -73,7 +73,7 @@ function GRID.Population.CheckPopulation()
         else
             GRID.NotifyAll(
                 string.format(
-                "[GRID BALANCER] Standard Mode Active (%d+ Players) • Full PvP territory capture unlocked • Standard economy rates.",
+                "[GRID BALANCER] Standard Mode Active (%d+ Players) - Full PvP territory capture unlocked - Standard economy rates.",
                     GRID.Population.Threshold),
                 NOTIFY_GENERIC,
                 5

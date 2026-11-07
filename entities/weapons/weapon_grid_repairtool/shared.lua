@@ -9,7 +9,7 @@ AddCSLuaFile()
 SWEP.PrintName = "Cryo-Thermal Calibrator"
 SWEP.Author = "Juicebox"
 SWEP.Instructions =
-"Left Click: Flash-Cool & Repair Printer (Instant 20°C)\nRight Click: Cyber-Tune Printer (Cyber Engineer)"
+"Left Click: Flash-Cool & Repair Printer (Instant 20C)\nRight Click: Cyber-Tune Printer (Cyber Engineer)"
 SWEP.Category = "GridRP"
 
 SWEP.Spawnable = true
@@ -72,7 +72,7 @@ function SWEP:PrimaryAttack()
     if SERVER then
         local curTemp = ent.GetTemperature and ent:GetTemperature() or 20
         if curTemp <= 20 then
-            GRID.Notify(ply, "Printer is already at optimal ambient temperature (20°C).", NOTIFY_HINT)
+            GRID.Notify(ply, "Printer is already at optimal ambient temperature (20C).", NOTIFY_HINT)
             return
         end
 
@@ -91,7 +91,7 @@ function SWEP:PrimaryAttack()
         util.Effect("Sparks", spark)
 
         GRID.Notify(ply,
-            string.format("Flash-Cooled printer instantly to optimal ambient temp (20°C)! (-%d°C dissipated)", coolDrop),
+            string.format("Flash-Cooled printer instantly to optimal ambient temp (20C)! (-%dC dissipated)", coolDrop),
             NOTIFY_GENERIC)
     end
 end

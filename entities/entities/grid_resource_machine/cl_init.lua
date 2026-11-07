@@ -160,7 +160,7 @@ function ENT:Draw()
         surface.SetDrawColor(pulseCol.r, pulseCol.g, pulseCol.b, 180)
         surface.DrawOutlinedRect(x + 12, y + 40, w - 24, 46, 1)
 
-        draw.SimpleText("★ RESOURCE READY ON TOP ★", "GRID_UI_Badge", 0, y + 53, pulseCol, TEXT_ALIGN_CENTER,
+        draw.SimpleText("[*] RESOURCE READY ON TOP [*]", "GRID_UI_Badge", 0, y + 53, pulseCol, TEXT_ALIGN_CENTER,
             TEXT_ALIGN_CENTER)
         draw.SimpleText(readyName ~= "" and readyName or "Crafting Material", "GRID_UI_BodyBold", 0, y + 71,
             Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
@@ -201,7 +201,7 @@ function ENT:Draw()
     ((curTemp >= 50) and Color(245, 158, 11) or Color(74, 222, 128))
     local hpTextY = y + 114
 
-    draw.SimpleText(string.format("Core Temp: %d°C / 100°C", curTemp), "GRID_UI_Badge", x + 14, hpTextY, tempCol,
+    draw.SimpleText(string.format("Core Temp: %dC / 100C", curTemp), "GRID_UI_Badge", x + 14, hpTextY, tempCol,
         TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     draw.SimpleText(string.format("Integrity: %d / %d HP", curHP, maxHP), "GRID_UI_Badge", x + w - 14, hpTextY,
         Color(248, 250, 252), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)

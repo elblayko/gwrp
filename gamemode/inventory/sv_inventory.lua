@@ -146,7 +146,7 @@ function GRID.Inventory.PickupEntity(ply, ent)
     if class == "grid_printer_bronze" or class == "grid_printer_silver" or class == "grid_printer_diamond" then
         local temp = ent.GetTemperature and ent:GetTemperature() or 20
         if temp > 35 then
-            GRID.Notify(ply, string.format("Printer is too hot to pocket (%d°C)! Allow it to cool below 35°C.", temp),
+            GRID.Notify(ply, string.format("Printer is too hot to pocket (%dC)! Allow it to cool below 35C.", temp),
                 NOTIFY_ERROR)
             ply:EmitSound("common/warning.wav", 65, 100)
             return false

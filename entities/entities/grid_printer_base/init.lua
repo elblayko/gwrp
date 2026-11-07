@@ -89,7 +89,7 @@ function ENT:Think()
             local cur = self:GetTemperature()
             local maxT = self.MaxTemp or 100
             if cur < self.ThermalTargetTemp then
-                -- Raising linearly (+1°C every 0.12s)
+                -- Raising linearly (+1C every 0.12s)
                 local nextTemp = cur + 1
                 self:SetTemperature(nextTemp)
                 self.NextThermalTick = now + 0.12
@@ -100,7 +100,7 @@ function ENT:Think()
                     return true
                 end
             elseif cur > self.ThermalTargetTemp then
-                -- Lowering linearly (-1°C every 0.12s)
+                -- Lowering linearly (-1C every 0.12s)
                 self:SetTemperature(cur - 1)
                 self.NextThermalTick = now + 0.12
 
@@ -365,7 +365,7 @@ function ENT:Use(activator, caller)
                     self:SetValveJammedUntil(now + 3.5)
                     self:SetThermalSpikeUntil(now + 8.0)
 
-                    -- Linearly raise temperature on fail (+1°C every 0.12s up to +4°C surge)
+                    -- Linearly raise temperature on fail (+1C every 0.12s up to +4C surge)
                     local failHeat = 4
                     local maxT = self.MaxTemp or 100
                     self.ThermalTargetTemp = math.min(maxT, curTemp + failHeat)

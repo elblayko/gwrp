@@ -85,7 +85,7 @@ function ENT:Think()
         if now >= (self.NextThermalTick or 0) then
             local cur = self:GetTemperature()
             if cur < self.ThermalTargetTemp then
-                -- Raising linearly (+1°C every 0.12s)
+                -- Raising linearly (+1C every 0.12s)
                 local nextTemp = cur + 1
                 self:SetTemperature(nextTemp)
                 self.NextThermalTick = now + 0.12
@@ -96,7 +96,7 @@ function ENT:Think()
                     return true
                 end
             elseif cur > self.ThermalTargetTemp then
-                -- Lowering linearly (-1°C every 0.12s)
+                -- Lowering linearly (-1C every 0.12s)
                 self:SetTemperature(cur - 1)
                 self.NextThermalTick = now + 0.12
 
@@ -208,7 +208,7 @@ function ENT:FinishExtraction()
         self:SetReadyItemID(matId)
         self:SetReadyItemName(itemName)
 
-        -- Cycle Heat Surge (+4°C standard, +1°C undervolted, -25% tuned)
+        -- Cycle Heat Surge (+4C standard, +1C undervolted, -25% tuned)
         local heatRise = self:GetHasUndervolt() and (GRID.Config.PrinterHeatRiseUndervolted or 1) or
         (GRID.Config.PrinterHeatRiseStandard or 4)
         if self:GetIsTuned() then
@@ -391,7 +391,7 @@ function ENT:Use(activator, caller)
         local sMax = self:GetVentSweetMax()
 
         if progress >= sMin and progress <= sMax then
-            -- SUCCESS: Clean exhaust vent (linear dissipation down towards 20°C)
+            -- SUCCESS: Clean exhaust vent (linear dissipation down towards 20C)
             local coolTarget = math.max(20, curTemp - 15)
             self.ThermalTargetTemp = coolTarget
             self.NextThermalTick = now
@@ -420,7 +420,7 @@ function ENT:Use(activator, caller)
             self.VentPlayer = nil
             self:SetValveJammedUntil(now + 3.5)
 
-            -- Linearly raise temperature on fail (+4°C surge)
+            -- Linearly raise temperature on fail (+4C surge)
             local failHeat = 4
             self.ThermalTargetTemp = math.min(self.MaxTemp, curTemp + failHeat)
             self.NextThermalTick = now
@@ -441,7 +441,7 @@ function ENT:Use(activator, caller)
         end
     end
 
-    -- 2. If holding SPRINT (Shift), or if temp is at ambient (20°C): open Crafting Workbench!
+    -- 2. If holding SPRINT (Shift), or if temp is at ambient (20C): open Crafting Workbench!
     if activator:KeyDown(IN_SPEED) or curTemp <= 20 then
         net.Start("GRID_OpenCraftingUI")
         net.WriteEntity(self)
@@ -453,7 +453,7 @@ function ENT:Use(activator, caller)
         return
     end
 
-    -- 3. If hot (curTemp > 20°C): tap [E] triggers the Vent Pressure gauge!
+    -- 3. If hot (curTemp > 20C): tap [E] triggers the Vent Pressure gauge!
     if curTemp > 20 then
         -- Check if valve is jammed
         if self:GetValveJammedUntil() > now then

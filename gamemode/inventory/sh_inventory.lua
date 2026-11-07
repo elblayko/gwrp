@@ -116,7 +116,7 @@ GRID.Inventory.Items = {
         quality = 2, -- Uncommon
         model = "models/weapons/w_slam.mdl",
         desc =
-        "Handheld field calibrator. Cools overheating printers (-35°C), repairs integrity, and enables Cyber-Tuning.",
+        "Handheld field calibrator. Cools overheating printers (-35C), repairs integrity, and enables Cyber-Tuning.",
         stats = "Primary: Flash-Cool (-100% Heat) | Secondary: Cyber-Tuning"
     },
     ["weapon_grid_scanner"] = {

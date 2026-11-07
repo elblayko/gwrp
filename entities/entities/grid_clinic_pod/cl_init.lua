@@ -40,7 +40,7 @@ function ENT:Draw()
         TEXT_ALIGN_CENTER)
 
     -- Status Pill
-    local statusText = isDoc and "● DR. ON DUTY (+50% DURATION)" or "○ AUTONOMOUS CLINIC"
+    local statusText = isDoc and "[*] DR. ON DUTY (+50% DURATION)" or "[o] AUTONOMOUS CLINIC"
     local statusCol = isDoc and Color(52, 211, 153) or Color(251, 191, 36)
     local statusBg = isDoc and Color(16, 185, 129, 35) or Color(245, 158, 11, 30)
 
@@ -51,7 +51,7 @@ function ENT:Draw()
 
     -- Bottom Row: Prompt & Vault
     if ply == owner then
-        draw.SimpleText(string.format("Vault: $%d  •  [E] CLINIC  •  [CTRL+E] WITHDRAW", vaultCash), "GRID_UI_Caption", 0,
+        draw.SimpleText(string.format("Vault: $%d  -  [E] CLINIC  -  [CTRL+E] WITHDRAW", vaultCash), "GRID_UI_Caption", 0,
             34, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     else
         draw.SimpleText("[E] ACCESS TREATMENT MENU", "GRID_UI_Badge", 0, 34, Color(248, 250, 252), TEXT_ALIGN_CENTER,
@@ -106,7 +106,7 @@ net.Receive("GRID_OpenClinicMenu", function()
 
         -- Subtitle info
         local ownerNick = IsValid(owner) and owner:Nick() or "Licensed Pharmacist"
-        draw.SimpleText("Station Physician: Dr. " .. ownerNick .. "  •  Patients Served: " .. totalPatients,
+        draw.SimpleText("Station Physician: Dr. " .. ownerNick .. "  -  Patients Served: " .. totalPatients,
             "GRID_UI_Caption", 20, 48, Color(148, 163, 184))
 
         -- Status Pill on right
@@ -129,7 +129,7 @@ net.Receive("GRID_OpenClinicMenu", function()
     closeBtn.Paint = function(s, bw, bh)
         local bg = s:IsHovered() and Color(239, 68, 68, 200) or Color(30, 41, 59, 160)
         draw.RoundedBox(4, 0, 0, bw, bh, bg)
-        draw.SimpleText("✕", "GRID_UI_Badge", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("X", "GRID_UI_Badge", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     closeBtn.DoClick = function()
         frame:Close()

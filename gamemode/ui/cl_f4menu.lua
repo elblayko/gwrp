@@ -483,7 +483,7 @@ function GRID.UI.RenderGuideContent(scroll)
             num = "03",
             title = "Money Printers & Cooling Mechanics",
             desc =
-            "Money printers produce continuous passive cash income. Internal temperatures rise during operation; interact with printers using [E] to cycle coolant and prevent explosive overheating at 100°C. Warning: Police officers are authorized to raid bases and seize illegal printers for instant cash bounties.",
+            "Money printers produce continuous passive cash income. Internal temperatures rise during operation; interact with printers using [E] to cycle coolant and prevent explosive overheating at 100C. Warning: Police officers are authorized to raid bases and seize illegal printers for instant cash bounties.",
             accent = Color(245, 158, 11)
         },
         {
@@ -504,7 +504,7 @@ function GRID.UI.RenderGuideContent(scroll)
             num = "06",
             title = "Chat Commands Reference",
             desc =
-            "Quick chat commands available to all citizens:\n• /gang : View active gang status, bank balance & controlled turfs\n• /creategang <name> : Found a street gang ($500 creation fee)\n• /invitegang <player> : Invite a fellow gangster to your syndicate\n• /acceptgang : Accept a pending street gang invitation\n• /leavegang : Voluntarily leave your current gang\n• /settax <5-30> : Configure tax rate for your controlled district\n• /g <msg> : Broadcast message on encrypted private gang radio\n• /dropmoney <amount> : Drop physical cash bills from your wallet",
+            "Quick chat commands available to all citizens:\n- /gang : View active gang status, bank balance & controlled turfs\n- /creategang <name> : Found a street gang ($500 creation fee)\n- /invitegang <player> : Invite a fellow gangster to your syndicate\n- /acceptgang : Accept a pending street gang invitation\n- /leavegang : Voluntarily leave your current gang\n- /settax <5-30> : Configure tax rate for your controlled district\n- /g <msg> : Broadcast message on encrypted private gang radio\n- /dropmoney <amount> : Drop physical cash bills from your wallet",
             accent = Color(244, 63, 94)
         }
     }
@@ -583,7 +583,7 @@ function GRID.UI.RenderGangContent(scroll, mainFrame)
                 draw.RoundedBox(8, 0, 0, w, h, Color(245, 158, 11, 25))
                 surface.SetDrawColor(245, 158, 11, 140)
                 surface.DrawOutlinedRect(0, 0, w, h, 1)
-                draw.SimpleText("⚠ GANG AFFILIATION CURRENTLY SUSPENDED", "GRID_UI_Sub", 18, 18, Color(251, 191, 36))
+                draw.SimpleText("[!] GANG AFFILIATION CURRENTLY SUSPENDED", "GRID_UI_Sub", 18, 18, Color(251, 191, 36))
                 draw.SimpleText(
                     "You are on duty as " ..
                     data.currentJob ..
@@ -616,7 +616,7 @@ function GRID.UI.RenderGangContent(scroll, mainFrame)
             draw.SimpleText(rText, "GRID_UI_Badge", 24 + tw / 2, 61, rCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             -- Right Stats
-            local stat1 = "★ Respect: " .. string.Comma(data.respect)
+            local stat1 = "[*] Respect: " .. string.Comma(data.respect)
             local stat2 = #data.members .. " Registered Gangsters"
             draw.SimpleText(stat1, "GRID_UI_Header", w - 24, 24, Color(245, 158, 11), TEXT_ALIGN_RIGHT)
             draw.SimpleText(stat2, "GRID_UI_Sub", w - 24, 52, Color(74, 222, 128), TEXT_ALIGN_RIGHT)
@@ -708,7 +708,7 @@ function GRID.UI.RenderGangContent(scroll, mainFrame)
             lblOnlyLeader:SetSize(colW - 36, 24)
             lblOnlyLeader:SetFont("GRID_UI_Caption")
             lblOnlyLeader:SetTextColor(Color(148, 163, 184))
-            lblOnlyLeader:SetText("★ Vault withdrawals are reserved exclusively for the Gang Leader.")
+            lblOnlyLeader:SetText("[*] Vault withdrawals are reserved exclusively for the Gang Leader.")
         end
 
         -- Controlled Territories Card
@@ -1046,7 +1046,7 @@ function GRID.UI.RenderGangContent(scroll, mainFrame)
                     draw.SimpleText((g.memberCount or 1) .. " Registered Members", "GRID_UI_Caption", 18, 36,
                         Color(148, 163, 184))
 
-                    draw.SimpleText("★ Respect: " .. string.Comma(g.respect or 0), "GRID_UI_Sub", w - 24, 18,
+                    draw.SimpleText("[*] Respect: " .. string.Comma(g.respect or 0), "GRID_UI_Sub", w - 24, 18,
                         Color(245, 158, 11), TEXT_ALIGN_RIGHT)
                     draw.SimpleText("Vault: $" .. string.Comma(g.bank or 0), "GRID_UI_Caption", w - 24, 36,
                         Color(74, 222, 128), TEXT_ALIGN_RIGHT)
@@ -1129,7 +1129,7 @@ function GRID.UI.PopulateInventoryGrid(scroll, mainFrame, searchFilter)
             draw.SimpleText(qName, "GRID_UI_Badge", w - 16 - qTextW / 2, 27, qCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
             -- Amount / SubType
-            local subInfo = string.format("Quantity: %dx  •  %s", amount, def.subType or "Asset")
+            local subInfo = string.format("Quantity: %dx  -  %s", amount, def.subType or "Asset")
             draw.SimpleText(subInfo, "GRID_UI_Sub", contentX, 48, Color(74, 222, 128))
 
             -- Stats / Description
@@ -1336,7 +1336,7 @@ function GRID.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         draw.SimpleText(cat.desc, "GRID_UI_Caption", 18, 33, Color(148, 163, 184), TEXT_ALIGN_LEFT,
                             TEXT_ALIGN_CENTER)
 
-                        local actText = #catJobs .. " Roles  •  " .. catActivePlayers .. " Active Players"
+                        local actText = #catJobs .. " Roles  -  " .. catActivePlayers .. " Active Players"
                         surface.SetFont("GRID_UI_Badge")
                         local tw = surface.GetTextSize(actText) + 20
                         draw.RoundedBox(4, w - tw - 16, 12, tw, 24, Color(cat.color.r, cat.color.g, cat.color.b, 35))
@@ -1719,7 +1719,7 @@ function GRID.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                 elseif hasJobReq then
                     if canBuyJob then
                         local checkText = (hasLevelReq and canBuyLevel) and
-                            ("✓ " .. reqJobName .. " (LVL " .. reqItemLevel .. "+)") or ("✓ Requires: " .. reqJobName)
+                            ("[OK] " .. reqJobName .. " (LVL " .. reqItemLevel .. "+)") or ("[OK] Requires: " .. reqJobName)
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(16, 185, 129, 35))
                         surface.SetDrawColor(16, 185, 129, 140)
                         surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
@@ -1740,7 +1740,7 @@ function GRID.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(16, 185, 129, 35))
                         surface.SetDrawColor(16, 185, 129, 140)
                         surface.DrawOutlinedRect(cardW - 214, 52, 200, 24, 1)
-                        draw.SimpleText("✓ Level " .. reqItemLevel .. " Unlocked", "GRID_UI_Caption", cardW - 114, 64,
+                        draw.SimpleText("[OK] Level " .. reqItemLevel .. " Unlocked", "GRID_UI_Caption", cardW - 114, 64,
                             Color(52, 211, 153), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                     else
                         draw.RoundedBox(4, cardW - 214, 52, 200, 24, Color(245, 158, 11, 40))
@@ -1762,7 +1762,7 @@ function GRID.UI.PopulateGrid(scroll, tabId, mainFrame, searchFilter)
 
                 -- Savings Tip for Non-Specialists
                 if not isWholesaleActive and item.markupRole then
-                    local tipText = "★ Tip: Buy from a " .. item.markupRole .. " to avoid this markup!"
+                    local tipText = "[*] Tip: Buy from a " .. item.markupRole .. " to avoid this markup!"
                     local fitTip = GRID.UI.FitText(tipText, "GRID_UI_Caption", leftContentW)
                     draw.SimpleText(fitTip, "GRID_UI_Caption", 18, 134, Color(251, 191, 36, 200))
                 end

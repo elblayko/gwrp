@@ -138,7 +138,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
     local getGangCol = GRID.GetGangColor
     local badgeCol = isGang and (getGangCol and getGangCol(gangName) or Color(168, 85, 247)) or
         (jobData.faction and jobData.faction.color or Color(56, 189, 248))
-    local badgeText = isGang and (gangName .. " • " .. jobName) or jobName
+    local badgeText = isGang and (gangName .. " - " .. jobName) or jobName
 
     -- Background Obsidian Card
     draw.RoundedBox(8, hudX, hudY, hudW, hudH, Color(11, 15, 25, 246))
@@ -346,9 +346,9 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
             surface.SetDrawColor(245, 158, 11, alpha)
             surface.DrawOutlinedRect(bX, bY, bW, bH, 2)
 
-            draw.SimpleText("★ LEVEL UP! ★", "GRID_UI_Title", bX + bW / 2, bY + 24, Color(251, 191, 36, alpha),
+            draw.SimpleText("[*] LEVEL UP! [*]", "GRID_UI_Title", bX + bW / 2, bY + 24, Color(251, 191, 36, alpha),
                 TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-            local sub = string.format("You reached Level %d!  •  Bonus: +$%s", levelUpBanner.level,
+            local sub = string.format("You reached Level %d!  -  Bonus: +$%s", levelUpBanner.level,
                 string.Comma(levelUpBanner.reward))
             draw.SimpleText(sub, "GRID_UI_Sub", bX + bW / 2, bY + 56, Color(248, 250, 252, alpha), TEXT_ALIGN_CENTER,
                 TEXT_ALIGN_CENTER)
@@ -441,7 +441,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     accentCol = gangCol or Color(6, 182, 212)
                     badgeText = "GANG ACCESS"
                     titleText = owner:Nick()
-                    subText = string.format("Gang: %s  •  Access Permitted", string.upper(gangName))
+                    subText = string.format("Gang: %s  -  Access Permitted", string.upper(gangName))
                     subCol = Color(52, 211, 153)
                     promptText = "[Shared Property]"
                     promptCol = Color(203, 213, 225)
@@ -453,7 +453,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                         ("Faction: " .. string.upper(gangName)) or "Private Residence"
                     subText = gangStr
                     subCol = Color(148, 163, 184)
-                    promptText = "Restricted Access  •  Trespassers Beware"
+                    promptText = "Restricted Access  -  Trespassers Beware"
                     promptCol = Color(239, 68, 68)
                 end
             end
@@ -522,9 +522,9 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
             local tier = ent.GetNodeTier and ent:GetNodeTier() or "trashbin"
             local entName = ent.PrintName or "Scavenge Node"
             local tierSubtitles = {
-                ["dumpster"] = "Industrial Refuse  •  High Scrap & Tech",
-                ["trashbin"] = "Public Waste Bin  •  Recyclables & Cash",
-                ["scrappile"] = "Metal Salvage Debris  •  Scrap & Chemicals"
+                ["dumpster"] = "Industrial Refuse  -  High Scrap & Tech",
+                ["trashbin"] = "Public Waste Bin  -  Recyclables & Cash",
+                ["scrappile"] = "Metal Salvage Debris  -  Scrap & Chemicals"
             }
             local subText = tierSubtitles[tier] or "Street Salvage Refuse"
 
@@ -587,7 +587,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                 local mins = math.floor(remain / 60)
                 local secs = remain % 60
                 local timeStr = (mins > 0) and string.format("%dm %02ds", mins, secs) or string.format("%ds", secs)
-                draw.SimpleText("Empty • Refreshes in " .. timeStr, "GRID_UI_Caption", cardX + 12, tagY + 68,
+                draw.SimpleText("Empty - Refreshes in " .. timeStr, "GRID_UI_Caption", cardX + 12, tagY + 68,
                     Color(248, 113, 113), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             else
                 draw.SimpleText("[E] Hold to Rummage & Scavenge", "GRID_UI_Caption", cardX + 12, tagY + 68,
@@ -681,7 +681,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
 
             -- Row 2: Subtitle Info
             local totalListings = (GRID.Auction and GRID.Auction.Listings) and #GRID.Auction.Listings or 0
-            local subText = string.format("Marketplace Hub  •  %d Active Listings", totalListings)
+            local subText = string.format("Marketplace Hub  -  %d Active Listings", totalListings)
             draw.SimpleText(subText, "GRID_FontSmall", cardX + 12, tagY + 44, Color(148, 163, 184), TEXT_ALIGN_LEFT,
                 TEXT_ALIGN_CENTER)
 
@@ -824,7 +824,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     local subnet = ent.GetSubnetID and ent:GetSubnetID() or 1
                     local summaryY = isMultiRow and (tagY + 104) or (tagY + 75)
                     local linksTxt = string.format(
-                        "%d/%d Ports Active  •  Subnet: 192.168.%d.0/24  •  Gateway: 192.168.%d.1",
+                        "%d/%d Ports Active  -  Subnet: 192.168.%d.0/24  -  Gateway: 192.168.%d.1",
                         activeCount, numPorts, subnet, subnet)
 
                     draw.SimpleText(linksTxt, "GRID_UI_Caption", cardX + cardW / 2, summaryY, Color(203, 213, 225),
@@ -899,8 +899,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     local healthRed = (GRID.Colors and GRID.Colors.HealthRed) or Color(239, 68, 68)
                     local tempCol = temp > 75 and healthRed or
                         (isUv and Color(56, 189, 248) or Color(203, 213, 225))
-                    local tempTxt = isUv and string.format("Temp: %d°C / 100°C (Undervolted)", temp) or
-                        string.format("Temp: %d°C / 100°C", temp)
+                    local tempTxt = isUv and string.format("Temp: %dC / 100C (Undervolted)", temp) or
+                        string.format("Temp: %dC / 100C", temp)
                     draw.SimpleText(tempTxt, "GRID_UI_Caption", cardX + 12, tagY + 61, tempCol, TEXT_ALIGN_LEFT,
                         TEXT_ALIGN_CENTER)
 

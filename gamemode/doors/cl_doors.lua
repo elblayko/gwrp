@@ -60,10 +60,10 @@ function GRID.Doors.OpenDoorMenu()
         -- Subtitle Info
         local subInfo
         if not isOwned then
-            subInfo = isHobo and "Vacant Real Estate  •  Hobos Cannot Purchase" or string.format("Vacant Real Estate  •  Price: $%s", string.Comma(cost))
+            subInfo = isHobo and "Vacant Real Estate  -  Hobos Cannot Purchase" or string.format("Vacant Real Estate  -  Price: $%s", string.Comma(cost))
         elseif isOwner then
             local refund = math.floor(cost * 0.7)
-            subInfo = string.format("Owner: %s  •  Refund on Sale: +$%s", ply:Nick(), string.Comma(refund))
+            subInfo = string.format("Owner: %s  -  Refund on Sale: +$%s", ply:Nick(), string.Comma(refund))
         else
             subInfo = string.format("Owner: %s%s", owner:Nick(), (gangName ~= "" and (" [" .. gangName .. "]") or ""))
         end
@@ -78,7 +78,7 @@ function GRID.Doors.OpenDoorMenu()
     closeBtn.Paint = function(s, bw, bh)
         local bg = s:IsHovered() and Color(239, 68, 68, 200) or Color(30, 41, 59, 160)
         draw.RoundedBox(4, 0, 0, bw, bh, bg)
-        draw.SimpleText("✕", "GRID_UI_Badge", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("X", "GRID_UI_Badge", bw / 2, bh / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     closeBtn.DoClick = function()
         frame:Close()

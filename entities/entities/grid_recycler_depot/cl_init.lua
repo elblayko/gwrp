@@ -122,7 +122,7 @@ net.Receive("GRID_OpenRecyclerMenu", function()
     closeBtn.Paint = function(s, bw, bh)
         local bg = s:IsHovered() and Color(239, 68, 68, 220) or Color(30, 41, 59, 180)
         draw.RoundedBox(4, 0, 0, bw, bh, bg)
-        draw.SimpleText("✕", "GRID_UI_Badge", bw / 2, bh / 2, COLOR_WHITE, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        draw.SimpleText("X", "GRID_UI_Badge", bw / 2, bh / 2, COLOR_WHITE, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
     closeBtn.DoClick = function()
         frame:Close()
@@ -225,7 +225,7 @@ net.Receive("GRID_OpenRecyclerMenu", function()
                 -- Item Name and count
                 draw.SimpleText(string.format("%dx %s", it.amount, it.name), "GRID_UI_BodyBold", 10, 10, COLOR_WHITE,
                     TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
-                draw.SimpleText(string.format("+$%d cash • +%d XP each", it.cash, it.xp), "GRID_UI_Caption", 10, 30,
+                draw.SimpleText(string.format("+$%d cash - +%d XP each", it.cash, it.xp), "GRID_UI_Caption", 10, 30,
                     COLOR_ACCENT, TEXT_ALIGN_LEFT, TEXT_ALIGN_TOP)
             end
 
@@ -398,7 +398,7 @@ net.Receive("GRID_OpenRecyclerMenu", function()
                     local pulse = math.abs(math.sin(CurTime() * 6))
                     local btnCol = s:IsHovered() and Color(16, 185, 129, 240) or Color(5, 150, 105, 200 + pulse * 50)
                     draw.RoundedBox(6, 0, 0, bw, bh, btnCol)
-                    draw.SimpleText("⚡ CRUSH NOW! [CLICK OR SPACE] ⚡", "GRID_UI_BodyBold", bw / 2, bh / 2, COLOR_WHITE,
+                    draw.SimpleText("[*] CRUSH NOW! [CLICK OR SPACE] [*]", "GRID_UI_BodyBold", bw / 2, bh / 2, COLOR_WHITE,
                         TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 end
             end
@@ -412,7 +412,7 @@ net.Receive("GRID_OpenRecyclerMenu", function()
                 local isSweet = (hitProg >= sweetMin and hitProg <= sweetMax)
 
                 if isSweet then
-                    minigameResultText = "★ CRUSH OPTIMIZED! +25% BONUS! ★"
+                    minigameResultText = "[*] CRUSH OPTIMIZED! +25% BONUS! [*]"
                     minigameResultCol = COLOR_ACCENT
                     surface.PlaySound("ambient/materials/metal_groan.wav")
                     surface.PlaySound("physics/metal/metal_box_break1.wav")
@@ -521,7 +521,7 @@ net.Receive("GRID_OpenRecyclerMenu", function()
                 local removeBtn = vgui.Create("DButton", row)
                 removeBtn:SetSize(24, 24)
                 removeBtn:SetPos(colW - 32 - 30, 5)
-                removeBtn:SetText("✕")
+                removeBtn:SetText("X")
                 removeBtn:SetFont("GRID_UI_Badge")
                 removeBtn:SetTextColor(COLOR_TEXT_MUTED)
                 removeBtn.Paint = function(s, bw, bh)

@@ -61,7 +61,7 @@ function ENT:UpdateKey(newKey)
         local botnetPC = IsValid(sw) and GRID.Network and GRID.Network.GetActiveBotnetForSwitch and
         GRID.Network.GetActiveBotnetForSwitch(sw)
         if IsValid(botnetPC) and botnetPC.StopBotnet then
-            botnetPC:StopBotnet("WAN encryption key changed — C2 tunnel handshake dropped.")
+            botnetPC:StopBotnet("WAN encryption key changed -- C2 tunnel handshake dropped.")
         end
     end
 

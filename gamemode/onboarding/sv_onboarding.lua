@@ -56,7 +56,7 @@ function GRID.Onboarding.ClaimDeadDrop(ply, lockerEnt)
     ply:EmitSound("garrysmod/save_load1.wav", 65, 110)
 
     GRID.Notify(ply, string.format("Starter kit claimed! +$%s cash, Glock-18 (90%% Durability) & Tactical Lockpick.", string.Comma(GRID.Onboarding.REWARD_DEAD_DROP_CASH)), NOTIFY_HINT, 6)
-    GRID.Notify(ply, "[STEP 2/3] Check your Burner Pager. Locate the Practice Stash and pick it!", NOTIFY_GENERIC, 7)
+    GRID.Notify(ply, "[STEP 2/2] Check your Burner Pager. Locate the Practice Stash and pick it!", NOTIFY_GENERIC, 7)
 
     net.Start("GRID_OnboardingSync")
         net.WriteUInt(GRID.Onboarding.STAGE_DEAD_DROP, 4)
@@ -73,7 +73,7 @@ function GRID.Onboarding.ClaimDeadDrop(ply, lockerEnt)
 end
 
 -- --------------------------------------------------------
--- Step 2: Breach Practice Stash
+-- Step 2: Breach Practice Stash & Syndicate Initiation
 -- --------------------------------------------------------
 function GRID.Onboarding.CompletePracticeStash(ply, stashEnt)
     if not IsValid(ply) or not ply:Alive() then return false end
@@ -86,14 +86,11 @@ function GRID.Onboarding.CompletePracticeStash(ply, stashEnt)
 
     -- Stage check: must be at Stage 1
     if ply:GetOnboardingStage() ~= GRID.Onboarding.STAGE_DEAD_DROP then
-        if ply:GetOnboardingStage() >= GRID.Onboarding.STAGE_STASH then
+        if ply:GetOnboardingStage() >= GRID.Onboarding.STAGE_COMPLETED then
             GRID.Notify(ply, "You have already completed the practice breach!", NOTIFY_ERROR, 3)
         end
         return false
     end
-
-    -- Advance to Stage 2
-    ply:SetOnboardingStage(GRID.Onboarding.STAGE_STASH)
 
     -- Grant Kevlar Armor (+50)
     ply:SetArmor(math.min(100, ply:Armor() + GRID.Onboarding.REWARD_ARMOR))
@@ -107,31 +104,12 @@ function GRID.Onboarding.CompletePracticeStash(ply, stashEnt)
     ply:EmitSound("items/ammo_pickup.wav", 65, 100)
 
     GRID.Notify(ply, string.format("Stash breached! +%d Kevlar Armor & +%d 9mm ammunition.", GRID.Onboarding.REWARD_ARMOR, ammoCount), NOTIFY_HINT, 6)
-    GRID.Notify(ply, "[STEP 3/3] HOSTILE DRONE DETECTED! Unholster your Glock-18 and destroy it!", NOTIFY_GENERIC, 7)
-
-    net.Start("GRID_OnboardingSync")
-        net.WriteUInt(GRID.Onboarding.STAGE_STASH, 4)
-    net.Send(ply)
 
     if GRID.Telemetry and GRID.Telemetry.Log then
         GRID.Telemetry.Log("PLAYER_ACTION", "ONBOARDING_BREACH_STASH", ply:SteamID(), "", ammoCount, {
             armor = GRID.Onboarding.REWARD_ARMOR,
             ammo = ammoCount
         })
-    end
-
-    return true
-end
-
--- --------------------------------------------------------
--- Step 3: Live-Fire Combat Drone Drill (Initiation Completion)
--- --------------------------------------------------------
-function GRID.Onboarding.CompleteInitiation(ply, droneEnt)
-    if not IsValid(ply) or not ply:Alive() then return false end
-
-    -- Stage check: must be at Stage 2
-    if ply:GetOnboardingStage() ~= GRID.Onboarding.STAGE_STASH then
-        return false
     end
 
     local cleanBonus = GRID.Onboarding.TOTAL_CLEAN_CASH or 2500
@@ -166,7 +144,7 @@ function GRID.Onboarding.CompleteInitiation(ply, droneEnt)
             -- Update in-memory player cache
             if GRID.Database.Cache and GRID.Database.Cache.Players and GRID.Database.Cache.Players[steamID] then
                 local p = GRID.Database.Cache.Players[steamID]
-                p.onboarding_stage = 3
+                p.onboarding_stage = 2
                 p.level = math.max(p.level or 1, 2)
                 p.bank = (p.bank or 0) + cleanBonus
             end
@@ -178,7 +156,7 @@ function GRID.Onboarding.CompleteInitiation(ply, droneEnt)
                 net.WriteUInt(cleanBonus, 32)
             net.Send(ply)
 
-            GRID.Notify(ply, string.format("🎉 [SYNDICATE VERIFIED] Combat trial cleared! +$%s bonus deposited to bank! Promoted to Level 2!", string.Comma(cleanBonus)), NOTIFY_GENERIC, 8)
+            GRID.Notify(ply, string.format("[SYNDICATE VERIFIED] Initiation cleared! +$%s bonus deposited to bank! Promoted to Level 2!", string.Comma(cleanBonus)), NOTIFY_GENERIC, 8)
             GRID.Notify(ply, "Base building, Toolgun, Auction House listings, and advanced careers are now unlocked!", NOTIFY_HINT, 10)
         end)
     end
@@ -325,7 +303,7 @@ concommand.Add("grid_onboarding_setstage", function(ply, cmd, args)
     end
 
     local newStage = tonumber(args[1]) or 0
-    newStage = math.Clamp(newStage, 0, 3)
+    newStage = math.Clamp(newStage, 0, 2)
 
     local target = ply
     if args[2] and args[2] ~= "" then
@@ -343,7 +321,7 @@ concommand.Add("grid_onboarding_setstage", function(ply, cmd, args)
     end
 
     target:SetOnboardingStage(newStage)
-    if newStage >= 3 and target:GetLevel() < 2 then
+    if newStage >= 2 and target:GetLevel() < 2 then
         target:SetNWInt("GRID_Level", 2)
     end
 
@@ -379,7 +357,6 @@ end
 local ONBOARDING_CLASSES = {
     ["grid_deaddrop_locker"] = true,
     ["grid_practice_stash"]  = true,
-    ["grid_combat_target"]   = true,
     ["grid_atm"]             = true
 }
 

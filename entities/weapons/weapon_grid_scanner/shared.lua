@@ -735,9 +735,9 @@ if CLIENT then
         surface.DrawOutlinedRect(mx, my, mw, mh, 1)
         draw.RoundedBoxEx(6, mx, my, mw, 2, badgeCol, true, true, false, false)
 
-        draw.SimpleText("◆ RAID TARGET: CONTRABAND ◆", "GRID_UI_Badge", screen.x, my + 14, badgeCol, TEXT_ALIGN_CENTER,
+        draw.SimpleText("[+] RAID TARGET: CONTRABAND [+]", "GRID_UI_Badge", screen.x, my + 14, badgeCol, TEXT_ALIGN_CENTER,
             TEXT_ALIGN_CENTER)
-        draw.SimpleText(string.format("Distance: ~%dm  •  Expires: %ds", distMeters, remaining), "GRID_UI_Caption",
+        draw.SimpleText(string.format("Distance: ~%dm  -  Expires: %ds", distMeters, remaining), "GRID_UI_Caption",
             screen.x, my + 32, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end)
 end

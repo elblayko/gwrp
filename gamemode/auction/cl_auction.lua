@@ -630,9 +630,9 @@ function GRID.Auction.RenderInstancesPane(parent, group)
 
             local statusSub = "Time Left: " .. timeLeft
             if hasHighBidder then
-                statusSub = statusSub .. "   •   High Bidder: " .. inst.high_bidder_name
+                statusSub = statusSub .. "   -   High Bidder: " .. inst.high_bidder_name
             else
-                statusSub = statusSub .. "   •   No Bids Yet"
+                statusSub = statusSub .. "   -   No Bids Yet"
             end
             draw.SimpleText(statusSub, "GRID_UI_Caption", 14, 40, hasHighBidder and Color(56, 189, 248) or Color(148, 163, 184))
 

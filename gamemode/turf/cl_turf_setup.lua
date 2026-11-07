@@ -1026,7 +1026,7 @@ function GRID.Turf.RenderSpawnersTab(parent)
         surface.SetDrawColor(6, 182, 212, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
-        draw.SimpleText("📌 Map Entity Placement Migrated to Q-Menu", "GRID_UI_Header", 16, 14, Color(6, 182, 212))
+        draw.SimpleText("[PIN] Map Entity Placement Migrated to Q-Menu", "GRID_UI_Header", 16, 14, Color(6, 182, 212))
         draw.SimpleText("Persistent objectives, salvage containers, ATMs, and contraband items are now placed directly", "GRID_UI_Body", 16, 42, Color(248, 250, 252))
         draw.SimpleText("via Q Menu > Entities (under 'GridRP - World Infrastructure', 'GridRP - Scavenging', etc.).", "GRID_UI_Body", 16, 64, Color(245, 158, 11))
         draw.SimpleText("SuperAdmins can spawn and freeze entities anywhere; they auto-anchor and persist to MariaDB.", "GRID_UI_Caption", 16, 88, Color(148, 163, 184))

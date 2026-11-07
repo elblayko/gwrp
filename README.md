@@ -1,6 +1,6 @@
 # GridRP (GRID)
 
-**Version:** 2.0.0 (2026) · **Author:** Juicebox · **Base gamemode:** `sandbox` · **Maps:** `^rp_*`
+**Version:** 2.0.0 (2026) - **Author:** Juicebox - **Base gamemode:** `sandbox` - **Maps:** `^rp_*`
 
 GridRP is a comprehensive, production-grade Garry's Mod roleplay gamemode built around three competing groups: **Citizens** (and specialist service jobs), **Street Gangs**, and **Police/SWAT**. Players earn money from salaries, money printers, scrap scavenging, recycling, crafting, auctions, and territory conquest, then invest into fortified compounds, high-tier weaponry, enterprise networking hardware, and black-market software exploits. Gangs battle over **turf** and levy **protection rackets**, police crack down on **contraband print farms**, Hobos comb the streets for **recyclable scrap**, and Cyber Engineers wage automated cyber-warfare through **Cloud Botnet C2 networks**.
 
@@ -41,14 +41,14 @@ GridRP is a comprehensive, production-grade Garry's Mod roleplay gamemode built 
 - **Dynamic Population Balancer**: Real-time server monitoring that scales economy mechanics when player counts drop below threshold (<4 players): node cooldowns accelerate (1.5x speed), scavenge loot/cash multipliers increase (1.25x), and territory captures are locked to prevent ghost-town abuse.
 - **15 Jobs across 3 Factions**: Citizens and commercial specialists (Pharmacist, Cyber Engineer, Security Contractor, Arms Dealer, Hobo), Street Gangs (Gangster, Gang Leader, Thief, Hitman, Black Market Dealer), and Law Enforcement (Police Officer, Police Chief, SWAT Specialist, Mayor) with tier gates, unique stats, and equipment.
 - **Player-Run Gangs & Syndicates**: Complete gang infrastructure with MariaDB-backed rosters, leader privileges, member invites/kicks, shared vault banking with deposit/withdrawal controls, and private gang communication.
-- **Turf Warfare & Protection Rackets**: Contested flag poles with 15-second uncontested captures, periodic dividend payouts, real-time police incursion radar alerts, an interactive in-game visual turf editor, and territory protection taxes (5%–30%) automatically levied on civilian printers.
+- **Turf Warfare & Protection Rackets**: Contested flag poles with 15-second uncontested captures, periodic dividend payouts, real-time police incursion radar alerts, an interactive in-game visual turf editor, and territory protection taxes (5%-30%) automatically levied on civilian printers.
 - **Native Networking Stack (No Wiremod Required)**: 4-Port and 7-Port Enterprise L3 Switches with per-port definitions (1G copper, 10G combo SFP, 10G optical uplinks), physical copper and fiber-optic cabling with snap physics, and encrypted Satellite WAN Uplinks.
 - **Cyber Layer & Cloud Botnet C2**: Interactive Personal Computer terminal running an in-game Linux-style CLI (`nmap`, `ping`, `hack`, `airmon`, and `botnet`). Cyber Engineers and tech operators deploy automated Cloud Botnet C2 attack daemons via Satellite WAN Uplinks to mine passive revenue scaled directly to connected money printers.
 - **Economy & Door Ownership**: Scheduled salary paydays, physical dropped cash stacks, a modernized F4 menu with categorized navigation, job/level restrictions, wholesale markups, and purchasable doors with co-owner management.
 - **Money Printers**: Bronze, Silver, and Diamond printers featuring dynamic heat simulation, interactive timing-based vent minigames, hardware modules (Undervolt / Overclock), Cryo-tuning, and police confiscation bounties (+50% for patrol officers).
 - **Crafting & Modular Inventory**: Resource Fabricators producing weighted raw materials (Zinc, Iron, Steel, Carbon Rods, Blueprints), crafting recipes for firearms and gear, a 16-slot base backpack, and 4 equippable bag tiers (Satchel, Duffel, Rucksack).
 - **Buff/Debuff Engine**: Persistent, stackable status effects (Adrenaline, Health Regen, Wanted, Poison, Taser Stun, and more) that survive player deaths and disconnects.
-- **Progression**: Levels 1–50 powered by an MMO-style exponential XP curve (`floor(250 × level^1.65)`) granting cash bonuses upon level-up.
+- **Progression**: Levels 1-50 powered by an MMO-style exponential XP curve (`floor(250 x level^1.65)`) granting cash bonuses upon level-up.
 - **Enterprise Persistence**: Production MariaDB (`mysqloo` v9) utilizing 100% Stored Procedures for writes, 12 Analytical Views for real-time reads, in-memory RAM caching, range-partitioned telemetry logging, and automatic SQLite fallback emulation for local singleplayer/listen server development.
 
 ---
@@ -117,7 +117,7 @@ GridRP is governed by an adversarial tri-faction ecosystem where commercial ente
 - **Core Philosophy:** Capital accumulation, enterprise infrastructure, and free-market opportunism. Civilians construct fortified bases, engineer multi-printer networks, operate automated medical pods, and vend arms or tech.
 - **Key Objectives:** Build fortified compounds with keypad doors, maximize money printer networking efficiency (up to 100%), deploy automated Clinic Pods, scavenge street salvage, list valuable loot on the Auction House, and invest in advanced hardware.
 - **Faction Interactions:**
-  - *Vs. Gangs:* Gangs view civilians as primary targets for burglary, extortion, and territory protection racket taxes (5%–30%). Civilians hire Security Contractors or quiet their operations to avoid attention.
+  - *Vs. Gangs:* Gangs view civilians as primary targets for burglary, extortion, and territory protection racket taxes (5%-30%). Civilians hire Security Contractors or quiet their operations to avoid attention.
   - *Vs. Police:* Police protect civilian commerce from violent crime, but aggressively search and seize unregistered money print farms (+50% cash bounty to patrol officers).
 
 #### 2. Street Gangs Faction (Territory, Extortion & Syndication)
@@ -275,7 +275,7 @@ sequenceDiagram
     participant S as Server
     participant DB as MariaDB / SQLite
     participant P as Player
-    S->>DB: GM:Initialize → Database.Connect (InitMariaDBSchema / Fallback)
+    S->>DB: GM:Initialize -> Database.Connect (InitMariaDBSchema / Fallback)
     S->>DB: PreloadCaches (Gangs, Members, Settings)
     S->>S: Turf.Init, Scavenge.LoadAndSpawn, Auction.LoadTerminals
     S->>S: Doors.Init, Economy.StartPaydayTimer, Auction.ExpiryTimer
@@ -292,7 +292,7 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | **Payday** | 90 s | `sv_economy` | Each player receives their job salary. |
 | **Turf Dividends** | 90 s | `sv_turf` | Online members of an owning gang (or Police) receive $25 per owned turf and 25 XP. |
-| **Printer Cycle** | 20 s | `grid_printer_base` | Adds `PrintAmount × efficiency` to stored cash and raises core temperature. |
+| **Printer Cycle** | 20 s | `grid_printer_base` | Adds `PrintAmount x efficiency` to stored cash and raises core temperature. |
 | **Botnet C2 Cycle** | 20 s | `grid_computer` | Generates passive botnet revenue based on connected money printers and Cyber Engineer perk. |
 | **Auction Expirations** | 60 s | `sv_auction` | Sweeps active listings; expired lots are placed in escrow collection via stored procedure. |
 | **Population Balance** | 30 s | `sv_population_balancer` | Evaluates player counts, toggling low-pop mode (<4 players) with dynamic multipliers and alerts. |
@@ -359,7 +359,7 @@ GridRP includes an automated population balancer (`sv_population_balancer.lua`) 
   - **Node Respawn Rate**: Scavenge node cooldowns are reduced by **33.3%** (1.5x faster node respawns).
   - **Loot & Cash Yield**: All scavenged items and cash drops receive a **+25% yield bonus** (1.25x multiplier).
   - **Turf Warfare Lock**: Territory flag pole captures are automatically locked when fewer than 4 players are online to prevent offline ghost-town exploitation (configurable via `AllowLowPopTurfCapture`).
-- **Standard Population Mode (≥ 4 Players)**: Standard cooldowns and economy multipliers resume automatically, broadcasting a notification to all players.
+- **Standard Population Mode (>= 4 Players)**: Standard cooldowns and economy multipliers resume automatically, broadcasting a notification to all players.
 
 ---
 
@@ -402,8 +402,8 @@ GridRP implements an enterprise networking model directly within Lua, completely
 - **Hardware Modules**:
   - **Overclock Module**: +50% yield, +3 heat per cycle.
   - **Undervolt Module**: Reduces heat generation per cycle from 4 to 1.
-  - **Cryo Calibrator (Cyber Engineer)**: +20% yield, −25% heat.
-- **Heat & Venting**: Printers reaching **100 °C** explode. Press **E** to initiate the venting cycle, then press **E** again inside the green sweet spot to vent heat. Failing jams the valve and spikes temperature.
+  - **Cryo Calibrator (Cyber Engineer)**: +20% yield, -25% heat.
+- **Heat & Venting**: Printers reaching **100  deg C** explode. Press **E** to initiate the venting cycle, then press **E** again inside the green sweet spot to vent heat. Failing jams the valve and spikes temperature.
 - **Police Interdiction**: Law enforcement officers earn a **$125 base bounty** (+50% bonus = **$187 for Patrol Officers**) upon confiscating illegal printers.
 
 ---
@@ -411,7 +411,7 @@ GridRP implements an enterprise networking model directly within Lua, completely
 ### Crafting & Modular Inventory
 
 - **Resource Fabricators**: Deployable machines producing raw crafting materials on a weighted drop table:
-  `Zinc (48%)` · `Iron (24%)` · `Steel (12%)` · `Weapon Blueprints (10%)` · `Carbon Rods (6%)`.
+  `Zinc (48%)` - `Iron (24%)` - `Steel (12%)` - `Weapon Blueprints (10%)` - `Carbon Rods (6%)`.
 - **Recipes**: Craft firearms (Glock, Shotgun, Deagle, AK-47), tactical bags, and equipment in the Crafting menu.
 - **Modular Bag Inventory**:
   - Base Backpack: 16 slots.
@@ -422,14 +422,14 @@ GridRP implements an enterprise networking model directly within Lua, completely
 
 ### Progression
 
-- **XP Formula**: Required XP to next level = `floor(250 × level^1.65)`. Maximum Level: **50**.
+- **XP Formula**: Required XP to next level = `floor(250 x level^1.65)`. Maximum Level: **50**.
 - **XP Sources**:
   - Player Kill: +50 XP (+50 bonus for rival gang members).
   - Turf Capture: +150 XP.
   - Turf Dividend Tick: +25 XP.
   - Printer Cash Collection: +20 XP.
   - Street Scavenging & Recycling: +5 to +25 XP per item.
-- **Level-Up Reward**: Awards **$500 × new level** directly to the player's wallet.
+- **Level-Up Reward**: Awards **$500 x new level** directly to the player's wallet.
 
 ---
 
@@ -477,7 +477,7 @@ Core configuration files are located in `gamemode/core/sh_config.lua` and `gamem
 
 | Command | Description |
 | :--- | :--- |
-| `/creategang <name>` | Founds a new syndicate ($200, 2–24 characters). |
+| `/creategang <name>` | Founds a new syndicate ($200, 2-24 characters). |
 | `/invitegang <player>` | Invites a player to join your syndicate. |
 | `/acceptgang` | Accepts a pending syndicate invitation. |
 | `/leavegang` | Leaves your current syndicate. |
@@ -537,31 +537,31 @@ Every job receives baseline items (`weapon_fists`, `weapon_grid_keys`, `weapon_p
 
 | Job & Tier | Stats & Loadout | Core Capabilities & Exclusive Mechanics |
 | :--- | :--- | :--- |
-| **Citizen**<br>`Lvl 1 · $6/90s · ∞ slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Fists | Base construction, money printer farming, resource gathering, door ownership. Baseline commerce partner. |
-| **Pharmacist**<br>`Lvl 1 · $12/90s · 3 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Medkit | Deploys automated **Triage Clinic Pods**; dispenses field heals & Adrenaline stim buffs for passive profits. |
-| **Cyber Engineer**<br>`Lvl 3 · $14/90s · 3 slots` | • Armor: 10<br>• Speed: 160 / 240<br>• Weapons: Wiretool | Networks printers, optimizes hardware with **Cryo Calibrator** (+20% yield, −25% heat), wireless terminal exploits, and **+25% Botnet C2 yield bonus**. |
-| **Security Contractor**<br>`Lvl 2 · $13/90s · 4 slots` | • Armor: 50<br>• Speed: 160 / 240<br>• Weapons: Stunstick | Hired protection specialist with high base armor; guards printer vaults, stores, and VIP compounds. |
-| **Arms Dealer**<br>`Lvl 2 · $10/90s · 3 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Fists | Authorized gun merchant; orders wholesale weapon shipments (Glock, Shotgun), ammo crates, Kevlar vests. |
-| **Hobo**<br>`Lvl 1 · $0/90s · 4 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Bugbait | Master scavenger; **faster search duration (1.2s)**, **+15% scavenging loot yield**, exempt from territory taxes and printer bounties. |
+| **Citizen**<br>`Lvl 1 - $6/90s - INF slots` | - Armor: 0<br>- Speed: 160 / 240<br>- Weapons: Fists | Base construction, money printer farming, resource gathering, door ownership. Baseline commerce partner. |
+| **Pharmacist**<br>`Lvl 1 - $12/90s - 3 slots` | - Armor: 0<br>- Speed: 160 / 240<br>- Weapons: Medkit | Deploys automated **Triage Clinic Pods**; dispenses field heals & Adrenaline stim buffs for passive profits. |
+| **Cyber Engineer**<br>`Lvl 3 - $14/90s - 3 slots` | - Armor: 10<br>- Speed: 160 / 240<br>- Weapons: Wiretool | Networks printers, optimizes hardware with **Cryo Calibrator** (+20% yield, -25% heat), wireless terminal exploits, and **+25% Botnet C2 yield bonus**. |
+| **Security Contractor**<br>`Lvl 2 - $13/90s - 4 slots` | - Armor: 50<br>- Speed: 160 / 240<br>- Weapons: Stunstick | Hired protection specialist with high base armor; guards printer vaults, stores, and VIP compounds. |
+| **Arms Dealer**<br>`Lvl 2 - $10/90s - 3 slots` | - Armor: 0<br>- Speed: 160 / 240<br>- Weapons: Fists | Authorized gun merchant; orders wholesale weapon shipments (Glock, Shotgun), ammo crates, Kevlar vests. |
+| **Hobo**<br>`Lvl 1 - $0/90s - 4 slots` | - Armor: 0<br>- Speed: 160 / 240<br>- Weapons: Bugbait | Master scavenger; **faster search duration (1.2s)**, **+15% scavenging loot yield**, exempt from territory taxes and printer bounties. |
 
 ### 2. Street Gangs & Underworld Faction
 
 | Job & Tier | Stats & Loadout | Core Capabilities & Exclusive Mechanics |
 | :--- | :--- | :--- |
-| **Gangster**<br>`Lvl 1 · $10/90s · 16 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Fists | Frontline soldier; joins syndicates, contests flag poles, defends printers. Gains **+$100/100XP Turf Defender bonus** per slain cop on claimed turf. |
-| **Gang Leader**<br>`Lvl 5 · $20/90s · 4 slots` | • Armor: 50<br>• Speed: 160 / 240<br>• Weapons: Fists | Syndicate founder; executes `/creategang`, withdraws vault funds, sets territory tax (`/settax 5-30`), and coordinates turf defense. |
-| **Thief**<br>`Lvl 3 · $10/90s · 4 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Lockpick | Infiltrator; bypasses door keypads with lockpicks to crack vaults, extract contraband, and steal cash. |
-| **Hitman**<br>`Lvl 6 · $16/90s · 2 slots` | • Armor: 30<br>• Speed: 160 / 240<br>• Weapons: Lockpick | Covert assassin; accepts targeted murder contracts, stealth infiltration, high-precision executions. |
-| **Black Market Dealer**<br>`Lvl 4 · $12/90s · 2 slots` | • Armor: 0<br>• Speed: 160 / 240<br>• Weapons: Fists | Contraband smuggler; exclusive vendor of heavy weapons (AK-47, Deagle shipments), lockpicks, and combat stims. |
+| **Gangster**<br>`Lvl 1 - $10/90s - 16 slots` | - Armor: 0<br>- Speed: 160 / 240<br>- Weapons: Fists | Frontline soldier; joins syndicates, contests flag poles, defends printers. Gains **+$100/100XP Turf Defender bonus** per slain cop on claimed turf. |
+| **Gang Leader**<br>`Lvl 5 - $20/90s - 4 slots` | - Armor: 50<br>- Speed: 160 / 240<br>- Weapons: Fists | Syndicate founder; executes `/creategang`, withdraws vault funds, sets territory tax (`/settax 5-30`), and coordinates turf defense. |
+| **Thief**<br>`Lvl 3 - $10/90s - 4 slots` | - Armor: 0<br>- Speed: 160 / 240<br>- Weapons: Lockpick | Infiltrator; bypasses door keypads with lockpicks to crack vaults, extract contraband, and steal cash. |
+| **Hitman**<br>`Lvl 6 - $16/90s - 2 slots` | - Armor: 30<br>- Speed: 160 / 240<br>- Weapons: Lockpick | Covert assassin; accepts targeted murder contracts, stealth infiltration, high-precision executions. |
+| **Black Market Dealer**<br>`Lvl 4 - $12/90s - 2 slots` | - Armor: 0<br>- Speed: 160 / 240<br>- Weapons: Fists | Contraband smuggler; exclusive vendor of heavy weapons (AK-47, Deagle shipments), lockpicks, and combat stims. |
 
 ### 3. Police / SWAT Faction
 
 | Job & Tier | Stats & Loadout | Core Capabilities & Exclusive Mechanics |
 | :--- | :--- | :--- |
-| **Police Officer**<br>`Lvl 1 · $16/90s · 6 slots` | • Armor: 30<br>• Speed: **230 / 350**<br>• Weapons: Glock, Stunstick, Scanner | Rapid pursuit interceptor (top 350 sprint speed); scans wireless contraband, earns **+50% printer bounties**, 5s rapid respawn timer. |
-| **Police Chief**<br>`Lvl 5 · $25/90s · 1 slot` | • Armor: 50<br>• Speed: 220 / 315<br>• Weapons: Deagle, Shotgun, Stunstick | Tactical commander; coordinates street patrols, issues warrants, initiates city lockdowns. |
-| **SWAT Specialist**<br>`Lvl 7 · $22/90s · 2 slots` | • Armor: **100**<br>• Speed: **160 / 230**<br>• Weapons: Shotgun, Battering Ram | Heavy siege breacher; instant dynamic door breaches with **Battering Ram**, absorbs heavy damage. Heavy speed penalty. |
-| **Mayor**<br>`Lvl 5 · $35/90s · 1 slot` | • Armor: 25<br>• Speed: 160 / 240<br>• Weapons: Deagle | Chief executive; declares citywide curfews, signs search warrants, manages public governance. High-value VIP target. |
+| **Police Officer**<br>`Lvl 1 - $16/90s - 6 slots` | - Armor: 30<br>- Speed: **230 / 350**<br>- Weapons: Glock, Stunstick, Scanner | Rapid pursuit interceptor (top 350 sprint speed); scans wireless contraband, earns **+50% printer bounties**, 5s rapid respawn timer. |
+| **Police Chief**<br>`Lvl 5 - $25/90s - 1 slot` | - Armor: 50<br>- Speed: 220 / 315<br>- Weapons: Deagle, Shotgun, Stunstick | Tactical commander; coordinates street patrols, issues warrants, initiates city lockdowns. |
+| **SWAT Specialist**<br>`Lvl 7 - $22/90s - 2 slots` | - Armor: **100**<br>- Speed: **160 / 230**<br>- Weapons: Shotgun, Battering Ram | Heavy siege breacher; instant dynamic door breaches with **Battering Ram**, absorbs heavy damage. Heavy speed penalty. |
+| **Mayor**<br>`Lvl 5 - $35/90s - 1 slot` | - Armor: 25<br>- Speed: 160 / 240<br>- Weapons: Deagle | Chief executive; declares citywide curfews, signs search warrants, manages public governance. High-value VIP target. |
 
 ---
 
@@ -593,101 +593,101 @@ Every job receives baseline items (`weapon_fists`, `weapon_grid_keys`, `weapon_p
 
 ```
 gridrp/
-├── gridrp.txt                      # Gamemode manifest & configuration
-├── README.md                       # Comprehensive system documentation
-├── sql/
-│   └── grid_mariadb_schema.sql     # Complete MariaDB schema (Procedures & Views)
-├── gamemode/
-│   ├── init.lua, cl_init.lua, shared.lua
-│   ├── auction/                    # Global Auction House system
-│   │   ├── sh_auction.lua          # Shared configs, sinks & attribute parsers
-│   │   ├── sv_auction.lua          # Server engine, expiration sweep, escrow
-│   │   └── cl_auction.lua          # Full VGUI Auction House interface
-│   ├── core/                       # Core engine subsystems
-│   │   ├── sh_config.lua           # Gamemode balance settings & shop items
-│   │   ├── sh_scavenge_config.lua  # Scavenging & recycling loot tables
-│   │   ├── sh_networking.lua       # Network strings & socket definitions
-│   │   ├── sh_player_meta.lua      # Player meta extensions (money, gang, etc.)
-│   │   ├── sh_entity_meta.lua      # Entity meta extensions
-│   │   ├── sh_notifications.lua    # Toast & notification engine
-│   │   ├── sv_database.lua         # MariaDB mysqloo v9 & SQLite fallback layer
-│   │   ├── sv_population_balancer.lua # Dynamic low-pop economy scaler
-│   │   ├── sv_scavenge_spawner.lua # Persistent scavenge node spawner
-│   │   ├── sv_telemetry.lua        # Partitioned telemetry logger
-│   │   ├── sv_net.lua              # Server network receivers & rate limiter
-│   │   └── sv_admin.lua            # Administrator HUD & moderation commands
-│   ├── factions/                   # Jobs, factions & gang management
-│   │   ├── sh_factions.lua         # 15 Job definitions across 3 factions
-│   │   └── sv_gangs.lua            # Syndicate creation, invites, vault banking
-│   ├── turf/                       # Territorial warfare & rackets
-│   │   ├── sh_turf.lua             # Shared turf helpers
-│   │   ├── sv_turf.lua             # 15s capture engine, dividends, alerts
-│   │   └── cl_turf_setup.lua       # Visual in-game turf setup editor
-│   ├── economy/                    # Economy & currency
-│   │   ├── sv_economy.lua          # Salaries, payday timer, cash drops
-│   │   └── cl_economy.lua          # Client money formatters
-│   ├── doors/                      # Property ownership
-│   │   ├── sv_doors.lua            # Keypad locks, purchasing, co-ownership
-│   │   └── cl_doors.lua            # Door HUD & F2 management menu
-│   ├── inventory/                  # Grid inventory & modular bags
-│   │   ├── sh_inventory.lua        # Slot math, item definitions, stacking
-│   │   ├── sv_inventory.lua        # Pickup, drop, bag persistence
-│   │   ├── cl_inventory.lua        # Main inventory UI
-│   │   └── cl_bag.lua              # Equipped bags display
-│   ├── crafting/                   # Industrial fabrication
-│   │   ├── sh_crafting.lua         # Materials, drop tables, blueprints
-│   │   ├── sv_crafting.lua         # Server crafting validation
-│   │   └── cl_crafting.lua         # Crafting bench UI
-│   ├── buffs/                      # Buff / debuff status engine
-│   │   ├── sh_buffs.lua            # Buff registry
-│   │   ├── sh_buff_definitions.lua # Buff hooks (speed, damage, healing)
-│   │   ├── sv_buffs.lua            # Buff ticking & DB persistence
-│   │   └── cl_buffs.lua            # Client HUD status icons
-│   └── ui/                         # User interface & HUD
-│       ├── cl_hud.lua              # Modern HUD with alerts & notifications
-│       ├── cl_f4menu.lua           # Categorized Command & Commerce Hub
-│       ├── cl_chatbox.lua          # Custom chatbox with gang/police channels
-│       ├── cl_scoreboard.lua       # Clean player scoreboard
-│       └── cl_deathscreen.lua      # Death screen & respawn timer
-└── entities/
-    ├── entities/                   # Scripted entities
-    │   ├── grid_auction_terminal/  # Persistent Auction House terminal
-    │   ├── grid_recycler_depot/    # Street Recycling Depot machine
-    │   ├── grid_scavenge_dumpster/ # Scavenge container: Dumpster
-    │   ├── grid_scavenge_trashbin/ # Scavenge container: Trash Bin
-    │   ├── grid_scavenge_scrappile/# Scavenge container: Scrap Pile
-    │   ├── grid_scavenge_node_base/# Base scavenge node entity
-    │   ├── grid_network_switch_base/# Base switch socket & routing logic
-    │   ├── grid_network_switch_4p/ # 4-Port Layer-3 Network Switch
-    │   ├── grid_network_switch_7p/ # 7-Port Enterprise Layer-3 Switch
-    │   ├── grid_printer_base/      # Base printer with heat & vent minigame
-    │   ├── grid_printer_bronze/    # Bronze Money Printer
-    │   ├── grid_printer_silver/    # Silver Money Printer
-    │   ├── grid_printer_diamond/   # Diamond Money Printer
-    │   ├── grid_computer/          # Personal Computer terminal & Botnet C2
-    │   ├── grid_wan_uplink/        # Satellite WAN Uplink transmitter
-    │   ├── grid_flag_pole/         # Turf capture flag pole
-    │   ├── grid_clinic_pod/        # Automated Triage Clinic Pod
-    │   ├── grid_resource_machine/  # Resource Fabricator
-    │   ├── grid_module_undervolt/  # Printer Undervolt Module
-    │   ├── grid_module_overclock/  # Printer Overclock Module
-    │   ├── grid_cash_stack/        # Physical dropped money entity
-    │   ├── grid_crafting_material/ # Physical dropped crafting scrap
-    │   └── grid_shipment/          # Bulk wholesale crate shipment
-    └── weapons/                    # Scripted weapons & tools
-        ├── weapon_grid_base/       # Base weapon recoil & spread handler
-        ├── weapon_grid_glock/      # Duty Glock 18
-        ├── weapon_grid_shotgun/    # Tactical Pump Shotgun
-        ├── weapon_grid_deagle/     # Heavy .50 Desert Eagle
-        ├── weapon_grid_ak47/       # Assault Rifle AK-47
-        ├── weapon_grid_wiretool/   # Copper & Fiber network wiring tool
-        ├── weapon_grid_repairtool/ # Cryo Calibrator & maintenance tool
-        ├── weapon_grid_scanner/    # Police RF contraband detector
-        ├── weapon_grid_ram/        # SWAT dynamic battering ram
-        ├── weapon_grid_lockpick/   # Burglary lockpick tool
-        ├── weapon_grid_medkit/     # Field triage first-aid medkit
-        ├── weapon_grid_keys/       # Property keys & lock/unlock tool
-        └── weapon_grid_cyberphone/ # CyberDeck mobile terminal
+|---- gridrp.txt                      # Gamemode manifest & configuration
+|---- README.md                       # Comprehensive system documentation
+|---- sql/
+|   \---- grid_mariadb_schema.sql     # Complete MariaDB schema (Procedures & Views)
+|---- gamemode/
+|   |---- init.lua, cl_init.lua, shared.lua
+|   |---- auction/                    # Global Auction House system
+|   |   |---- sh_auction.lua          # Shared configs, sinks & attribute parsers
+|   |   |---- sv_auction.lua          # Server engine, expiration sweep, escrow
+|   |   \---- cl_auction.lua          # Full VGUI Auction House interface
+|   |---- core/                       # Core engine subsystems
+|   |   |---- sh_config.lua           # Gamemode balance settings & shop items
+|   |   |---- sh_scavenge_config.lua  # Scavenging & recycling loot tables
+|   |   |---- sh_networking.lua       # Network strings & socket definitions
+|   |   |---- sh_player_meta.lua      # Player meta extensions (money, gang, etc.)
+|   |   |---- sh_entity_meta.lua      # Entity meta extensions
+|   |   |---- sh_notifications.lua    # Toast & notification engine
+|   |   |---- sv_database.lua         # MariaDB mysqloo v9 & SQLite fallback layer
+|   |   |---- sv_population_balancer.lua # Dynamic low-pop economy scaler
+|   |   |---- sv_scavenge_spawner.lua # Persistent scavenge node spawner
+|   |   |---- sv_telemetry.lua        # Partitioned telemetry logger
+|   |   |---- sv_net.lua              # Server network receivers & rate limiter
+|   |   \---- sv_admin.lua            # Administrator HUD & moderation commands
+|   |---- factions/                   # Jobs, factions & gang management
+|   |   |---- sh_factions.lua         # 15 Job definitions across 3 factions
+|   |   \---- sv_gangs.lua            # Syndicate creation, invites, vault banking
+|   |---- turf/                       # Territorial warfare & rackets
+|   |   |---- sh_turf.lua             # Shared turf helpers
+|   |   |---- sv_turf.lua             # 15s capture engine, dividends, alerts
+|   |   \---- cl_turf_setup.lua       # Visual in-game turf setup editor
+|   |---- economy/                    # Economy & currency
+|   |   |---- sv_economy.lua          # Salaries, payday timer, cash drops
+|   |   \---- cl_economy.lua          # Client money formatters
+|   |---- doors/                      # Property ownership
+|   |   |---- sv_doors.lua            # Keypad locks, purchasing, co-ownership
+|   |   \---- cl_doors.lua            # Door HUD & F2 management menu
+|   |---- inventory/                  # Grid inventory & modular bags
+|   |   |---- sh_inventory.lua        # Slot math, item definitions, stacking
+|   |   |---- sv_inventory.lua        # Pickup, drop, bag persistence
+|   |   |---- cl_inventory.lua        # Main inventory UI
+|   |   \---- cl_bag.lua              # Equipped bags display
+|   |---- crafting/                   # Industrial fabrication
+|   |   |---- sh_crafting.lua         # Materials, drop tables, blueprints
+|   |   |---- sv_crafting.lua         # Server crafting validation
+|   |   \---- cl_crafting.lua         # Crafting bench UI
+|   |---- buffs/                      # Buff / debuff status engine
+|   |   |---- sh_buffs.lua            # Buff registry
+|   |   |---- sh_buff_definitions.lua # Buff hooks (speed, damage, healing)
+|   |   |---- sv_buffs.lua            # Buff ticking & DB persistence
+|   |   \---- cl_buffs.lua            # Client HUD status icons
+|   \---- ui/                         # User interface & HUD
+|       |---- cl_hud.lua              # Modern HUD with alerts & notifications
+|       |---- cl_f4menu.lua           # Categorized Command & Commerce Hub
+|       |---- cl_chatbox.lua          # Custom chatbox with gang/police channels
+|       |---- cl_scoreboard.lua       # Clean player scoreboard
+|       \---- cl_deathscreen.lua      # Death screen & respawn timer
+\---- entities/
+    |---- entities/                   # Scripted entities
+    |   |---- grid_auction_terminal/  # Persistent Auction House terminal
+    |   |---- grid_recycler_depot/    # Street Recycling Depot machine
+    |   |---- grid_scavenge_dumpster/ # Scavenge container: Dumpster
+    |   |---- grid_scavenge_trashbin/ # Scavenge container: Trash Bin
+    |   |---- grid_scavenge_scrappile/# Scavenge container: Scrap Pile
+    |   |---- grid_scavenge_node_base/# Base scavenge node entity
+    |   |---- grid_network_switch_base/# Base switch socket & routing logic
+    |   |---- grid_network_switch_4p/ # 4-Port Layer-3 Network Switch
+    |   |---- grid_network_switch_7p/ # 7-Port Enterprise Layer-3 Switch
+    |   |---- grid_printer_base/      # Base printer with heat & vent minigame
+    |   |---- grid_printer_bronze/    # Bronze Money Printer
+    |   |---- grid_printer_silver/    # Silver Money Printer
+    |   |---- grid_printer_diamond/   # Diamond Money Printer
+    |   |---- grid_computer/          # Personal Computer terminal & Botnet C2
+    |   |---- grid_wan_uplink/        # Satellite WAN Uplink transmitter
+    |   |---- grid_flag_pole/         # Turf capture flag pole
+    |   |---- grid_clinic_pod/        # Automated Triage Clinic Pod
+    |   |---- grid_resource_machine/  # Resource Fabricator
+    |   |---- grid_module_undervolt/  # Printer Undervolt Module
+    |   |---- grid_module_overclock/  # Printer Overclock Module
+    |   |---- grid_cash_stack/        # Physical dropped money entity
+    |   |---- grid_crafting_material/ # Physical dropped crafting scrap
+    |   \---- grid_shipment/          # Bulk wholesale crate shipment
+    \---- weapons/                    # Scripted weapons & tools
+        |---- weapon_grid_base/       # Base weapon recoil & spread handler
+        |---- weapon_grid_glock/      # Duty Glock 18
+        |---- weapon_grid_shotgun/    # Tactical Pump Shotgun
+        |---- weapon_grid_deagle/     # Heavy .50 Desert Eagle
+        |---- weapon_grid_ak47/       # Assault Rifle AK-47
+        |---- weapon_grid_wiretool/   # Copper & Fiber network wiring tool
+        |---- weapon_grid_repairtool/ # Cryo Calibrator & maintenance tool
+        |---- weapon_grid_scanner/    # Police RF contraband detector
+        |---- weapon_grid_ram/        # SWAT dynamic battering ram
+        |---- weapon_grid_lockpick/   # Burglary lockpick tool
+        |---- weapon_grid_medkit/     # Field triage first-aid medkit
+        |---- weapon_grid_keys/       # Property keys & lock/unlock tool
+        \---- weapon_grid_cyberphone/ # CyberDeck mobile terminal
 ```
 
 ---

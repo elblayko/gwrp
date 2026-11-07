@@ -405,7 +405,7 @@ GRID.ShopItems = {
         class = "weapon_grid_repairtool",
         category = "networking",
         desc =
-        "Handheld printer calibrator. Cools printers (-35°C), repairs integrity, and allows Cyber Engineers to Supercharge hardware."
+        "Handheld printer calibrator. Cools printers (-35C), repairs integrity, and allows Cyber Engineers to Supercharge hardware."
     },
     ["entity_network_switch"] = {
         name = "L3 Network Switch (2-Cu + 2-SFP)",

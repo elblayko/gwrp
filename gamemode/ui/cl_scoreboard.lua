@@ -24,7 +24,7 @@ function GM:ScoreboardShow()
     frame.Paint = function(s, w, h)
         draw.RoundedBox(8, 0, 0, w, h, Color(15, 23, 42, 245))
         draw.RoundedBox(8, 0, 0, w, 45, Color(30, 41, 59))
-        draw.SimpleText("GRIDRP — Juicebox", "GRID_FontLarge", 20, 10, colors.Border or Color(56, 189, 248))
+        draw.SimpleText("GRIDRP -- Juicebox", "GRID_FontLarge", 20, 10, colors.Border or Color(56, 189, 248))
         draw.SimpleText("Players Online: " .. #player.GetAll(), "GRID_FontSmall", w - 20, 15,
             colors.White or Color(255, 255, 255), TEXT_ALIGN_RIGHT)
     end

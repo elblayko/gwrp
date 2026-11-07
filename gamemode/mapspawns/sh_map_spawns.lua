@@ -29,7 +29,6 @@ GRID.MapSpawns.WhitelistedClasses = {
     ["grid_flag_pole"]         = true,
     ["grid_deaddrop_locker"]   = true,
     ["grid_practice_stash"]    = true,
-    ["grid_combat_target"]     = true,
     ["grid_atm"]               = true,
 }
 
@@ -38,7 +37,6 @@ GRID.MapSpawns.TransmitAlwaysClasses = {
     ["grid_auction_terminal"]  = true,
     ["grid_clinic_pod"]        = true,
     ["grid_recycler_depot"]    = true,
-    ["grid_combat_target"]     = true,
     ["grid_atm"]               = true,
 }
 
