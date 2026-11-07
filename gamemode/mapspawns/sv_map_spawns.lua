@@ -223,6 +223,17 @@ hook.Add("PlayerSpawnedSENT", "GRID_MapSpawns_PlayerSpawnedSENT", function(ply, 
             GRID.Notify(ply, string.format("Permanent map entity #%d (%s) saved to MariaDB!", newSpawnId, className), NOTIFY_HINT, 6)
             print(string.format("[GRID MapSpawns] SuperAdmin %s (%s) placed new persistent entity #%d (%s).", ply:Nick(), adminSid, newSpawnId, className))
         end
+
+        -- Keep JSON backup profiles synchronized
+        if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (className == "grid_deaddrop_locker" or className == "grid_practice_stash" or className == "grid_atm") then
+            GRID.Onboarding.SaveMapProfile()
+        end
+        if GRID.Auction and GRID.Auction.SaveTerminals and className == "grid_auction_terminal" then
+            GRID.Auction.SaveTerminals()
+        end
+        if GRID.Scavenge and GRID.Scavenge.SaveMapProfile and (string.StartWith(className, "grid_scavenge_") or className == "grid_recycler_depot") then
+            GRID.Scavenge.SaveMapProfile()
+        end
     end, function(err)
         GRID.Notify(ply, "Failed to save persistent entity to MariaDB! See server console.", NOTIFY_ERROR, 8)
     end)
@@ -277,8 +288,20 @@ hook.Add("OnPhysgunFreeze", "GRID_MapSpawns_OnPhysgunFreeze", function(weapon, p
         end
 
         -- Update row in MariaDB
-        GRID.Database.SaveMapEntity(spawnId, game.GetMap(), ent:GetClass(), ent:GetPos(), ent:GetAngles(), ply:SteamID(), customData, function(savedId)
+        local entClass = ent:GetClass()
+        GRID.Database.SaveMapEntity(spawnId, game.GetMap(), entClass, ent:GetPos(), ent:GetAngles(), ply:SteamID(), customData, function(savedId)
             GRID.Notify(ply, string.format("Updated persistent entity #%d position in MariaDB.", savedId), NOTIFY_HINT, 4)
+
+            -- Keep JSON snapshots updated
+            if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_atm") then
+                GRID.Onboarding.SaveMapProfile()
+            end
+            if GRID.Auction and GRID.Auction.SaveTerminals and entClass == "grid_auction_terminal" then
+                GRID.Auction.SaveTerminals()
+            end
+            if GRID.Scavenge and GRID.Scavenge.SaveMapProfile and (string.StartWith(entClass, "grid_scavenge_") or entClass == "grid_recycler_depot") then
+                GRID.Scavenge.SaveMapProfile()
+            end
         end)
 
         return true
@@ -330,13 +353,26 @@ hook.Add("CanUndo", "GRID_MapSpawns_CanUndo", function(ply, undoTable)
             end
 
             local spawnId = ent.GRID_MapSpawnID
+            local entClass = ent:GetClass()
             ent.GRID_MapSpawnID = nil -- Clear so EntityRemoved or cleanup never triggers DB action
             if spawnId and spawnId > 0 then
                 GRID.Database.DeleteMapEntity(spawnId, function()
-                    print(string.format("[GRID MapSpawns] SuperAdmin %s (%s) undid persistent entity #%d (%s).", ply:Nick(), ply:SteamID(), spawnId, ent:GetClass()))
+                    print(string.format("[GRID MapSpawns] SuperAdmin %s (%s) undid persistent entity #%d (%s).", ply:Nick(), ply:SteamID(), spawnId, entClass))
                 end)
                 GRID.Notify(ply, string.format("Removed persistent map entity #%d from MariaDB.", spawnId), NOTIFY_GENERIC)
             end
+
+            timer.Simple(0.1, function()
+                if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_atm") then
+                    GRID.Onboarding.SaveMapProfile()
+                end
+                if GRID.Auction and GRID.Auction.SaveTerminals and entClass == "grid_auction_terminal" then
+                    GRID.Auction.SaveTerminals()
+                end
+                if GRID.Scavenge and GRID.Scavenge.SaveMapProfile and (string.StartWith(entClass, "grid_scavenge_") or entClass == "grid_recycler_depot") then
+                    GRID.Scavenge.SaveMapProfile()
+                end
+            end)
         end
     end
 end)
@@ -353,13 +389,26 @@ hook.Add("CanTool", "GRID_MapSpawns_CanTool", function(ply, tr, toolname)
     if toolname == "remover" then
         local ent = tr.Entity
         local spawnId = ent.GRID_MapSpawnID
+        local entClass = ent:GetClass()
         ent.GRID_MapSpawnID = nil -- Clear so accidental duplicate removal calls do nothing
         if spawnId and spawnId > 0 then
             GRID.Database.DeleteMapEntity(spawnId, function()
-                print(string.format("[GRID MapSpawns] SuperAdmin %s (%s) removed persistent entity #%d (%s) via Remover.", ply:Nick(), ply:SteamID(), spawnId, ent:GetClass()))
+                print(string.format("[GRID MapSpawns] SuperAdmin %s (%s) removed persistent entity #%d (%s) via Remover.", ply:Nick(), ply:SteamID(), spawnId, entClass))
             end)
             GRID.Notify(ply, string.format("Deleted persistent map entity #%d from MariaDB.", spawnId), NOTIFY_GENERIC)
         end
+
+        timer.Simple(0.1, function()
+            if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_atm") then
+                GRID.Onboarding.SaveMapProfile()
+            end
+            if GRID.Auction and GRID.Auction.SaveTerminals and entClass == "grid_auction_terminal" then
+                GRID.Auction.SaveTerminals()
+            end
+            if GRID.Scavenge and GRID.Scavenge.SaveMapProfile and (string.StartWith(entClass, "grid_scavenge_") or entClass == "grid_recycler_depot") then
+                GRID.Scavenge.SaveMapProfile()
+            end
+        end)
         return true
     end
 

@@ -361,4 +361,166 @@ concommand.Add("grid_onboarding_setstage", function(ply, cmd, args)
     end
 end)
 
+-- --------------------------------------------------------
+-- Map Profile & World Infrastructure Persistence (JSON & DB Backup)
+-- --------------------------------------------------------
+local ONBOARDING_DATA_DIR = "gridrp/onboarding"
+
+local function GetOnboardingFilePath()
+    local map = string.lower(game.GetMap())
+    return ONBOARDING_DATA_DIR .. "/" .. map .. ".json"
+end
+
+local function GetOnboardingDBKey()
+    return "onboarding_props_" .. string.lower(game.GetMap())
+end
+
+local ONBOARDING_CLASSES = {
+    ["grid_deaddrop_locker"] = true,
+    ["grid_practice_stash"]  = true,
+    ["grid_atm"]             = true
+}
+
+--- Saves all world onboarding entities to disk and database
+function GRID.Onboarding.SaveMapProfile()
+    local records = {}
+    for class, _ in pairs(ONBOARDING_CLASSES) do
+        for _, ent in ipairs(ents.FindByClass(class)) do
+            if IsValid(ent) then
+                local pos = ent:GetPos()
+                local ang = ent:GetAngles()
+                table.insert(records, {
+                    class = class,
+                    pos = { x = math.Round(pos.x, 2), y = math.Round(pos.y, 2), z = math.Round(pos.z, 2) },
+                    ang = { p = math.Round(ang.p, 2), y = math.Round(ang.y, 2), r = math.Round(ang.r, 2) }
+                })
+            end
+        end
+    end
+
+    local json = util.TableToJSON(records, true)
+
+    -- 1. Primary DB persistence
+    local dbKey = GetOnboardingDBKey()
+    if GRID.Database and GRID.Database.SetSetting then
+        GRID.Database.SetSetting(dbKey, json)
+    end
+
+    -- 2. File snapshot
+    file.CreateDir(ONBOARDING_DATA_DIR)
+    local filePath = GetOnboardingFilePath()
+    file.Write(filePath, json)
+
+    print(string.format("[GRID Onboarding] Saved %d onboarding props to Database ('%s') & JSON '%s'.", #records, dbKey, filePath))
+    return true
+end
+
+--- Loads and spawns onboarding entities from JSON/Database if persistent map spawns did not load any
+function GRID.Onboarding.LoadMapProfile()
+    local existingCount = 0
+    for class, _ in pairs(ONBOARDING_CLASSES) do
+        existingCount = existingCount + #ents.FindByClass(class)
+    end
+
+    -- If entities already spawned (e.g. from v_grid_map_spawns), don't duplicate
+    if existingCount > 0 then
+        return
+    end
+
+    local dbKey = GetOnboardingDBKey()
+    local filePath = GetOnboardingFilePath()
+    local records = nil
+    local loadSource = "none"
+
+    if GRID.Database and GRID.Database.GetSetting then
+        local raw = GRID.Database.GetSetting(dbKey)
+        if raw and raw ~= "" then
+            records = util.JSONToTable(raw)
+            if records and #records > 0 then
+                loadSource = "Database ('" .. dbKey .. "')"
+            end
+        end
+    end
+
+    if not records or #records == 0 then
+        if file.Exists(filePath, "DATA") then
+            local raw = file.Read(filePath, "DATA")
+            records = util.JSONToTable(raw)
+            if records and #records > 0 then
+                loadSource = "JSON Snapshot ('" .. filePath .. "')"
+            end
+        end
+    end
+
+    if not records or #records == 0 then return end
+
+    local count = 0
+    for _, data in ipairs(records) do
+        if data.class and data.pos and data.ang then
+            local pos = Vector(data.pos.x, data.pos.y, data.pos.z)
+            local ang = Angle(data.ang.p, data.ang.y, data.ang.r)
+            local ent = ents.Create(data.class)
+            if IsValid(ent) then
+                ent:SetPos(pos)
+                ent:SetAngles(ang)
+                ent:Spawn()
+                ent:Activate()
+
+                local phys = ent:GetPhysicsObject()
+                if IsValid(phys) then
+                    phys:EnableMotion(false)
+                    phys:Wake()
+                end
+
+                if GRID.MapSpawns and GRID.MapSpawns.ApplyWorldProtection then
+                    GRID.MapSpawns.ApplyWorldProtection(ent)
+                end
+
+                count = count + 1
+            end
+        end
+    end
+
+    print(string.format("[GRID Onboarding] Successfully restored %d onboarding props from %s.", count, loadSource))
+end
+
+-- Auto-load hook after map and DB initialization
+hook.Add("InitPostEntity", "GRID_Onboarding_InitPostEntity", function()
+    timer.Simple(3.0, function()
+        GRID.Onboarding.LoadMapProfile()
+    end)
+end)
+
+hook.Add("PostCleanupMap", "GRID_Onboarding_PostCleanupMap", function()
+    timer.Simple(1.0, function()
+        GRID.Onboarding.LoadMapProfile()
+    end)
+end)
+
+-- Admin helper concommands
+concommand.Add("grid_onboarding_save", function(ply)
+    if IsValid(ply) and not ply:IsSuperAdmin() then
+        GRID.Notify(ply, "Access Denied: SuperAdmin only.", NOTIFY_ERROR)
+        return
+    end
+
+    GRID.Onboarding.SaveMapProfile()
+    if IsValid(ply) then
+        GRID.Notify(ply, "Onboarding world props saved to Database & Map JSON Profile.", NOTIFY_GENERIC)
+    end
+end)
+
+concommand.Add("grid_onboarding_respawn", function(ply)
+    if IsValid(ply) and not ply:IsSuperAdmin() then
+        GRID.Notify(ply, "Access Denied: SuperAdmin only.", NOTIFY_ERROR)
+        return
+    end
+
+    GRID.Onboarding.LoadMapProfile()
+    if IsValid(ply) then
+        GRID.Notify(ply, "Restored onboarding world props from Database / JSON Profile.", NOTIFY_GENERIC)
+    end
+end)
+
+
 
