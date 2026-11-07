@@ -93,7 +93,8 @@ function GRID.Inventory.PickupEntity(ply, ent)
         local itemId = class
         local itemData = {
             clip1 = ent:Clip1(),
-            clip2 = ent:Clip2()
+            clip2 = ent:Clip2(),
+            durability = (ent.GetDurability and ent:GetDurability()) or 100
         }
         local def = GRID.Inventory.GetItemData(itemId)
         local reqLevel = (def and def.level) or 1
@@ -111,8 +112,17 @@ function GRID.Inventory.PickupEntity(ply, ent)
                 ply:Give(itemId)
                 ply:SelectWeapon(itemId)
                 local givenWep = ply:GetWeapon(itemId)
-                if IsValid(givenWep) and itemData.clip1 and itemData.clip1 >= 0 then
-                    givenWep:SetClip1(itemData.clip1)
+                if IsValid(givenWep) then
+                    givenWep.GRID_DurabilityInitialized = true
+                    if givenWep.SetDurability and itemData.durability ~= nil then
+                        givenWep:SetDurability(tonumber(itemData.durability) or 100)
+                    end
+                    if itemData.clip1 and itemData.clip1 >= 0 then
+                        givenWep:SetClip1(itemData.clip1)
+                    end
+                    if itemData.clip2 and itemData.clip2 >= 0 then
+                        givenWep:SetClip2(itemData.clip2)
+                    end
                 end
                 ent:EmitSound("items/itempickup.wav", 65, 100)
                 GRID.Notify(ply, "Bags full! Equipped " .. (def and def.name or itemId) .. " directly.", NOTIFY_GENERIC)
@@ -332,9 +342,13 @@ local function HandleDropInventorySlot(len, ply)
         spawnedEnt = ents.Create(itemId)
         if IsValid(spawnedEnt) then
             spawnedEnt.GRID_Dropped = true
+            spawnedEnt.GRID_DurabilityInitialized = true
             spawnedEnt:SetPos(spawnPos)
             spawnedEnt:Spawn()
             spawnedEnt:Activate()
+            if spawnedEnt.SetDurability and rawData.durability ~= nil then
+                spawnedEnt:SetDurability(tonumber(rawData.durability) or 100)
+            end
             if rawData.clip1 then spawnedEnt:SetClip1(rawData.clip1) end
             if rawData.clip2 then spawnedEnt:SetClip2(rawData.clip2) end
         end
@@ -463,8 +477,22 @@ local function HandleUseInventorySlot(len, ply)
             return
         end
 
+        local rawData = util.JSONToTable(targetRow.item_data or "{}") or {}
         ply:Give(itemId)
         ply:SelectWeapon(itemId)
+        local givenWep = ply:GetWeapon(itemId)
+        if IsValid(givenWep) then
+            givenWep.GRID_DurabilityInitialized = true
+            if givenWep.SetDurability and rawData.durability ~= nil then
+                givenWep:SetDurability(tonumber(rawData.durability) or 100)
+            end
+            if rawData.clip1 and rawData.clip1 >= 0 then
+                givenWep:SetClip1(rawData.clip1)
+            end
+            if rawData.clip2 and rawData.clip2 >= 0 then
+                givenWep:SetClip2(rawData.clip2)
+            end
+        end
         ply:EmitSound("items/ammo_pickup.wav", 65, 100)
 
         GRID.Database.RemoveInventoryItemAtSlot(steamID, bagIndex, slotIndex, 1)
@@ -591,8 +619,22 @@ local function HandleUseInventoryItem(len, ply)
                     return
                 end
                 if not ply:HasWeapon(itemId) then
+                    local rawData = util.JSONToTable(r.item_data or "{}") or {}
                     ply:Give(itemId)
                     ply:SelectWeapon(itemId)
+                    local givenWep = ply:GetWeapon(itemId)
+                    if IsValid(givenWep) then
+                        givenWep.GRID_DurabilityInitialized = true
+                        if givenWep.SetDurability and rawData.durability ~= nil then
+                            givenWep:SetDurability(tonumber(rawData.durability) or 100)
+                        end
+                        if rawData.clip1 and rawData.clip1 >= 0 then
+                            givenWep:SetClip1(rawData.clip1)
+                        end
+                        if rawData.clip2 and rawData.clip2 >= 0 then
+                            givenWep:SetClip2(rawData.clip2)
+                        end
+                    end
                     GRID.Database.RemoveInventoryItemAtSlot(steamID, tonumber(r.bag_index) or 0,
                         tonumber(r.slot_index) or 1, 1)
                     GRID.Inventory.Sync(ply)
@@ -651,8 +693,13 @@ hook.Add("PlayerSay", "GRID_DropWeaponChatCommands", function(ply, text)
             return ""
         end
 
+        if hook.Run("PlayerCanDropWeapon", ply, wep) == false or wep.GRID_IsStarterItem then
+            return ""
+        end
+
         local clip1 = wep:Clip1()
         local clip2 = wep:Clip2()
+        local dur = (wep.GetDurability and wep:GetDurability()) or 100
 
         local tr = ply:GetEyeTrace()
         local spawnPos = ply:GetShootPos() + ply:GetAimVector() * 45
@@ -663,9 +710,13 @@ hook.Add("PlayerSay", "GRID_DropWeaponChatCommands", function(ply, text)
         local spawnedEnt = ents.Create(class)
         if IsValid(spawnedEnt) then
             spawnedEnt.GRID_Dropped = true
+            spawnedEnt.GRID_DurabilityInitialized = true
             spawnedEnt:SetPos(spawnPos)
             spawnedEnt:Spawn()
             spawnedEnt:Activate()
+            if spawnedEnt.SetDurability then
+                spawnedEnt:SetDurability(dur)
+            end
             if clip1 and clip1 >= 0 then spawnedEnt:SetClip1(clip1) end
             if clip2 and clip2 >= 0 then spawnedEnt:SetClip2(clip2) end
 

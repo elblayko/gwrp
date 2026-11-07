@@ -174,6 +174,39 @@ GRID.Database.MariaDBDirectProcedures = {
     grid_update_player_bank = function(p, run)
         run(GRID.Database.FormatQuery("UPDATE grid_players SET bank = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] }))
     end,
+    grid_transfer_personal_bank = function(p, run)
+        -- p = { steamID, delta, unixTime }
+        local steamID = p[1]
+        local delta = tonumber(p[2]) or 0
+        local now = tonumber(p[3]) or os.time()
+        GRID.Database.Execute(GRID.Database.FormatQuery("SELECT money, bank FROM grid_players WHERE steamid = ? LIMIT 1;", { steamID }), function(rows)
+            local r = rows and rows[1]
+            local m = tonumber(r and r.money) or 0
+            local b = tonumber(r and r.bank) or 0
+            if delta > 0 then
+                if m < delta then
+                    run("SELECT 'ERR_INSUFFICIENT_WALLET' AS status, " .. m .. " AS money, " .. b .. " AS bank;")
+                    return
+                end
+                m = m - delta
+                b = b + delta
+            elseif delta < 0 then
+                local w = math.abs(delta)
+                if b < w then
+                    run("SELECT 'ERR_INSUFFICIENT_BANK' AS status, " .. m .. " AS money, " .. b .. " AS bank;")
+                    return
+                end
+                m = m + w
+                b = b - w
+            else
+                run("SELECT 'ERR_ZERO_DELTA' AS status, " .. m .. " AS money, " .. b .. " AS bank;")
+                return
+            end
+            GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = ?, bank = ?, last_seen = ? WHERE steamid = ?;", { m, b, now, steamID }), function()
+                run("SELECT 'SUCCESS' AS status, " .. m .. " AS money, " .. b .. " AS bank;")
+            end)
+        end)
+    end,
     grid_update_onboarding_stage = function(p, run)
         run(GRID.Database.FormatQuery("UPDATE grid_players SET onboarding_stage = ? WHERE steamid = ?;", { p[2], p[1] }))
     end,
@@ -204,7 +237,7 @@ GRID.Database.MariaDBDirectProcedures = {
             GRID.Database.Execute(GRID.Database.FormatQuery("DELETE FROM grid_player_bags WHERE steamid = ?;", { steamID }))
             GRID.Database.Execute(GRID.Database.FormatQuery("DELETE FROM grid_player_buffs WHERE steamid = ?;", { steamID }))
             GRID.Database.Execute(GRID.Database.FormatQuery(
-                "INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (?, 'ADMIN', 'PLAYER_FULL_RESET', 'CONSOLE', ?, 0, ?);",
+                "INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (?, 'PLAYER_ACTION', 'PLAYER_FULL_RESET', 'CONSOLE', ?, 0, ?);",
                 { now, steamID, '{"reason":"admin_hud_reset"}' }
             ))
         end)
@@ -400,6 +433,8 @@ GRID.Database.DirectViews = {
     v_map_turfs = "grid_turfs",
     v_settings = "grid_settings",
     v_auction_metrics = "(SELECT a.item_id, MIN(CASE WHEN a.status = 'ACTIVE' AND a.buyout_price > 0 THEN a.buyout_price ELSE NULL END) AS min_active_buyout, COUNT(CASE WHEN a.status = 'ACTIVE' THEN 1 ELSE NULL END) AS active_listings_count, ROUND(AVG(CASE WHEN a.status = 'SOLD' AND a.closed_at_unix >= (strftime('%s', 'now') - 604800) THEN MAX(a.current_bid, a.buyout_price) ELSE NULL END)) AS avg_sale_price_7d, COALESCE(SUM(CASE WHEN a.status = 'SOLD' AND a.closed_at_unix >= (strftime('%s', 'now') - 86400) THEN a.amount ELSE 0 END), 0) AS sold_volume_24h FROM grid_auctions a GROUP BY a.item_id) AS v_auction_metrics",
+    v_auctions = "grid_auctions",
+    v_auction_collection = "grid_auction_collection",
     v_grid_map_spawns = "grid_map_entities",
 }
 
@@ -425,6 +460,64 @@ GRID.Database.SQLiteProcedures = {
     grid_update_player_bank = function(p)
         return GRID.Database.FormatQuery("UPDATE grid_players SET bank = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
     end,
+    grid_transfer_personal_bank = function(p)
+        local steamID = p[1]
+        local delta = tonumber(p[2]) or 0
+        local now = tonumber(p[3]) or os.time()
+        local r = sql.Query(GRID.Database.FormatQuery("SELECT money, bank FROM grid_players WHERE steamid = ? LIMIT 1;", { steamID }))
+        local row = r and r[1]
+        local m = tonumber(row and row.money) or 0
+        local b = tonumber(row and row.bank) or 0
+        if delta > 0 then
+            if m < delta then
+                return string.format("SELECT 'ERR_INSUFFICIENT_WALLET' AS status, %d AS money, %d AS bank;", m, b)
+            end
+            m = m - delta
+            b = b + delta
+        elseif delta < 0 then
+            local w = math.abs(delta)
+            if b < w then
+                return string.format("SELECT 'ERR_INSUFFICIENT_BANK' AS status, %d AS money, %d AS bank;", m, b)
+            end
+            m = m + w
+            b = b - w
+        else
+            return string.format("SELECT 'ERR_ZERO_DELTA' AS status, %d AS money, %d AS bank;", m, b)
+        end
+        sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET money = ?, bank = ?, last_seen = ? WHERE steamid = ?;", { m, b, now, steamID }))
+        return string.format("SELECT 'SUCCESS' AS status, %d AS money, %d AS bank;", m, b)
+    end,
+    grid_transfer_gang_vault = function(p)
+        local steamID = p[1]
+        local gangName = p[2]
+        local delta = tonumber(p[3]) or 0
+        local now = tonumber(p[4]) or os.time()
+        local pr = sql.Query(GRID.Database.FormatQuery("SELECT money FROM grid_players WHERE steamid = ? LIMIT 1;", { steamID }))
+        local gr = sql.Query(GRID.Database.FormatQuery("SELECT bank FROM grid_gangs WHERE name = ? LIMIT 1;", { gangName }))
+        local m = tonumber(pr and pr[1] and pr[1].money) or 0
+        local gb = tonumber(gr and gr[1] and gr[1].bank) or 0
+        if delta > 0 and m >= delta then
+            sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET money = money - ?, last_seen = ? WHERE steamid = ?;", { delta, now, steamID }))
+            return GRID.Database.FormatQuery("UPDATE grid_gangs SET bank = bank + ? WHERE name = ?;", { delta, gangName })
+        elseif delta < 0 and gb >= math.abs(delta) then
+            local w = math.abs(delta)
+            sql.Query(GRID.Database.FormatQuery("UPDATE grid_gangs SET bank = bank - ? WHERE name = ?;", { w, gangName }))
+            return GRID.Database.FormatQuery("UPDATE grid_players SET money = money + ?, last_seen = ? WHERE steamid = ?;", { w, now, steamID })
+        end
+        return "SELECT 1;"
+    end,
+    grid_collect_printer_taxed = function(p)
+        local steamID = p[1]
+        local gang = tostring(p[2] or "")
+        local payout = tonumber(p[3]) or 0
+        local tax = tonumber(p[4]) or 0
+        local now = tonumber(p[5]) or os.time()
+        sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET money = money + ?, last_seen = ? WHERE steamid = ?;", { payout, now, steamID }))
+        if tax > 0 and gang ~= "" and gang ~= "neutral" and gang ~= "Police" then
+            return GRID.Database.FormatQuery("UPDATE grid_gangs SET bank = bank + ? WHERE name = ?;", { tax, gang })
+        end
+        return "SELECT 1;"
+    end,
     grid_update_onboarding_stage = function(p)
         return GRID.Database.FormatQuery("UPDATE grid_players SET onboarding_stage = ? WHERE steamid = ?;", { p[2], p[1] })
     end,
@@ -444,7 +537,7 @@ GRID.Database.SQLiteProcedures = {
         sql.Query(GRID.Database.FormatQuery("DELETE FROM grid_player_bags WHERE steamid = ?;", { steamID }))
         sql.Query(GRID.Database.FormatQuery("DELETE FROM grid_player_buffs WHERE steamid = ?;", { steamID }))
         local qMeta = sql.SQLStr('{"reason":"admin_hud_reset"}')
-        return string.format("INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (%d, 'ADMIN', 'PLAYER_FULL_RESET', 'CONSOLE', %s, 0, %s);", now, sql.SQLStr(steamID), qMeta)
+        return string.format("INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (%d, 'PLAYER_ACTION', 'PLAYER_FULL_RESET', 'CONSOLE', %s, 0, %s);", now, sql.SQLStr(steamID), qMeta)
     end,
     grid_update_player_gang = function(p)
         return GRID.Database.FormatQuery("UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
@@ -663,7 +756,7 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             log_id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
             created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
             unix_ts INT UNSIGNED NOT NULL DEFAULT 0,
-            category VARCHAR(24) NOT NULL,
+            category ENUM('ECONOMY', 'PLAYER_ACTION', 'ANTIDEBUG', 'COMBAT', 'TRADE') NOT NULL,
             action_type VARCHAR(48) NOT NULL,
             actor_steamid VARCHAR(20) NOT NULL,
             target_steamid VARCHAR(20) NULL,
@@ -789,7 +882,16 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             GROUP BY a.item_id;]],
         [[CREATE OR REPLACE VIEW v_grid_map_spawns AS
             SELECT spawn_id, map_name, class_name, pos_x, pos_y, pos_z, ang_p, ang_y, ang_r, placed_by, custom_data
-            FROM grid_map_entities;]]
+            FROM grid_map_entities;]],
+        [[CREATE OR REPLACE VIEW v_auctions AS
+            SELECT auction_id, seller_steamid, seller_name, item_id, item_type, amount, item_data,
+                   start_bid, current_bid, high_bidder_steamid, high_bidder_name, buyout_price,
+                   deposit_amount, status, duration_hours, created_at_unix, expires_at_unix, closed_at_unix
+            FROM grid_auctions;]],
+        [[CREATE OR REPLACE VIEW v_auction_collection AS
+            SELECT collection_id, steamid, item_id, item_type, amount, item_data,
+                   source_reason, source_auction_id, created_at_unix, claimed, claimed_at_unix
+            FROM grid_auction_collection;]]
     }
 
     local procDDLs = {
@@ -820,6 +922,46 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             IN p_steamid VARCHAR(20), IN p_bank BIGINT, IN p_last_seen INT UNSIGNED
         ) BEGIN
             UPDATE grid_players SET bank = p_bank, last_seen = p_last_seen WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_transfer_personal_bank(
+            IN p_steamid VARCHAR(20), IN p_delta BIGINT, IN p_unix_time INT UNSIGNED
+        ) BEGIN
+            DECLARE v_money BIGINT DEFAULT 0;
+            DECLARE v_bank BIGINT DEFAULT 0;
+            DECLARE v_status VARCHAR(32) DEFAULT 'ERROR_SQL';
+            DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN
+                ROLLBACK;
+                SELECT 'ERROR_SQL' AS status, v_money AS money, v_bank AS bank;
+            END;
+            START TRANSACTION;
+            SELECT money, bank INTO v_money, v_bank FROM grid_players WHERE steamid = p_steamid FOR UPDATE;
+            IF p_delta > 0 THEN
+                IF v_money >= p_delta THEN
+                    SET v_money = v_money - p_delta;
+                    SET v_bank = v_bank + p_delta;
+                    UPDATE grid_players SET money = v_money, bank = v_bank, last_seen = p_unix_time WHERE steamid = p_steamid;
+                    SET v_status = 'SUCCESS';
+                    COMMIT;
+                ELSE
+                    SET v_status = 'ERR_INSUFFICIENT_WALLET';
+                    ROLLBACK;
+                END IF;
+            ELSEIF p_delta < 0 THEN
+                IF v_bank >= ABS(p_delta) THEN
+                    SET v_money = v_money + ABS(p_delta);
+                    SET v_bank = v_bank - ABS(p_delta);
+                    UPDATE grid_players SET money = v_money, bank = v_bank, last_seen = p_unix_time WHERE steamid = p_steamid;
+                    SET v_status = 'SUCCESS';
+                    COMMIT;
+                ELSE
+                    SET v_status = 'ERR_INSUFFICIENT_BANK';
+                    ROLLBACK;
+                END IF;
+            ELSE
+                SET v_status = 'ERR_ZERO_DELTA';
+                ROLLBACK;
+            END IF;
+            SELECT v_status AS status, v_money AS money, v_bank AS bank;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_update_onboarding_stage(
             IN p_steamid VARCHAR(20), IN p_stage TINYINT UNSIGNED
@@ -887,7 +1029,7 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
             VALUES (
                 UNIX_TIMESTAMP(),
-                'ADMIN',
+                'PLAYER_ACTION',
                 'PLAYER_FULL_RESET',
                 'CONSOLE',
                 p_steamid,
@@ -979,17 +1121,18 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
         ) BEGIN
             DECLARE v_src_id BIGINT UNSIGNED;
             DECLARE v_src_item VARCHAR(64);
+            DECLARE v_src_type VARCHAR(32);
             DECLARE v_src_amt INT;
             DECLARE v_dst_id BIGINT UNSIGNED;
             DECLARE v_dst_item VARCHAR(64);
-            SELECT id, item_id, amount INTO v_src_id, v_src_item, v_src_amt FROM grid_inventory
+            SELECT id, item_id, item_type, amount INTO v_src_id, v_src_item, v_src_type, v_src_amt FROM grid_inventory
                 WHERE steamid = p_steamid AND bag_index = p_from_bag AND slot_index = p_from_slot LIMIT 1;
             IF v_src_id IS NOT NULL THEN
                 SELECT id, item_id INTO v_dst_id, v_dst_item FROM grid_inventory
                     WHERE steamid = p_steamid AND bag_index = p_to_bag AND slot_index = p_to_slot LIMIT 1;
                 IF v_dst_id IS NULL THEN
                     UPDATE grid_inventory SET bag_index = p_to_bag, slot_index = p_to_slot WHERE id = v_src_id;
-                ELSEIF v_src_item = v_dst_item THEN
+                ELSEIF v_src_item = v_dst_item AND v_src_type != 'weapon' THEN
                     UPDATE grid_inventory SET amount = amount + v_src_amt WHERE id = v_dst_id;
                     DELETE FROM grid_inventory WHERE id = v_src_id;
                 ELSE
@@ -1053,46 +1196,44 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             INSERT INTO grid_settings (`key`, `val`) VALUES (p_key, p_val) ON DUPLICATE KEY UPDATE `val` = p_val;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_auction_create(
-            IN p_seller_steamid VARCHAR(20), IN p_seller_name VARCHAR(64), IN p_inv_id BIGINT UNSIGNED,
+            IN p_seller_steamid VARCHAR(20), IN p_seller_name VARCHAR(64),
+            IN p_bag_index TINYINT UNSIGNED, IN p_slot_index TINYINT UNSIGNED,
             IN p_start_bid BIGINT UNSIGNED, IN p_buyout_price BIGINT UNSIGNED, IN p_duration_hours TINYINT UNSIGNED,
-            IN p_deposit_amount BIGINT UNSIGNED, IN p_now_unix INT UNSIGNED,
-            OUT p_out_status VARCHAR(32), OUT p_out_auction_id BIGINT UNSIGNED
+            IN p_deposit_amount BIGINT UNSIGNED, IN p_now_unix INT UNSIGNED
         ) BEGIN
             DECLARE v_active_count INT DEFAULT 0;
             DECLARE v_item_id VARCHAR(64);
             DECLARE v_item_type VARCHAR(32);
-            DECLARE v_amount INT;
+            DECLARE v_amount INT DEFAULT 0;
             DECLARE v_item_data JSON;
             DECLARE v_seller_money BIGINT DEFAULT 0;
+            DECLARE v_out_status VARCHAR(32) DEFAULT 'ERROR_SQL';
+            DECLARE v_out_auction_id BIGINT UNSIGNED DEFAULT 0;
 
             DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN
                 ROLLBACK;
-                SET p_out_status = 'ERROR_SQL';
-                SET p_out_auction_id = 0;
+                SELECT 'ERROR_SQL' AS status, 0 AS auction_id, '' AS item_id, 0 AS amount;
             END;
 
             START TRANSACTION;
 
             SELECT COUNT(*) INTO v_active_count FROM grid_auctions WHERE seller_steamid = p_seller_steamid AND status = 'ACTIVE';
             IF v_active_count >= 10 THEN
-                SET p_out_status = 'ERR_MAX_LISTINGS';
-                SET p_out_auction_id = 0;
+                SET v_out_status = 'ERR_MAX_LISTINGS';
                 ROLLBACK;
             ELSE
                 SELECT money INTO v_seller_money FROM grid_players WHERE steamid = p_seller_steamid FOR UPDATE;
                 IF v_seller_money < p_deposit_amount THEN
-                    SET p_out_status = 'ERR_INSUFFICIENT_FUNDS';
-                    SET p_out_auction_id = 0;
+                    SET v_out_status = 'ERR_INSUFFICIENT_FUNDS';
                     ROLLBACK;
                 ELSE
                     SELECT item_id, item_type, amount, item_data INTO v_item_id, v_item_type, v_amount, v_item_data
-                    FROM grid_inventory WHERE id = p_inv_id AND steamid = p_seller_steamid FOR UPDATE;
+                    FROM grid_inventory WHERE steamid = p_seller_steamid AND bag_index = p_bag_index AND slot_index = p_slot_index FOR UPDATE;
                     IF v_item_id IS NULL THEN
-                        SET p_out_status = 'ERR_ITEM_NOT_FOUND';
-                        SET p_out_auction_id = 0;
+                        SET v_out_status = 'ERR_ITEM_NOT_FOUND';
                         ROLLBACK;
                     ELSE
-                        DELETE FROM grid_inventory WHERE id = p_inv_id;
+                        DELETE FROM grid_inventory WHERE steamid = p_seller_steamid AND bag_index = p_bag_index AND slot_index = p_slot_index;
                         UPDATE grid_players SET money = money - p_deposit_amount WHERE steamid = p_seller_steamid;
                         INSERT INTO grid_auctions (
                             seller_steamid, seller_name, item_id, item_type, amount, item_data,
@@ -1103,18 +1244,19 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
                             p_start_bid, 0, p_buyout_price, p_deposit_amount, 'ACTIVE',
                             p_duration_hours, p_now_unix, p_now_unix + (p_duration_hours * 3600)
                         );
-                        SET p_out_auction_id = LAST_INSERT_ID();
-                        SET p_out_status = 'SUCCESS';
+                        SET v_out_auction_id = LAST_INSERT_ID();
+                        SET v_out_status = 'SUCCESS';
                         INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, numeric_value, metadata)
-                        VALUES (p_now_unix, 'ECONOMY', 'AUCTION_LIST', p_seller_steamid, p_deposit_amount, JSON_OBJECT('item_id', v_item_id, 'auction_id', p_out_auction_id, 'buyout', p_buyout_price, 'start_bid', p_start_bid));
+                        VALUES (p_now_unix, 'ECONOMY', 'AUCTION_LIST', p_seller_steamid, p_deposit_amount, JSON_OBJECT('item_id', v_item_id, 'auction_id', v_out_auction_id, 'buyout', p_buyout_price, 'start_bid', p_start_bid));
                         COMMIT;
                     END IF;
                 END IF;
             END IF;
+            SELECT v_out_status AS status, v_out_auction_id AS auction_id, COALESCE(v_item_id, '') AS item_id, COALESCE(v_amount, 0) AS amount;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_auction_bid(
             IN p_auction_id BIGINT UNSIGNED, IN p_bidder_steamid VARCHAR(20), IN p_bidder_name VARCHAR(64),
-            IN p_bid_amount BIGINT UNSIGNED, IN p_now_unix INT UNSIGNED, OUT p_out_status VARCHAR(32)
+            IN p_bid_amount BIGINT UNSIGNED, IN p_now_unix INT UNSIGNED
         ) BEGIN
             DECLARE v_seller_steamid VARCHAR(20);
             DECLARE v_status VARCHAR(16);
@@ -1124,10 +1266,11 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             DECLARE v_buyout_price BIGINT UNSIGNED;
             DECLARE v_prev_bidder VARCHAR(20);
             DECLARE v_bidder_money BIGINT;
+            DECLARE v_out_status VARCHAR(32) DEFAULT 'ERROR_SQL';
 
             DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN
                 ROLLBACK;
-                SET p_out_status = 'ERROR_SQL';
+                SELECT 'ERROR_SQL' AS status, '' AS prev_bidder, 0 AS prev_bid;
             END;
 
             START TRANSACTION;
@@ -1136,21 +1279,21 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             FROM grid_auctions WHERE auction_id = p_auction_id FOR UPDATE;
 
             IF v_status IS NULL OR v_status != 'ACTIVE' THEN
-                SET p_out_status = 'ERR_NOT_ACTIVE';
+                SET v_out_status = 'ERR_NOT_ACTIVE';
                 ROLLBACK;
             ELSEIF v_expires_at_unix <= p_now_unix THEN
-                SET p_out_status = 'ERR_EXPIRED';
+                SET v_out_status = 'ERR_EXPIRED';
                 ROLLBACK;
             ELSEIF v_seller_steamid = p_bidder_steamid THEN
-                SET p_out_status = 'ERR_SELF_BID';
+                SET v_out_status = 'ERR_SELF_BID';
                 ROLLBACK;
             ELSEIF (v_current_bid = 0 AND p_bid_amount < v_start_bid) OR (v_current_bid > 0 AND p_bid_amount <= v_current_bid) THEN
-                SET p_out_status = 'ERR_BID_TOO_LOW';
+                SET v_out_status = 'ERR_BID_TOO_LOW';
                 ROLLBACK;
             ELSE
                 SELECT money INTO v_bidder_money FROM grid_players WHERE steamid = p_bidder_steamid FOR UPDATE;
                 IF v_bidder_money < p_bid_amount THEN
-                    SET p_out_status = 'ERR_INSUFFICIENT_FUNDS';
+                    SET v_out_status = 'ERR_INSUFFICIENT_FUNDS';
                     ROLLBACK;
                 ELSE
                     IF v_prev_bidder IS NOT NULL AND v_prev_bidder != '' AND v_current_bid > 0 THEN
@@ -1158,35 +1301,37 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
                     END IF;
                     UPDATE grid_players SET money = money - p_bid_amount WHERE steamid = p_bidder_steamid;
                     UPDATE grid_auctions SET current_bid = p_bid_amount, high_bidder_steamid = p_bidder_steamid, high_bidder_name = p_bidder_name WHERE auction_id = p_auction_id;
-                    SET p_out_status = 'SUCCESS';
+                    SET v_out_status = 'SUCCESS';
                     INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
                     VALUES (p_now_unix, 'ECONOMY', 'AUCTION_BID', p_bidder_steamid, v_seller_steamid, p_bid_amount, JSON_OBJECT('auction_id', p_auction_id));
                     COMMIT;
                 END IF;
             END IF;
+            SELECT v_out_status AS status, COALESCE(v_prev_bidder, '') AS prev_bidder, COALESCE(v_current_bid, 0) AS prev_bid;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_auction_buyout(
             IN p_auction_id BIGINT UNSIGNED, IN p_buyer_steamid VARCHAR(20), IN p_buyer_name VARCHAR(64),
-            IN p_now_unix INT UNSIGNED, OUT p_out_status VARCHAR(32)
+            IN p_now_unix INT UNSIGNED
         ) BEGIN
             DECLARE v_seller_steamid VARCHAR(20);
             DECLARE v_status VARCHAR(16);
             DECLARE v_expires_at_unix INT UNSIGNED;
-            DECLARE v_buyout_price BIGINT UNSIGNED;
-            DECLARE v_current_bid BIGINT UNSIGNED;
+            DECLARE v_buyout_price BIGINT UNSIGNED DEFAULT 0;
+            DECLARE v_current_bid BIGINT UNSIGNED DEFAULT 0;
             DECLARE v_prev_bidder VARCHAR(20);
-            DECLARE v_deposit_amount BIGINT UNSIGNED;
+            DECLARE v_deposit_amount BIGINT UNSIGNED DEFAULT 0;
             DECLARE v_item_id VARCHAR(64);
             DECLARE v_item_type VARCHAR(32);
-            DECLARE v_amount INT;
+            DECLARE v_amount INT DEFAULT 0;
             DECLARE v_item_data JSON;
             DECLARE v_buyer_money BIGINT;
-            DECLARE v_tax BIGINT UNSIGNED;
-            DECLARE v_seller_payout BIGINT UNSIGNED;
+            DECLARE v_tax BIGINT UNSIGNED DEFAULT 0;
+            DECLARE v_seller_payout BIGINT UNSIGNED DEFAULT 0;
+            DECLARE v_out_status VARCHAR(32) DEFAULT 'ERROR_SQL';
 
             DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN
                 ROLLBACK;
-                SET p_out_status = 'ERROR_SQL';
+                SELECT 'ERROR_SQL' AS status;
             END;
 
             START TRANSACTION;
@@ -1197,21 +1342,21 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             FROM grid_auctions WHERE auction_id = p_auction_id FOR UPDATE;
 
             IF v_status IS NULL OR v_status != 'ACTIVE' THEN
-                SET p_out_status = 'ERR_NOT_ACTIVE';
+                SET v_out_status = 'ERR_NOT_ACTIVE';
                 ROLLBACK;
             ELSEIF v_expires_at_unix <= p_now_unix THEN
-                SET p_out_status = 'ERR_EXPIRED';
+                SET v_out_status = 'ERR_EXPIRED';
                 ROLLBACK;
             ELSEIF v_buyout_price = 0 THEN
-                SET p_out_status = 'ERR_NO_BUYOUT';
+                SET v_out_status = 'ERR_NO_BUYOUT';
                 ROLLBACK;
             ELSEIF v_seller_steamid = p_buyer_steamid THEN
-                SET p_out_status = 'ERR_SELF_BUY';
+                SET v_out_status = 'ERR_SELF_BUY';
                 ROLLBACK;
             ELSE
                 SELECT money INTO v_buyer_money FROM grid_players WHERE steamid = p_buyer_steamid FOR UPDATE;
                 IF v_buyer_money < v_buyout_price THEN
-                    SET p_out_status = 'ERR_INSUFFICIENT_FUNDS';
+                    SET v_out_status = 'ERR_INSUFFICIENT_FUNDS';
                     ROLLBACK;
                 ELSE
                     IF v_prev_bidder IS NOT NULL AND v_prev_bidder != '' AND v_current_bid > 0 THEN
@@ -1227,15 +1372,18 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
                         p_buyer_steamid, v_item_id, v_item_type, v_amount, v_item_data, 'WON_AUCTION', p_auction_id, p_now_unix, 0
                     );
                     UPDATE grid_auctions SET status = 'SOLD', closed_at_unix = p_now_unix, high_bidder_steamid = p_buyer_steamid, high_bidder_name = p_buyer_name, current_bid = v_buyout_price WHERE auction_id = p_auction_id;
-                    SET p_out_status = 'SUCCESS';
+                    SET v_out_status = 'SUCCESS';
                     INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
                     VALUES (p_now_unix, 'ECONOMY', 'AUCTION_SALE', p_buyer_steamid, v_seller_steamid, v_tax, JSON_OBJECT('auction_id', p_auction_id, 'item_id', v_item_id, 'buyout', v_buyout_price, 'tax', v_tax, 'payout', v_seller_payout));
                     COMMIT;
                 END IF;
             END IF;
+            SELECT v_out_status AS status, COALESCE(v_seller_steamid, '') AS seller_steamid, v_seller_payout AS seller_payout,
+                   COALESCE(v_prev_bidder, '') AS prev_bidder, v_current_bid AS prev_bid, v_buyout_price AS buyout_price,
+                   v_tax AS tax, COALESCE(v_item_id, '') AS item_id, v_amount AS amount;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_auction_cancel(
-            IN p_auction_id BIGINT UNSIGNED, IN p_seller_steamid VARCHAR(20), IN p_now_unix INT UNSIGNED, OUT p_out_status VARCHAR(32)
+            IN p_auction_id BIGINT UNSIGNED, IN p_seller_steamid VARCHAR(20), IN p_now_unix INT UNSIGNED
         ) BEGIN
             DECLARE v_status VARCHAR(16);
             DECLARE v_seller_steamid VARCHAR(20);
@@ -1244,11 +1392,12 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             DECLARE v_item_type VARCHAR(32);
             DECLARE v_amount INT;
             DECLARE v_item_data JSON;
-            DECLARE v_deposit_amount BIGINT UNSIGNED;
+            DECLARE v_deposit_amount BIGINT UNSIGNED DEFAULT 0;
+            DECLARE v_out_status VARCHAR(32) DEFAULT 'ERROR_SQL';
 
             DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN
                 ROLLBACK;
-                SET p_out_status = 'ERROR_SQL';
+                SELECT 'ERROR_SQL' AS status, 0 AS deposit_amount;
             END;
 
             START TRANSACTION;
@@ -1257,13 +1406,13 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             FROM grid_auctions WHERE auction_id = p_auction_id FOR UPDATE;
 
             IF v_status IS NULL OR v_status != 'ACTIVE' THEN
-                SET p_out_status = 'ERR_NOT_ACTIVE';
+                SET v_out_status = 'ERR_NOT_ACTIVE';
                 ROLLBACK;
             ELSEIF v_seller_steamid != p_seller_steamid THEN
-                SET p_out_status = 'ERR_NOT_OWNER';
+                SET v_out_status = 'ERR_NOT_OWNER';
                 ROLLBACK;
             ELSEIF v_current_bid > 0 THEN
-                SET p_out_status = 'ERR_HAS_BIDS';
+                SET v_out_status = 'ERR_HAS_BIDS';
                 ROLLBACK;
             ELSE
                 INSERT INTO grid_auction_collection (
@@ -1272,25 +1421,27 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
                     p_seller_steamid, v_item_id, v_item_type, v_amount, v_item_data, 'CANCELLED_AUCTION', p_auction_id, p_now_unix, 0
                 );
                 UPDATE grid_auctions SET status = 'CANCELLED', closed_at_unix = p_now_unix WHERE auction_id = p_auction_id;
-                SET p_out_status = 'SUCCESS';
+                SET v_out_status = 'SUCCESS';
                 INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, numeric_value, metadata)
                 VALUES (p_now_unix, 'ECONOMY', 'AUCTION_CANCEL', p_seller_steamid, v_deposit_amount, JSON_OBJECT('auction_id', p_auction_id, 'deposit_forfeited', v_deposit_amount));
                 COMMIT;
             END IF;
+            SELECT v_out_status AS status, COALESCE(v_deposit_amount, 0) AS deposit_amount;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_auction_claim_collection(
             IN p_collection_id BIGINT UNSIGNED, IN p_steamid VARCHAR(20), IN p_bag_index TINYINT UNSIGNED,
-            IN p_slot_index TINYINT UNSIGNED, IN p_now_unix INT UNSIGNED, OUT p_out_status VARCHAR(32)
+            IN p_slot_index TINYINT UNSIGNED, IN p_now_unix INT UNSIGNED
         ) BEGIN
             DECLARE v_item_id VARCHAR(64);
             DECLARE v_item_type VARCHAR(32);
-            DECLARE v_amount INT;
+            DECLARE v_amount INT DEFAULT 1;
             DECLARE v_item_data JSON;
             DECLARE v_claimed TINYINT;
+            DECLARE v_out_status VARCHAR(32) DEFAULT 'ERROR_SQL';
 
             DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN
                 ROLLBACK;
-                SET p_out_status = 'ERROR_SQL';
+                SELECT 'ERROR_SQL' AS status;
             END;
 
             START TRANSACTION;
@@ -1299,18 +1450,20 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             FROM grid_auction_collection WHERE collection_id = p_collection_id AND steamid = p_steamid FOR UPDATE;
 
             IF v_item_id IS NULL THEN
-                SET p_out_status = 'ERR_NOT_FOUND';
+                SET v_out_status = 'ERR_NOT_FOUND';
                 ROLLBACK;
             ELSEIF v_claimed = 1 THEN
-                SET p_out_status = 'ERR_ALREADY_CLAIMED';
+                SET v_out_status = 'ERR_ALREADY_CLAIMED';
                 ROLLBACK;
             ELSE
                 INSERT INTO grid_inventory (steamid, bag_index, slot_index, item_id, item_type, amount, item_data)
                 VALUES (p_steamid, p_bag_index, p_slot_index, v_item_id, v_item_type, v_amount, v_item_data);
                 UPDATE grid_auction_collection SET claimed = 1, claimed_at_unix = p_now_unix WHERE collection_id = p_collection_id;
-                SET p_out_status = 'SUCCESS';
+                SET v_out_status = 'SUCCESS';
                 COMMIT;
             END IF;
+            SELECT v_out_status AS status, COALESCE(v_item_id, '') AS item_id, COALESCE(v_item_type, 'generic') AS item_type,
+                   COALESCE(v_amount, 1) AS amount, COALESCE(v_item_data, '{}') AS item_data;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_auction_process_expirations(IN p_now_unix INT UNSIGNED) BEGIN
             DECLARE done INT DEFAULT FALSE;
@@ -1720,13 +1873,14 @@ end
 function GRID.Database.SavePlayer(ply)
     if not IsValid(ply) or not ply.GRID_DataLoaded then return end
     local steamID = ply:SteamID()
+    local rawGang = ply.GetRawGang and ply:GetRawGang() or ply:GetGang()
 
     GRID.Database.CallProcedure("grid_upsert_player", {
         steamID,
         ply:Nick(),
         ply:GetMoney(),
         ply:GetNWInt("GRID_Respect", 0),
-        ply:GetGang(),
+        rawGang,
         ply:GetJob(),
         ply:GetNWInt("GRID_Level", 1),
         ply:GetNWInt("GRID_XP", 0),
@@ -1741,7 +1895,7 @@ function GRID.Database.SavePlayer(ply)
         p.money = ply:GetMoney()
         p.bank = ply:GetNWInt("GRID_Bank", 0)
         p.respect = ply:GetNWInt("GRID_Respect", 0)
-        p.gang = ply:GetGang()
+        p.gang = rawGang
         p.job = ply:GetJob()
         p.level = ply:GetNWInt("GRID_Level", 1)
         p.xp = ply:GetNWInt("GRID_XP", 0)
@@ -1764,6 +1918,63 @@ function GRID.Database.SavePlayerBank(ply, amount)
     if GRID.Database.Cache.Players[steamID] then
         GRID.Database.Cache.Players[steamID].bank = bank
     end
+end
+
+function GRID.Database.TransferPersonalBank(ply, delta, callback)
+    if not IsValid(ply) or not ply.GRID_DataLoaded then
+        if callback then callback(false, "ERR_NOT_LOADED") end
+        return
+    end
+    local steamID = ply:SteamID()
+    local d = math.floor(tonumber(delta) or 0)
+    if d == 0 then
+        if callback then callback(false, "ERR_ZERO_DELTA") end
+        return
+    end
+
+    GRID.Database.CallProcedure("grid_transfer_personal_bank", {
+        steamID,
+        d,
+        os.time()
+    }, function(rows)
+        local r = rows and rows[1]
+        local status = (r and r.status) or "SUCCESS"
+        if status == "SUCCESS" then
+            local newMoney = tonumber(r and r.money) or math.max(0, ply:GetMoney() - d)
+            local newBank = tonumber(r and r.bank) or math.max(0, ply:GetBank() + d)
+            if IsValid(ply) then
+                ply:SetNWInt("GRID_Money", newMoney)
+                ply:SetNWInt("GRID_Bank", newBank)
+            end
+            if GRID.Database.Cache.Players[steamID] then
+                GRID.Database.Cache.Players[steamID].money = newMoney
+                GRID.Database.Cache.Players[steamID].bank = newBank
+            end
+            if callback then callback(true, "SUCCESS", newMoney, newBank) end
+        else
+            if callback then callback(false, status) end
+        end
+    end, function(err)
+        if callback then callback(false, "ERROR_SQL: " .. tostring(err)) end
+    end)
+end
+
+function GRID.Database.SyncOnlinePlayerMoneyDelta(steamID, delta)
+    if not steamID or steamID == "" then return end
+    local d = tonumber(delta) or 0
+    if d == 0 then return end
+    if GRID.Database.Cache.Players[steamID] then
+        local cur = tonumber(GRID.Database.Cache.Players[steamID].money) or 0
+        GRID.Database.Cache.Players[steamID].money = math.max(0, cur + d)
+    end
+    for _, p in ipairs(player.GetAll()) do
+        if p:SteamID() == steamID then
+            local newAmt = math.max(0, p:GetMoney() + d)
+            p:SetNWInt("GRID_Money", newAmt)
+            return p
+        end
+    end
+    return nil
 end
 
 function GRID.Database.SavePlayerOnboardingStage(ply, stage)
@@ -1975,12 +2186,18 @@ end
 
 function GRID.Database.TransferGangVault(steamID, gangName, delta)
     local d = tonumber(delta) or 0
+    if d == 0 then return false end
     GRID.Database.CallProcedure("grid_transfer_gang_vault", {
         steamID,
         gangName,
         d,
         os.time()
     })
+    if GRID.Database.Cache.Gangs[gangName] then
+        local cur = tonumber(GRID.Database.Cache.Gangs[gangName].bank) or 0
+        GRID.Database.Cache.Gangs[gangName].bank = math.max(0, cur + d)
+    end
+    GRID.Database.SyncOnlinePlayerMoneyDelta(steamID, -d)
     return true
 end
 
@@ -2100,20 +2317,22 @@ function GRID.Database.AddInventoryItem(steamID, itemId, itemType, amount, itemD
         end
     end
 
-    -- 2. Check identical stack
-    for _, it in ipairs(inv) do
-        if it.item_id == itemId then
-            it.amount = (tonumber(it.amount) or 1) + amount
-            GRID.Database.CallProcedure("grid_set_inventory_slot", {
-                steamID,
-                it.bag_index,
-                it.slot_index,
-                it.item_id,
-                it.item_type,
-                it.amount,
-                it.item_data
-            })
-            return true
+    -- 2. Check identical stack (weapons never stack so durability/clip state stays unique per slot)
+    if iType ~= "weapon" then
+        for _, it in ipairs(inv) do
+            if it.item_id == itemId and it.item_type ~= "weapon" then
+                it.amount = (tonumber(it.amount) or 1) + amount
+                GRID.Database.CallProcedure("grid_set_inventory_slot", {
+                    steamID,
+                    it.bag_index,
+                    it.slot_index,
+                    it.item_id,
+                    it.item_type,
+                    it.amount,
+                    it.item_data
+                })
+                return true
+            end
         end
     end
 
@@ -2238,8 +2457,8 @@ function GRID.Database.MoveInventorySlot(steamID, fromBag, fromSlot, toBag, toSl
         return true
     else
         local dstItem = inv[dstIdx]
-        if srcItem.item_id == dstItem.item_id then
-            -- Stack
+        if srcItem.item_id == dstItem.item_id and srcItem.item_type ~= "weapon" and dstItem.item_type ~= "weapon" then
+            -- Stack non-weapon items
             dstItem.amount = (tonumber(dstItem.amount) or 1) + (tonumber(srcItem.amount) or 1)
             table.remove(inv, srcIdx)
             GRID.Database.CallProcedure("grid_move_inventory_slot", { steamID, fromBag, fromSlot, toBag, toSlot })
@@ -2287,18 +2506,25 @@ function GRID.Database.RemoveInventoryItemAtSlot(steamID, bagIndex, slotIndex, a
 end
 
 function GRID.Database.RemoveInventoryItem(steamID, itemId, amount)
-    amount = tonumber(amount) or 1
+    local needed = tonumber(amount) or 1
+    if not GRID.Database.HasInventoryItem(steamID, itemId, needed) then
+        return false
+    end
+
     local inv = GRID.Database.Cache.Inventories[steamID] or {}
-    for idx, it in ipairs(inv) do
-        if it.item_id == itemId then
+    for idx = #inv, 1, -1 do
+        local it = inv[idx]
+        if it and it.item_id == itemId and needed > 0 then
             local curAmount = tonumber(it.amount) or 1
-            if curAmount <= amount then
+            if curAmount <= needed then
                 local b = it.bag_index
                 local s = it.slot_index
+                needed = needed - curAmount
                 table.remove(inv, idx)
                 GRID.Database.CallProcedure("grid_delete_inventory_slot", { steamID, b, s })
             else
-                it.amount = curAmount - amount
+                it.amount = curAmount - needed
+                needed = 0
                 GRID.Database.CallProcedure("grid_set_inventory_slot", {
                     steamID,
                     it.bag_index,
@@ -2309,18 +2535,24 @@ function GRID.Database.RemoveInventoryItem(steamID, itemId, amount)
                     it.item_data
                 })
             end
-            return true
+            if needed <= 0 then
+                break
+            end
         end
     end
-    return false
+    return needed <= 0
 end
 
 function GRID.Database.HasInventoryItem(steamID, itemId, amount)
     amount = tonumber(amount) or 1
     local inv = GRID.Database.Cache.Inventories[steamID] or {}
+    local total = 0
     for _, it in ipairs(inv) do
-        if it.item_id == itemId and (tonumber(it.amount) or 0) >= amount then
-            return true
+        if it.item_id == itemId then
+            total = total + (tonumber(it.amount) or 0)
+            if total >= amount then
+                return true
+            end
         end
     end
     return false
@@ -2536,13 +2768,21 @@ end
 -- ========================================================
 
 function GRID.Database.CollectPrinterTaxed(steamID, gangName, payout, tax)
+    local pAmt = tonumber(payout) or 0
+    local tAmt = tonumber(tax) or 0
+    local gName = gangName or ""
     GRID.Database.CallProcedure("grid_collect_printer_taxed", {
         steamID,
-        gangName or "",
-        tonumber(payout) or 0,
-        tonumber(tax) or 0,
+        gName,
+        pAmt,
+        tAmt,
         os.time()
     })
+    if tAmt > 0 and gName ~= "" and gName ~= "neutral" and gName ~= "Police" and GRID.Database.Cache.Gangs[gName] then
+        local cur = tonumber(GRID.Database.Cache.Gangs[gName].bank) or 0
+        GRID.Database.Cache.Gangs[gName].bank = math.max(0, cur + tAmt)
+    end
+    GRID.Database.SyncOnlinePlayerMoneyDelta(steamID, pAmt)
 end
 
 -- ========================================================
@@ -2551,8 +2791,7 @@ end
 
 function GRID.Database.GetActiveAuctions(callback)
     local now = os.time()
-    local q = "SELECT * FROM grid_auctions WHERE status = 'ACTIVE' AND expires_at_unix > " .. now .. " ORDER BY created_at_unix DESC;"
-    GRID.Database.Execute(q, function(rows)
+    GRID.Database.QueryView("v_auctions", "status = 'ACTIVE' AND expires_at_unix > ? ORDER BY created_at_unix DESC", { now }, function(rows)
         if callback then callback(rows or {}) end
     end, function(err)
         ErrorNoHalt(string.format("[GRID AUCTION DB ERROR] GetActiveAuctions failed: %s\n", tostring(err)))
@@ -2561,8 +2800,7 @@ function GRID.Database.GetActiveAuctions(callback)
 end
 
 function GRID.Database.GetPlayerAuctions(steamID, callback)
-    local q = GRID.Database.FormatQuery("SELECT * FROM grid_auctions WHERE seller_steamid = ? ORDER BY created_at_unix DESC LIMIT 50;", { steamID })
-    GRID.Database.Execute(q, function(rows)
+    GRID.Database.QueryView("v_auctions", "seller_steamid = ? ORDER BY created_at_unix DESC LIMIT 50", { steamID }, function(rows)
         if callback then callback(rows or {}) end
     end, function(err)
         ErrorNoHalt(string.format("[GRID AUCTION DB ERROR] GetPlayerAuctions failed: %s\n", tostring(err)))
@@ -2571,8 +2809,7 @@ function GRID.Database.GetPlayerAuctions(steamID, callback)
 end
 
 function GRID.Database.GetPlayerCollection(steamID, callback)
-    local q = GRID.Database.FormatQuery("SELECT * FROM grid_auction_collection WHERE steamid = ? AND claimed = 0 ORDER BY created_at_unix DESC;", { steamID })
-    GRID.Database.Execute(q, function(rows)
+    GRID.Database.QueryView("v_auction_collection", "steamid = ? AND claimed = 0 ORDER BY created_at_unix DESC", { steamID }, function(rows)
         if callback then callback(rows or {}) end
     end, function(err)
         ErrorNoHalt(string.format("[GRID AUCTION DB ERROR] GetPlayerCollection failed: %s\n", tostring(err)))
@@ -2640,6 +2877,33 @@ function GRID.Database.CreateAuction(sellerSteamID, sellerName, bagIndex, slotIn
     durationHours = tonumber(durationHours) or 24
     depositAmount = tonumber(depositAmount) or 0
 
+    if not GRID.Database.UseSQLiteFallback and not GRID.Database.UseDirectMariaDBSQL then
+        GRID.Database.CallProcedure("grid_auction_create", {
+            sellerSteamID, sellerName, bagIndex, slotIndex, startBid, buyoutPrice, durationHours, depositAmount, now
+        }, function(rows)
+            local r = rows and rows[1]
+            local status = (r and r.status) or "ERROR_SQL"
+            if status == "SUCCESS" then
+                local newAucID = tonumber(r and r.auction_id) or 0
+                -- Remove slot from RAM cache (DB row was deleted atomically inside grid_auction_create)
+                local inv = GRID.Database.Cache.Inventories[sellerSteamID] or {}
+                for idx, it in ipairs(inv) do
+                    if (tonumber(it.bag_index) or 0) == bagIndex and (tonumber(it.slot_index) or 1) == slotIndex then
+                        table.remove(inv, idx)
+                        break
+                    end
+                end
+                GRID.Database.SyncOnlinePlayerMoneyDelta(sellerSteamID, -depositAmount)
+                if callback then callback(true, "SUCCESS", newAucID) end
+            else
+                if callback then callback(false, status) end
+            end
+        end, function(err)
+            if callback then callback(false, "ERROR_SQL: " .. tostring(err)) end
+        end)
+        return
+    end
+
     local checkQ = GRID.Database.FormatQuery("SELECT COUNT(*) AS cnt FROM grid_auctions WHERE seller_steamid = ? AND status = 'ACTIVE';", { sellerSteamID })
     GRID.Database.Execute(checkQ, function(cRows)
         local cnt = tonumber(cRows and cRows[1] and cRows[1].cnt) or 0
@@ -2670,7 +2934,11 @@ function GRID.Database.CreateAuction(sellerSteamID, sellerName, bagIndex, slotIn
             -- 1. Remove from player's inventory cache & DB
             GRID.Database.RemoveInventoryItemAtSlot(sellerSteamID, bagIndex, slotIndex, amount)
 
-            -- 2. Insert into grid_auctions
+            -- 2. Deduct deposit from seller in DB & sync online player
+            GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money - ? WHERE steamid = ?;", { depositAmount, sellerSteamID }))
+            GRID.Database.SyncOnlinePlayerMoneyDelta(sellerSteamID, -depositAmount)
+
+            -- 3. Insert into grid_auctions
             local insQ = GRID.Database.FormatQuery([[INSERT INTO grid_auctions (
                 seller_steamid, seller_name, item_id, item_type, amount, item_data,
                 start_bid, current_bid, buyout_price, deposit_amount, status,
@@ -2683,7 +2951,7 @@ function GRID.Database.CreateAuction(sellerSteamID, sellerName, bagIndex, slotIn
             GRID.Database.Execute(insQ, function(insRes)
                 local newAucID = insRes and (insRes.lastid or (insRes[1] and insRes[1].id)) or 0
 
-                -- 3. Insert telemetry
+                -- 4. Log telemetry via procedure wrapper
                 local meta = util.TableToJSON({
                     item_id = itemId,
                     amount = amount,
@@ -2692,12 +2960,9 @@ function GRID.Database.CreateAuction(sellerSteamID, sellerName, bagIndex, slotIn
                     duration = durationHours,
                     auction_id = newAucID
                 })
-                local telemQ = GRID.Database.FormatQuery([[INSERT INTO grid_telemetry (
-                    unix_ts, category, action_type, actor_steamid, numeric_value, metadata
-                ) VALUES (?, 'ECONOMY', 'AUCTION_LIST', ?, ?, ?);]], {
-                    now, sellerSteamID, depositAmount, meta
+                GRID.Database.CallProcedure("grid_log_telemetry", {
+                    "ECONOMY", "AUCTION_LIST", sellerSteamID, "", depositAmount, meta
                 })
-                GRID.Database.Execute(telemQ)
 
                 if callback then callback(true, "SUCCESS", newAucID) end
             end, function(err)
@@ -2715,6 +2980,32 @@ function GRID.Database.BidAuction(auctionID, bidderSteamID, bidderName, bidAmoun
     local now = os.time()
     auctionID = tonumber(auctionID) or 0
     bidAmount = tonumber(bidAmount) or 0
+
+    if not GRID.Database.UseSQLiteFallback and not GRID.Database.UseDirectMariaDBSQL then
+        GRID.Database.CallProcedure("grid_auction_bid", {
+            auctionID, bidderSteamID, bidderName, bidAmount, now
+        }, function(rows)
+            local r = rows and rows[1]
+            local status = (r and r.status) or "ERROR_SQL"
+            if status == "SUCCESS" then
+                local prevBidder = r and r.prev_bidder or ""
+                local prevBid = tonumber(r and r.prev_bid) or 0
+                if prevBidder ~= "" and prevBid > 0 then
+                    local pPrev = GRID.Database.SyncOnlinePlayerMoneyDelta(prevBidder, prevBid)
+                    if IsValid(pPrev) then
+                        GRID.Notify(pPrev, string.format("You were outbid on auction #%d! $%s was refunded to your wallet.", auctionID, string.Comma(prevBid)), NOTIFY_GENERIC)
+                    end
+                end
+                GRID.Database.SyncOnlinePlayerMoneyDelta(bidderSteamID, -bidAmount)
+                if callback then callback(true, "SUCCESS") end
+            else
+                if callback then callback(false, status) end
+            end
+        end, function(err)
+            if callback then callback(false, "ERROR_SQL: " .. tostring(err)) end
+        end)
+        return
+    end
 
     local aucQ = GRID.Database.FormatQuery("SELECT * FROM grid_auctions WHERE auction_id = ?;", { auctionID })
     GRID.Database.Execute(aucQ, function(aRows)
@@ -2749,34 +3040,24 @@ function GRID.Database.BidAuction(auctionID, bidderSteamID, bidderName, bidAmoun
             -- Refund previous high bidder if any
             if auc.high_bidder_steamid and auc.high_bidder_steamid ~= "" and curBid > 0 then
                 GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money + ? WHERE steamid = ?;", { curBid, auc.high_bidder_steamid }))
-                for _, p in ipairs(player.GetAll()) do
-                    if p:SteamID() == auc.high_bidder_steamid then
-                        p:AddMoney(curBid)
-                        GRID.Notify(p, string.format("You were outbid on auction #%d! $%s was refunded to your wallet.", auctionID, string.Comma(curBid)), NOTIFY_GENERIC)
-                        break
-                    end
+                local pPrev = GRID.Database.SyncOnlinePlayerMoneyDelta(auc.high_bidder_steamid, curBid)
+                if IsValid(pPrev) then
+                    GRID.Notify(pPrev, string.format("You were outbid on auction #%d! $%s was refunded to your wallet.", auctionID, string.Comma(curBid)), NOTIFY_GENERIC)
                 end
             end
 
             -- Deduct new bid from bidder
             GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money - ? WHERE steamid = ?;", { bidAmount, bidderSteamID }))
-            for _, p in ipairs(player.GetAll()) do
-                if p:SteamID() == bidderSteamID then
-                    p:AddMoney(-bidAmount)
-                    break
-                end
-            end
+            GRID.Database.SyncOnlinePlayerMoneyDelta(bidderSteamID, -bidAmount)
 
             -- Update auction
             GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_auctions SET current_bid = ?, high_bidder_steamid = ?, high_bidder_name = ? WHERE auction_id = ?;", { bidAmount, bidderSteamID, bidderName, auctionID }))
 
-            -- Log telemetry
+            -- Log telemetry via procedure wrapper
             local meta = util.TableToJSON({ auction_id = auctionID, bid_amount = bidAmount })
-            GRID.Database.Execute(GRID.Database.FormatQuery([[INSERT INTO grid_telemetry (
-                unix_ts, category, action_type, actor_steamid, numeric_value, metadata
-            ) VALUES (?, 'ECONOMY', 'AUCTION_BID', ?, ?, ?);]], {
-                now, bidderSteamID, bidAmount, meta
-            }))
+            GRID.Database.CallProcedure("grid_log_telemetry", {
+                "ECONOMY", "AUCTION_BID", bidderSteamID, auc.seller_steamid or "", bidAmount, meta
+            })
 
             if callback then callback(true, "SUCCESS") end
         end, function(err)
@@ -2790,6 +3071,43 @@ end
 function GRID.Database.BuyoutAuction(auctionID, buyerSteamID, buyerName, callback)
     local now = os.time()
     auctionID = tonumber(auctionID) or 0
+
+    if not GRID.Database.UseSQLiteFallback and not GRID.Database.UseDirectMariaDBSQL then
+        GRID.Database.CallProcedure("grid_auction_buyout", {
+            auctionID, buyerSteamID, buyerName, now
+        }, function(rows)
+            local r = rows and rows[1]
+            local status = (r and r.status) or "ERROR_SQL"
+            if status == "SUCCESS" then
+                local prevBidder = r and r.prev_bidder or ""
+                local prevBid = tonumber(r and r.prev_bid) or 0
+                if prevBidder ~= "" and prevBid > 0 then
+                    local pPrev = GRID.Database.SyncOnlinePlayerMoneyDelta(prevBidder, prevBid)
+                    if IsValid(pPrev) then
+                        GRID.Notify(pPrev, string.format("An auction you bid on was bought out! $%s was refunded.", string.Comma(prevBid)), NOTIFY_GENERIC)
+                    end
+                end
+
+                local buyout = tonumber(r and r.buyout_price) or 0
+                local sellerSteamID = r and r.seller_steamid or ""
+                local payout = tonumber(r and r.seller_payout) or 0
+                local itemId = r and r.item_id or "item"
+
+                GRID.Database.SyncOnlinePlayerMoneyDelta(buyerSteamID, -buyout)
+                local pSeller = GRID.Database.SyncOnlinePlayerMoneyDelta(sellerSteamID, payout)
+                if IsValid(pSeller) then
+                    GRID.Notify(pSeller, string.format("Your auction for %s was bought out! You received +$%s (including refunded deposit).", itemId, string.Comma(payout)), NOTIFY_GENERIC)
+                end
+
+                if callback then callback(true, "SUCCESS") end
+            else
+                if callback then callback(false, status) end
+            end
+        end, function(err)
+            if callback then callback(false, "ERROR_SQL: " .. tostring(err)) end
+        end)
+        return
+    end
 
     local aucQ = GRID.Database.FormatQuery("SELECT * FROM grid_auctions WHERE auction_id = ?;", { auctionID })
     GRID.Database.Execute(aucQ, function(aRows)
@@ -2824,12 +3142,9 @@ function GRID.Database.BuyoutAuction(auctionID, buyerSteamID, buyerName, callbac
             local curBid = tonumber(auc.current_bid) or 0
             if auc.high_bidder_steamid and auc.high_bidder_steamid ~= "" and curBid > 0 then
                 GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money + ? WHERE steamid = ?;", { curBid, auc.high_bidder_steamid }))
-                for _, p in ipairs(player.GetAll()) do
-                    if p:SteamID() == auc.high_bidder_steamid then
-                        p:AddMoney(curBid)
-                        GRID.Notify(p, string.format("An auction you bid on was bought out! $%s was refunded.", string.Comma(curBid)), NOTIFY_GENERIC)
-                        break
-                    end
+                local pPrev = GRID.Database.SyncOnlinePlayerMoneyDelta(auc.high_bidder_steamid, curBid)
+                if IsValid(pPrev) then
+                    GRID.Notify(pPrev, string.format("An auction you bid on was bought out! $%s was refunded.", string.Comma(curBid)), NOTIFY_GENERIC)
                 end
             end
 
@@ -2839,21 +3154,13 @@ function GRID.Database.BuyoutAuction(auctionID, buyerSteamID, buyerName, callbac
 
             -- Deduct buyout from buyer
             GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money - ? WHERE steamid = ?;", { buyout, buyerSteamID }))
-            for _, p in ipairs(player.GetAll()) do
-                if p:SteamID() == buyerSteamID then
-                    p:AddMoney(-buyout)
-                    break
-                end
-            end
+            GRID.Database.SyncOnlinePlayerMoneyDelta(buyerSteamID, -buyout)
 
             -- Pay seller (proceeds + deposit refund)
             GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money + ? WHERE steamid = ?;", { payout, auc.seller_steamid }))
-            for _, p in ipairs(player.GetAll()) do
-                if p:SteamID() == auc.seller_steamid then
-                    p:AddMoney(payout)
-                    GRID.Notify(p, string.format("Your auction for %s was bought out! You received +$%s (including refunded deposit).", auc.item_id, string.Comma(payout)), NOTIFY_GENERIC)
-                    break
-                end
+            local pSeller = GRID.Database.SyncOnlinePlayerMoneyDelta(auc.seller_steamid, payout)
+            if IsValid(pSeller) then
+                GRID.Notify(pSeller, string.format("Your auction for %s was bought out! You received +$%s (including refunded deposit).", auc.item_id, string.Comma(payout)), NOTIFY_GENERIC)
             end
 
             -- Put item into collection box for buyer
@@ -2867,13 +3174,11 @@ function GRID.Database.BuyoutAuction(auctionID, buyerSteamID, buyerName, callbac
             -- Mark auction as SOLD
             GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_auctions SET status = 'SOLD', closed_at_unix = ?, high_bidder_steamid = ?, high_bidder_name = ?, current_bid = ? WHERE auction_id = ?;", { now, buyerSteamID, buyerName, buyout, auctionID }))
 
-            -- Log telemetry
+            -- Log telemetry via procedure wrapper
             local meta = util.TableToJSON({ auction_id = auctionID, buyout = buyout, tax = tax, payout = payout })
-            GRID.Database.Execute(GRID.Database.FormatQuery([[INSERT INTO grid_telemetry (
-                unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata
-            ) VALUES (?, 'ECONOMY', 'AUCTION_BUYOUT', ?, ?, ?, ?);]], {
-                now, buyerSteamID, auc.seller_steamid, tax, meta
-            }))
+            GRID.Database.CallProcedure("grid_log_telemetry", {
+                "ECONOMY", "AUCTION_SALE", buyerSteamID, auc.seller_steamid or "", tax, meta
+            })
 
             if callback then callback(true, "SUCCESS") end
         end, function(err)
@@ -2887,6 +3192,23 @@ end
 function GRID.Database.CancelAuction(auctionID, sellerSteamID, callback)
     local now = os.time()
     auctionID = tonumber(auctionID) or 0
+
+    if not GRID.Database.UseSQLiteFallback and not GRID.Database.UseDirectMariaDBSQL then
+        GRID.Database.CallProcedure("grid_auction_cancel", {
+            auctionID, sellerSteamID, now
+        }, function(rows)
+            local r = rows and rows[1]
+            local status = (r and r.status) or "ERROR_SQL"
+            if status == "SUCCESS" then
+                if callback then callback(true, "SUCCESS") end
+            else
+                if callback then callback(false, status) end
+            end
+        end, function(err)
+            if callback then callback(false, "ERROR_SQL: " .. tostring(err)) end
+        end)
+        return
+    end
 
     local aucQ = GRID.Database.FormatQuery("SELECT * FROM grid_auctions WHERE auction_id = ?;", { auctionID })
     GRID.Database.Execute(aucQ, function(aRows)
@@ -2914,12 +3236,9 @@ function GRID.Database.CancelAuction(auctionID, sellerSteamID, callback)
             GRID.Database.Execute(updAucQ)
 
             local meta = util.TableToJSON({ auction_id = auctionID, deposit_forfeited = tonumber(auc.deposit_amount) or 0 })
-            local telemQ = GRID.Database.FormatQuery([[INSERT INTO grid_telemetry (
-                unix_ts, category, action_type, actor_steamid, numeric_value, metadata
-            ) VALUES (?, 'ECONOMY', 'AUCTION_CANCEL', ?, ?, ?);]], {
-                now, sellerSteamID, tonumber(auc.deposit_amount) or 0, meta
+            GRID.Database.CallProcedure("grid_log_telemetry", {
+                "ECONOMY", "AUCTION_CANCEL", sellerSteamID, "", tonumber(auc.deposit_amount) or 0, meta
             })
-            GRID.Database.Execute(telemQ)
 
             if callback then callback(true, "SUCCESS") end
         end, function(err)
@@ -2935,6 +3254,34 @@ function GRID.Database.ClaimAuctionCollection(collectionID, steamID, bagIndex, s
     collectionID = tonumber(collectionID) or 0
     bagIndex = tonumber(bagIndex) or 0
     slotIndex = tonumber(slotIndex) or 1
+
+    if not GRID.Database.UseSQLiteFallback and not GRID.Database.UseDirectMariaDBSQL then
+        GRID.Database.CallProcedure("grid_auction_claim_collection", {
+            collectionID, steamID, bagIndex, slotIndex, now
+        }, function(rows)
+            local r = rows and rows[1]
+            local status = (r and r.status) or "ERROR_SQL"
+            if status == "SUCCESS" then
+                local inv = GRID.Database.Cache.Inventories[steamID] or {}
+                table.insert(inv, {
+                    steamid = steamID,
+                    bag_index = bagIndex,
+                    slot_index = slotIndex,
+                    item_id = r.item_id or "",
+                    item_type = r.item_type or "generic",
+                    amount = tonumber(r.amount) or 1,
+                    item_data = r.item_data or "{}"
+                })
+                GRID.Database.Cache.Inventories[steamID] = inv
+                if callback then callback(true, "SUCCESS") end
+            else
+                if callback then callback(false, status) end
+            end
+        end, function(err)
+            if callback then callback(false, "ERROR_SQL: " .. tostring(err)) end
+        end)
+        return
+    end
 
     local colQ = GRID.Database.FormatQuery("SELECT * FROM grid_auction_collection WHERE collection_id = ? AND steamid = ?;", { collectionID, steamID })
     GRID.Database.Execute(colQ, function(cRows)
@@ -2954,7 +3301,7 @@ function GRID.Database.ClaimAuctionCollection(collectionID, steamID, bagIndex, s
         end
 
         -- Add to player's inventory cache & DB
-        local added = GRID.Database.AddItemToInventory(steamID, item.item_id, tonumber(item.amount) or 1, item.item_type or "generic", itemData, bagIndex, slotIndex)
+        local added = GRID.Database.AddInventoryItem(steamID, item.item_id, item.item_type or "generic", tonumber(item.amount) or 1, itemData, bagIndex, slotIndex)
         if not added then
             if callback then callback(false, "ERR_BAG_FULL") end
             return
@@ -2964,11 +3311,9 @@ function GRID.Database.ClaimAuctionCollection(collectionID, steamID, bagIndex, s
         GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_auction_collection SET claimed = 1, claimed_at_unix = ? WHERE collection_id = ?;", { now, collectionID }))
 
         local meta = util.TableToJSON({ collection_id = collectionID, item_id = item.item_id })
-        GRID.Database.Execute(GRID.Database.FormatQuery([[INSERT INTO grid_telemetry (
-            unix_ts, category, action_type, actor_steamid, numeric_value, metadata
-        ) VALUES (?, 'ECONOMY', 'AUCTION_CLAIM', ?, 0, ?);]], {
-            now, steamID, meta
-        }))
+        GRID.Database.CallProcedure("grid_log_telemetry", {
+            "ECONOMY", "AUCTION_CLAIM", steamID, "", 0, meta
+        })
 
         if callback then callback(true, "SUCCESS") end
     end, function(err)
@@ -2978,21 +3323,44 @@ end
 
 function GRID.Database.ProcessAuctionExpirations(callback)
     local now = os.time()
-    local q = "SELECT * FROM grid_auctions WHERE status = 'ACTIVE' AND expires_at_unix <= " .. now .. ";"
-    GRID.Database.Execute(q, function(rows)
-        for _, auc in ipairs(rows or {}) do
+    GRID.Database.QueryView("v_auctions", "status = 'ACTIVE' AND expires_at_unix <= ?", { now }, function(rows)
+        if not rows or #rows == 0 then
+            if callback then callback() end
+            return
+        end
+
+        if not GRID.Database.UseSQLiteFallback and not GRID.Database.UseDirectMariaDBSQL then
+            GRID.Database.CallProcedure("grid_auction_process_expirations", { now }, function()
+                for _, auc in ipairs(rows) do
+                    local curBid = tonumber(auc.current_bid) or 0
+                    local deposit = tonumber(auc.deposit_amount) or 0
+                    if curBid > 0 and auc.high_bidder_steamid and auc.high_bidder_steamid ~= "" then
+                        local tax = math.floor(curBid * 0.075)
+                        local payout = (curBid - tax) + deposit
+                        local pSeller = GRID.Database.SyncOnlinePlayerMoneyDelta(auc.seller_steamid, payout)
+                        if IsValid(pSeller) then
+                            GRID.Notify(pSeller, string.format("Your auction for %s expired and sold for +$%s!", auc.item_id, string.Comma(payout)), NOTIFY_GENERIC)
+                        end
+                    end
+                end
+                if callback then callback() end
+            end, function(err)
+                ErrorNoHalt(string.format("[GRID AUCTION DB ERROR] grid_auction_process_expirations failed: %s\n", tostring(err)))
+                if callback then callback() end
+            end)
+            return
+        end
+
+        for _, auc in ipairs(rows) do
             local curBid = tonumber(auc.current_bid) or 0
             local deposit = tonumber(auc.deposit_amount) or 0
             if curBid > 0 and auc.high_bidder_steamid and auc.high_bidder_steamid ~= "" then
                 local tax = math.floor(curBid * 0.075)
                 local payout = (curBid - tax) + deposit
                 GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_players SET money = money + ? WHERE steamid = ?;", { payout, auc.seller_steamid }))
-                for _, p in ipairs(player.GetAll()) do
-                    if p:SteamID() == auc.seller_steamid then
-                        p:AddMoney(payout)
-                        GRID.Notify(p, string.format("Your auction for %s expired and sold for +$%s!", auc.item_id, string.Comma(payout)), NOTIFY_GENERIC)
-                        break
-                    end
+                local pSeller = GRID.Database.SyncOnlinePlayerMoneyDelta(auc.seller_steamid, payout)
+                if IsValid(pSeller) then
+                    GRID.Notify(pSeller, string.format("Your auction for %s expired and sold for +$%s!", auc.item_id, string.Comma(payout)), NOTIFY_GENERIC)
                 end
 
                 GRID.Database.Execute(GRID.Database.FormatQuery([[INSERT INTO grid_auction_collection (

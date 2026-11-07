@@ -153,14 +153,12 @@ function ENT:ProcessRecycle(ply, selectedItems, hitSweetSpot)
     end
 
     -- Gang bank & influence synergy
-    local gangID = ply.GetGangID and ply:GetGangID()
-    if gangID and gangID > 0 then
-        local gangCut = math.max(1, math.floor(finalCash * 0.10))
+    local gangName = ply.GetGang and ply:GetGang() or ""
+    local gangCut = 0
+    if gangName ~= "" then
+        gangCut = math.max(1, math.floor(finalCash * 0.10))
         if GRID.Database and GRID.Database.AddGangBank then
-            GRID.Database.AddGangBank(gangID, gangCut)
-        end
-        if GRID.Database and GRID.Database.AddGangXP then
-            GRID.Database.AddGangXP(gangID, math.max(1, math.floor(finalXP * 0.25)))
+            GRID.Database.AddGangBank(gangName, gangCut)
         end
     end
 
@@ -207,13 +205,13 @@ function ENT:ProcessRecycle(ply, selectedItems, hitSweetSpot)
 
     -- Telemetry logging
     if GRID.Telemetry and GRID.Telemetry.Log then
-        GRID.Telemetry.Log("ECONOMY", "RECYCLE_DEPOSIT", {
-            player = steamID,
+        GRID.Telemetry.Log("ECONOMY", "RECYCLE_DEPOSIT", steamID, gangName, finalCash, {
             items_recycled = totalCount,
             categories = numCategories,
             combo_bonus = comboBonus * 100,
             sweet_spot = (hitSweetSpot == true),
             payout = finalCash,
+            gang_cut = gangCut,
             xp = finalXP
         })
     end

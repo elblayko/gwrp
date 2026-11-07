@@ -244,9 +244,16 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
                 GRID.Notify(ply, "You cannot afford to deposit $" .. amt .. "!", NOTIFY_ERROR)
                 return ""
             end
-            ply:AddMoney(-amt)
-            if GRID.Database and GRID.Database.AddGangBank then
-                GRID.Database.AddGangBank(gang, amt)
+            if GRID.Database and GRID.Database.TransferGangVault then
+                GRID.Database.TransferGangVault(ply:SteamID(), gang, amt)
+            else
+                ply:AddMoney(-amt)
+                if GRID.Database and GRID.Database.AddGangBank then
+                    GRID.Database.AddGangBank(gang, amt)
+                end
+            end
+            if GRID.Telemetry and GRID.Telemetry.Log then
+                GRID.Telemetry.Log("ECONOMY", "GANG_VAULT_DEPOSIT", ply:SteamID(), gang, amt, {})
             end
             GRID.Notify(ply, string.format("Deposited +$%d into the gang vault!", amt), NOTIFY_GENERIC)
             GRID.Gangs.SendSync(ply)
@@ -264,15 +271,22 @@ hook.Add("PlayerSay", "GRID_GangChatCommands", function(ply, text)
                 return ""
             end
             local gData = GRID.Database and GRID.Database.GetGang and GRID.Database.GetGang(gang)
-            local bank = gData and gData.bank or 0
+            local bank = gData and tonumber(gData.bank) or 0
             if amt > bank then
                 GRID.Notify(ply, string.format("The gang vault only contains $%d!", bank), NOTIFY_ERROR)
                 return ""
             end
-            if GRID.Database and GRID.Database.AddGangBank then
-                GRID.Database.AddGangBank(gang, -amt)
+            if GRID.Database and GRID.Database.TransferGangVault then
+                GRID.Database.TransferGangVault(ply:SteamID(), gang, -amt)
+            else
+                if GRID.Database and GRID.Database.AddGangBank then
+                    GRID.Database.AddGangBank(gang, -amt)
+                end
+                ply:AddMoney(amt)
             end
-            ply:AddMoney(amt)
+            if GRID.Telemetry and GRID.Telemetry.Log then
+                GRID.Telemetry.Log("ECONOMY", "GANG_VAULT_WITHDRAW", ply:SteamID(), gang, amt, {})
+            end
             GRID.Notify(ply, string.format("Withdrew $%d from the gang vault!", amt), NOTIFY_GENERIC)
             GRID.Gangs.SendSync(ply)
             return ""
@@ -537,9 +551,16 @@ local function HandleGangUIAction(len, ply)
             GRID.Notify(ply, "Invalid amount or insufficient funds!", NOTIFY_ERROR)
             return
         end
-        ply:AddMoney(-amt)
-        if GRID.Database and GRID.Database.AddGangBank then
-            GRID.Database.AddGangBank(gang, amt)
+        if GRID.Database and GRID.Database.TransferGangVault then
+            GRID.Database.TransferGangVault(ply:SteamID(), gang, amt)
+        else
+            ply:AddMoney(-amt)
+            if GRID.Database and GRID.Database.AddGangBank then
+                GRID.Database.AddGangBank(gang, amt)
+            end
+        end
+        if GRID.Telemetry and GRID.Telemetry.Log then
+            GRID.Telemetry.Log("ECONOMY", "GANG_VAULT_DEPOSIT", ply:SteamID(), gang, amt, {})
         end
         GRID.Notify(ply, string.format("Deposited +$%s into the gang vault!", string.Comma(amt)), NOTIFY_GENERIC)
         GRID.Gangs.SendSync(ply)
@@ -561,15 +582,22 @@ local function HandleGangUIAction(len, ply)
         local amt = math.floor(tonumber(payload.amount) or 0)
         if amt <= 0 then return end
         local gData = GRID.Database and GRID.Database.GetGang and GRID.Database.GetGang(gang)
-        local bank = gData and gData.bank or 0
+        local bank = gData and tonumber(gData.bank) or 0
         if amt > bank then
             GRID.Notify(ply, string.format("The vault only contains $%s!", string.Comma(bank)), NOTIFY_ERROR)
             return
         end
-        if GRID.Database and GRID.Database.AddGangBank then
-            GRID.Database.AddGangBank(gang, -amt)
+        if GRID.Database and GRID.Database.TransferGangVault then
+            GRID.Database.TransferGangVault(ply:SteamID(), gang, -amt)
+        else
+            if GRID.Database and GRID.Database.AddGangBank then
+                GRID.Database.AddGangBank(gang, -amt)
+            end
+            ply:AddMoney(amt)
         end
-        ply:AddMoney(amt)
+        if GRID.Telemetry and GRID.Telemetry.Log then
+            GRID.Telemetry.Log("ECONOMY", "GANG_VAULT_WITHDRAW", ply:SteamID(), gang, amt, {})
+        end
         GRID.Notify(ply, string.format("Withdrew $%s from the gang vault!", string.Comma(amt)), NOTIFY_GENERIC)
         GRID.Gangs.SendSync(ply)
 

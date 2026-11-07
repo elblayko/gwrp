@@ -58,8 +58,17 @@ function ENT:Use(activator, caller)
     local owner = self:GetOwnerPlayer()
     local isOwner = (activator == owner) or (activator:SteamID() == self.PurchaserSteamID)
 
-    -- Owner Price Configuration (Hold Reload or Walk while pressing E)
-    if isOwner and (activator:KeyDown(IN_RELOAD) or activator:KeyDown(IN_WALK)) then
+    -- Merchant Kiosk Enforcement (Pillar 4): Owners cannot extract weapons from their own wholesale shipment.
+    -- Pressing [E] as the owner cycles the retail price markup preset.
+    if isOwner then
+        local currentJob = activator:GetJob()
+        local affinity = self:GetJobAffinity()
+        if affinity and affinity ~= "" and currentJob ~= affinity then
+            GRID.Notify(activator, "You are no longer on-duty as the licensed merchant for this shipment!", NOTIFY_ERROR)
+            activator:EmitSound("common/warning.wav", 65, 100)
+            return
+        end
+
         local currentPrice = self:GetUnitPrice()
         local wholesaleBase = self.WholesaleBase or math.floor(currentPrice * 0.7)
         local markups = { 1.2, 1.35, 1.5, 1.75, 2.0, 2.5 }
@@ -70,51 +79,38 @@ function ENT:Use(activator, caller)
         local newPrice = math.max(10, math.floor(wholesaleBase * markups[curMarkupIdx]))
         self:SetUnitPrice(newPrice)
         activator:EmitSound("buttons/button15.wav", 65, 110)
-        GRID.Notify(activator, string.format("Shipment Retail Price adjusted: $%d (+%d%% margin)", newPrice, math.Round((markups[curMarkupIdx] - 1) * 100)), NOTIFY_GENERIC)
+        GRID.Notify(activator, string.format("Kiosk Retail Price adjusted: $%d (+%d%% margin). Use /setprice <amt> for custom pricing. (Self-extraction blocked)", newPrice, math.Round((markups[curMarkupIdx] - 1) * 100)), NOTIFY_GENERIC)
         return
     end
 
-    -- Self-Consumption Gate (Dealers who switched jobs cannot consume wholesale firearms)
-    if isOwner then
-        local currentJob = activator:GetJob()
-        local affinity = self:GetJobAffinity()
-        if affinity and affinity ~= "" and currentJob ~= affinity then
-            GRID.Notify(activator, "You are no longer on-duty as the licensed merchant for this shipment! Wholesale self-consumption is blocked.", NOTIFY_ERROR)
-            activator:EmitSound("common/warning.wav", 65, 100)
-            return
-        end
+    -- Customer Purchase Transaction (Non-owner purchasing at retail)
+    local retailPrice = self:GetUnitPrice()
+    if not activator:CanAfford(retailPrice) then
+        GRID.Notify(activator, string.format("You cannot afford this %s ($%d)!", wepName, retailPrice), NOTIFY_ERROR)
+        activator:EmitSound("common/warning.wav", 65, 100)
+        return
     end
 
-    -- Customer Purchase Transaction (Non-owner or dealer buying at retail)
-    if not isOwner then
-        local retailPrice = self:GetUnitPrice()
-        if not activator:CanAfford(retailPrice) then
-            GRID.Notify(activator, string.format("You cannot afford this %s ($%d)!", wepName, retailPrice), NOTIFY_ERROR)
-            activator:EmitSound("common/warning.wav", 65, 100)
-            return
-        end
+    -- Deduct purchase price
+    activator:AddMoney(-retailPrice)
 
-        -- Deduct purchase price
-        activator:AddMoney(-retailPrice)
+    -- 8% Sales Tax Anti-Inflation Sink
+    local taxRate = GRID.Config.VendorSalesTaxPct or 0.08
+    local salesTax = math.floor(retailPrice * taxRate)
+    local dealerPayout = retailPrice - salesTax
 
-        -- 8% Sales Tax Anti-Inflation Sink
-        local taxRate = GRID.Config.VendorSalesTaxPct or 0.08
-        local salesTax = math.floor(retailPrice * taxRate)
-        local dealerPayout = retailPrice - salesTax
+    if IsValid(owner) and owner:IsPlayer() then
+        owner:AddMoney(dealerPayout)
+        GRID.Notify(owner, string.format("[MERCHANT] %s bought 1x %s! +$%d (Tax: -$%d)", activator:Nick(), wepName, dealerPayout, salesTax), NOTIFY_GENERIC)
+        owner:EmitSound("ambient/levels/labs/coinslot1.wav", 65, 115)
+    end
 
-        if IsValid(owner) and owner:IsPlayer() then
-            owner:AddMoney(dealerPayout)
-            GRID.Notify(owner, string.format("[MERCHANT] %s bought 1x %s! +$%d (Tax: -$%d)", activator:Nick(), wepName, dealerPayout, salesTax), NOTIFY_GENERIC)
-            owner:EmitSound("ambient/levels/labs/coinslot1.wav", 65, 115)
-        end
-
-        if GRID.Telemetry and GRID.Telemetry.Log then
-            GRID.Telemetry.Log("TRADE", "SHIPMENT_PURCHASE", activator:SteamID(), IsValid(owner) and owner:SteamID() or "", retailPrice, {
-                weapon = wepClass,
-                tax = salesTax,
-                dealer_payout = dealerPayout
-            })
-        end
+    if GRID.Telemetry and GRID.Telemetry.Log then
+        GRID.Telemetry.Log("TRADE", "SHIPMENT_PURCHASE", activator:SteamID(), IsValid(owner) and owner:SteamID() or "", retailPrice, {
+            weapon = wepClass,
+            tax = salesTax,
+            dealer_payout = dealerPayout
+        })
     end
 
     -- Calculate weapon ammo / clip metadata & full durability
@@ -138,13 +134,13 @@ function ENT:Use(activator, caller)
             GRID.Inventory.Sync(activator)
         end
         activator:EmitSound("items/ammo_pickup.wav", 65, 100)
-        local actionStr = isOwner and "Retrieved" or "Purchased"
-        GRID.Notify(activator, string.format("%s 1x %s into your bag (%d remaining in crate).", actionStr, wepName, count - 1), NOTIFY_GENERIC)
+        GRID.Notify(activator, string.format("Purchased 1x %s into your bag (%d remaining in crate).", wepName, count - 1), NOTIFY_GENERIC)
     else
         -- If inventory is full, drop it on top of shipment
         local spawnedWep = ents.Create(wepClass)
         if IsValid(spawnedWep) then
             spawnedWep.GRID_Dropped = true
+            spawnedWep.GRID_DurabilityInitialized = true
             spawnedWep:SetPos(self:GetPos() + Vector(0, 0, 25))
             spawnedWep:Spawn()
             spawnedWep:Activate()

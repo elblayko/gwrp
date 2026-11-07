@@ -294,15 +294,26 @@ function GM:PlayerDeath(victim, inflictor, attacker)
         activeWep:SetDurability(math.max(0, activeWep:GetDurability() - 15))
     end
 
-    -- Dynamic Anti-Inflation Resuscitation Fee (Hybrid Base + Wealth %)
+    -- Dynamic Anti-Inflation Resuscitation Fee (Hybrid Base + Total Net Worth %, auto-drafts from Bank if Wallet insufficient)
     if GRID.Economy and GRID.Economy.CalculateDynamicFee then
         local hospFee = GRID.Economy.CalculateDynamicFee(victim, GRID.Config.HospitalFeeBase or 50,
             GRID.Config.HospitalFeeWealthPct or 0.015)
-        if hospFee > 0 and victim:CanAfford(hospFee) then
-            victim:AddMoney(-hospFee)
-            GRID.Notify(victim, string.format("Emergency Medical Resuscitation Fee: -$%d", hospFee), NOTIFY_ERROR)
-            if GRID.Telemetry and GRID.Telemetry.Log then
-                GRID.Telemetry.Log("ECONOMY", "HOSPITAL_FEE", victim:SteamID(), "", hospFee, {})
+        if hospFee > 0 then
+            local paid, fromWallet, fromBank = false, 0, 0
+            if GRID.Economy.DeductFeeWithBankFallback then
+                paid, fromWallet, fromBank = GRID.Economy.DeductFeeWithBankFallback(victim, hospFee)
+            elseif victim:CanAfford(hospFee) then
+                victim:AddMoney(-hospFee)
+                paid, fromWallet = true, hospFee
+            end
+            if paid then
+                GRID.Notify(victim, string.format("Emergency Medical Resuscitation Fee: -$%d", hospFee), NOTIFY_ERROR)
+                if GRID.Telemetry and GRID.Telemetry.Log then
+                    GRID.Telemetry.Log("ECONOMY", "HOSPITAL_FEE", victim:SteamID(), "", hospFee, {
+                        from_wallet = fromWallet,
+                        from_bank = fromBank
+                    })
+                end
             end
         end
     end

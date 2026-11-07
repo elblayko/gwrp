@@ -7,15 +7,40 @@
 GRID = GRID or {}
 GRID.Economy = GRID.Economy or {}
 
--- Calculate dynamic fee: Base Flat + Percentage of Wealth (Anti-Inflation Sink)
+-- Calculate dynamic fee: Base Flat + Percentage of Total Net Worth (Wallet + Bank) (Anti-Inflation Sink)
 function GRID.Economy.CalculateDynamicFee(ply, flatBase, wealthPct)
     flatBase = tonumber(flatBase) or 0
     wealthPct = tonumber(wealthPct) or 0
     if not IsValid(ply) or not ply:IsPlayer() then return flatBase end
 
     local wallet = math.max(0, ply:GetMoney())
-    local wealthFee = math.floor(wallet * wealthPct)
+    local bank = math.max(0, ply.GetBank and ply:GetBank() or 0)
+    local netWorth = wallet + bank
+    local wealthFee = math.floor(netWorth * wealthPct)
     return math.max(0, flatBase + wealthFee)
+end
+
+-- Deduct mandatory dynamic fee from Wallet first, auto-drafting remainder from Personal Bank if needed
+function GRID.Economy.DeductFeeWithBankFallback(ply, amount)
+    amount = math.max(0, math.floor(tonumber(amount) or 0))
+    if amount <= 0 then return true, 0, 0 end
+    if not IsValid(ply) or not ply:IsPlayer() then return false, 0, 0 end
+
+    local wallet = math.max(0, ply:GetMoney())
+    local bank = math.max(0, ply.GetBank and ply:GetBank() or 0)
+    if (wallet + bank) < amount then
+        return false, 0, 0
+    end
+
+    local fromWallet = math.min(wallet, amount)
+    local fromBank = amount - fromWallet
+    if fromWallet > 0 then
+        ply:AddMoney(-fromWallet)
+    end
+    if fromBank > 0 and ply.AddBank then
+        ply:AddBank(-fromBank)
+    end
+    return true, fromWallet, fromBank
 end
 
 function GRID.Economy.StartPaydayTimer()
@@ -41,12 +66,16 @@ function GRID.Economy.StartPaydayTimer()
                         local flatUpkeep = ((GRID.Config and GRID.Config.PropertyUpkeepBase) or 15) + (doorCount * ((GRID.Config and GRID.Config.PropertyUpkeepPerDoor) or 5))
                         local upkeepFee = GRID.Economy.CalculateDynamicFee(ply, flatUpkeep, (GRID.Config and GRID.Config.PropertyUpkeepWealthPct) or 0.005)
 
-                        if ply:CanAfford(upkeepFee) then
-                            ply:AddMoney(-upkeepFee)
+                        local paid, fromWallet, fromBank = GRID.Economy.DeductFeeWithBankFallback(ply, upkeepFee)
+                        if paid then
                             GRID.Notify(ply, string.format("Property taxes paid: -$%d (%d doors)", upkeepFee, doorCount), NOTIFY_GENERIC)
 
                             if GRID.Telemetry and GRID.Telemetry.Log then
-                                GRID.Telemetry.Log("ECONOMY", "PROPERTY_UPKEEP", ply:SteamID(), "", upkeepFee, { doors = doorCount })
+                                GRID.Telemetry.Log("ECONOMY", "PROPERTY_UPKEEP", ply:SteamID(), "", upkeepFee, {
+                                    doors = doorCount,
+                                    from_wallet = fromWallet,
+                                    from_bank = fromBank
+                                })
                             end
                         else
                             -- Foreclose property if player cannot afford upkeep

@@ -33,7 +33,7 @@ function ENT:Draw()
         draw.SimpleText(string.format("Stock: %d | Unit Price: $%d", count, price), "GRID_HUD_Small", 0, 15, Color(74, 222, 128), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
         if isOwner then
-            draw.SimpleText("Owner: Press E to Retrieve | R+E to Adjust Markup", "GRID_HUD_Small", 0, 42, Color(245, 158, 11), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            draw.SimpleText("Owner: [E] Cycle Markup | /setprice <amt> (Retail Only)", "GRID_HUD_Small", 0, 42, Color(245, 158, 11), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         else
             draw.SimpleText(string.format("Press E to Purchase for $%d", price), "GRID_HUD_Small", 0, 42, Color(56, 189, 248), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end

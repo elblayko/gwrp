@@ -160,7 +160,6 @@ net.Receive("GRID_Auction_CreateListing", function(len, ply)
     GRID.Database.CreateAuction(ply:SteamID(), ply:Nick(), bagIndex, slotIndex, startBid, buyoutPrice, durationHours, deposit, function(success, status, aucID)
         if not IsValid(ply) then return end
         if success then
-            ply:AddMoney(-deposit)
             GRID.Notify(ply, string.format("Listing created! Deposit paid: $%s (%dh duration)", string.Comma(deposit), durationHours), NOTIFY_GENERIC)
             ply:EmitSound("ambient/levels/labs/coinslot1.wav", 65, 100)
 
@@ -207,7 +206,6 @@ net.Receive("GRID_Auction_PlaceBid", function(len, ply)
     GRID.Database.BidAuction(auctionID, ply:SteamID(), ply:Nick(), bidAmount, function(success, status)
         if not IsValid(ply) then return end
         if success then
-            ply:AddMoney(-bidAmount)
             GRID.Notify(ply, string.format("Bid placed: $%s on Auction #%d!", string.Comma(bidAmount), auctionID), NOTIFY_GENERIC)
             ply:EmitSound("ambient/levels/labs/coinslot1.wav", 65, 100)
         else

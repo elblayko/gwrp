@@ -256,9 +256,21 @@ function ENT:Use(activator, caller)
                 local taxAmount = math.max(1, math.floor(cash * (taxRate / 100)))
                 local playerPayout = cash - taxAmount
 
-                activator:AddMoney(playerPayout)
-                if GRID.Database and GRID.Database.AddGangBank then
-                    GRID.Database.AddGangBank(zone.owner, taxAmount)
+                if GRID.Database and GRID.Database.CollectPrinterTaxed then
+                    GRID.Database.CollectPrinterTaxed(activator:SteamID(), zone.owner, playerPayout, taxAmount)
+                else
+                    activator:AddMoney(playerPayout)
+                    if GRID.Database and GRID.Database.AddGangBank then
+                        GRID.Database.AddGangBank(zone.owner, taxAmount)
+                    end
+                end
+
+                if GRID.Telemetry and GRID.Telemetry.Log then
+                    GRID.Telemetry.Log("ECONOMY", "PRINTER_COLLECT_TAXED", activator:SteamID(), zone.owner, playerPayout, {
+                        tax = taxAmount,
+                        tax_rate = taxRate,
+                        turf = zone.name
+                    })
                 end
 
                 if activator.AddXP then
@@ -278,7 +290,14 @@ function ENT:Use(activator, caller)
                     end
                 end
             else
-                activator:AddMoney(cash)
+                if GRID.Database and GRID.Database.CollectPrinterTaxed then
+                    GRID.Database.CollectPrinterTaxed(activator:SteamID(), "", cash, 0)
+                else
+                    activator:AddMoney(cash)
+                end
+                if GRID.Telemetry and GRID.Telemetry.Log then
+                    GRID.Telemetry.Log("ECONOMY", "PRINTER_COLLECT", activator:SteamID(), "", cash, {})
+                end
                 if activator.AddXP then
                     activator:AddXP((GRID.Config and GRID.Config.Level and GRID.Config.Level.XP_PrinterCollect) or 20,
                         "Printer Revenue")

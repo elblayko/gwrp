@@ -60,7 +60,8 @@ end
 function SWEP:Initialize()
     self:SetHoldType(self.HoldType or "pistol")
     self:SetIronsights(false)
-    if self:GetDurability() <= 0 then
+    if SERVER and not self.GRID_DurabilityInitialized then
+        self.GRID_DurabilityInitialized = true
         self:SetDurability(100)
     end
 end
@@ -69,9 +70,6 @@ function SWEP:Deploy()
     self:SetHoldType(self.HoldType or "pistol")
     self:SetIronsights(false)
     self.IronSightsProgress = 0
-    if self:GetDurability() <= 0 then
-        self:SetDurability(100)
-    end
     return true
 end
 
@@ -93,15 +91,20 @@ function SWEP:PrimaryAttack()
     end
     self.LastPrimaryAttackTime = cur
 
-    -- Low Durability Misfire Check (Under 20% durability has a chance to misfire / jam)
+    -- Server-Authoritative & Prediction-Safe Durability / Jamming Check
     local durability = self:GetDurability()
-    if durability < 20 and math.random(1, 100) <= (25 - durability) then
-        self:EmitSound("weapons/pistol/pistol_empty.wav", 65, 90)
+    if durability <= 0 then
+        self:EmitSound("weapons/pistol/pistol_empty.wav", 65, 85)
         self:SetNextPrimaryFire(cur + 0.6)
-        if CLIENT and ply == LocalPlayer() then
-            surface.PlaySound("weapons/pistol/pistol_empty.wav")
-        end
         return
+    end
+    if durability < 20 then
+        local roll = util.SharedRandom("GRID_Misfire", 1, 100, math.floor(cur * 100))
+        if roll <= (25 - durability) then
+            self:EmitSound("weapons/pistol/pistol_empty.wav", 65, 90)
+            self:SetNextPrimaryFire(cur + 0.6)
+            return
+        end
     end
 
     self:SetNextPrimaryFire(cur + self.Primary.Delay)
