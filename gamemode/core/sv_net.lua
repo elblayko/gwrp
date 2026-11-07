@@ -71,6 +71,7 @@ util.AddNetworkString("GRID_PoliceVoteStart")
 util.AddNetworkString("GRID_PoliceCastVote")
 util.AddNetworkString("GRID_PoliceVoteEnd")
 util.AddNetworkString("GRID_EvidenceInvestigate")
+util.AddNetworkString("GRID_TurfLockdownAction")
 
 GRID = GRID or {}
 GRID.NetLimits = GRID.NetLimits or {}

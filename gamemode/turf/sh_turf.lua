@@ -77,3 +77,32 @@ function GRID.Turf.GetCaptureZoneAtPos(pos)
 
     return bestZone, bestId
 end
+
+-- ========================================================
+-- CITYWIDE LOCKDOWN & TERRITORY OCCUPATION METRICS
+-- ========================================================
+
+function GRID.Turf.IsLockdownActive()
+    return GetGlobalBool("GRID_LockdownActive", false)
+end
+
+function GRID.Turf.GetGangControlStats()
+    local totalZones = table.Count(GRID.Turf.Zones or {})
+    if totalZones <= 0 then return 0, 0, false end
+
+    local gangZones = 0
+    for _, z in pairs(GRID.Turf.Zones) do
+        local owner = z.owner or ""
+        if owner ~= "" and string.lower(owner) ~= "police" and string.lower(owner) ~= "neutral" then
+            gangZones = gangZones + 1
+        end
+    end
+
+    local allControlled = (gangZones == totalZones and totalZones > 0)
+    return gangZones, totalZones, allControlled
+end
+
+function GRID.Turf.AreAllZonesGangControlled()
+    local _, _, allControlled = GRID.Turf.GetGangControlStats()
+    return allControlled
+end

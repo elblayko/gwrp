@@ -327,3 +327,30 @@ local function HandleOpenTurfTaxMenu()
 end
 
 net.Receive("GRID_OpenTurfTaxMenu", HandleOpenTurfTaxMenu)
+
+-- ========================================================
+-- MARTIAL LAW CITYWIDE LOCKDOWN HUD BANNER
+-- ========================================================
+
+hook.Add("HUDPaint", "GRID_TurfLockdownHUD", function()
+    if not GRID.Turf or not GRID.Turf.IsLockdownActive or not GRID.Turf.IsLockdownActive() then return end
+
+    local scrW = ScrW()
+    local bannerW, bannerH = 540, 52
+    local bannerX = (scrW - bannerW) / 2
+    local bannerY = 16
+
+    local pulse = math.abs(math.sin(CurTime() * 4))
+    local borderCol = Color(239, 68, 68, math.floor(180 + (75 * pulse)))
+
+    draw.RoundedBox(8, bannerX, bannerY, bannerW, bannerH, Color(11, 15, 25, 245))
+    surface.SetDrawColor(borderCol)
+    surface.DrawOutlinedRect(bannerX, bannerY, bannerW, bannerH, 1)
+
+    -- Top pulsing red stripe
+    draw.RoundedBoxEx(4, bannerX, bannerY, bannerW, 3, borderCol, true, true, false, false)
+
+    -- Text
+    draw.SimpleText("[!] MARTIAL LAW: CITYWIDE LOCKDOWN [!]", "GRID_UI_Header", scrW / 2, bannerY + 8, borderCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+    draw.SimpleText("Warrantless arrests & curfew enforcement authorized until a territory is recaptured.", "GRID_UI_Caption", scrW / 2, bannerY + 30, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
+end)

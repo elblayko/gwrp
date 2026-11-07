@@ -288,6 +288,11 @@ function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
 end
 
 function GM:PlayerDeath(victim, inflictor, attacker)
+    -- Citywide Lockdown Termination on Mayor Death
+    if IsValid(victim) and victim.GetJob and victim:GetJob() == "mayor" and GRID.Turf and GRID.Turf.IsLockdownActive and GRID.Turf.IsLockdownActive() then
+        GRID.Turf.EndLockdown("mayor_death")
+    end
+
     -- Flush pending combat telemetry
     if GRID.Telemetry and GRID.Telemetry.FlushCombat then
         GRID.Telemetry.FlushCombat(victim)

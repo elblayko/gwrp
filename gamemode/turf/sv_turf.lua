@@ -266,6 +266,10 @@ function GRID.Turf.FinalizeCapture(turfId, ply, claimant)
     GRID.Turf.SaveMapProfile()
     GRID.Turf.BroadcastUpdate(turfId)
 
+    if claimant == "Police" and GRID.Turf.IsLockdownActive() then
+        GRID.Turf.EndLockdown("police_capture", zone.name)
+    end
+
     local reward = (GRID.Config and GRID.Config.TurfCaptureReward) or 40
     if IsValid(ply) then
         ply:AddMoney(reward)
@@ -535,6 +539,111 @@ local function HandleAdminTurfAction(len, ply)
 end
 
 net.Receive("GRID_AdminTurfAction", HandleAdminTurfAction)
+
+-- ========================================================
+-- 8. CITYWIDE LOCKDOWN & MARTIAL LAW ENGINE
+-- ========================================================
+
+function GRID.Turf.InitiateLockdown(mayor)
+    if not IsValid(mayor) or not mayor:IsPlayer() then return false end
+    local isMayorOrAdmin = (mayor.GetJob and mayor:GetJob() == "mayor") or mayor:IsAdmin() or mayor:IsSuperAdmin()
+    if not isMayorOrAdmin then
+        GRID.Notify(mayor, "Only the Mayor or an Administrator can declare citywide martial law!", NOTIFY_ERROR)
+        return false
+    end
+
+    if GRID.Turf.IsLockdownActive() then
+        GRID.Notify(mayor, "Citywide lockdown is already in effect!", NOTIFY_ERROR)
+        return false
+    end
+
+    local gangCount, totalCount, allControlled = GRID.Turf.GetGangControlStats()
+    if not allControlled then
+        GRID.Notify(mayor, string.format("Cannot declare martial law! Street gangs must control 100%% of territories (Currently %d/%d controlled).", gangCount, totalCount), NOTIFY_ERROR, 8)
+        return false
+    end
+
+    SetGlobalBool("GRID_LockdownActive", true)
+
+    -- Play air raid sirens across the metropolis
+    for _, p in ipairs(player.GetAll()) do
+        p:EmitSound("ambient/alarms/warningbell1.wav", 80, 100)
+        p:EmitSound("ambient/alarms/citadel_alert_loop2.wav", 75, 100)
+    end
+
+    local mayorNick = mayor:Nick()
+    for _, p in ipairs(player.GetAll()) do
+        GRID.Notify(p, string.format("[MARTIAL LAW DECLARED] Mayor %s has initiated a Citywide Lockdown! Police are authorized to arrest and tase all non-police on sight until a territory is recaptured.", mayorNick), NOTIFY_ERROR, 12)
+    end
+
+    return true
+end
+
+function GRID.Turf.EndLockdown(reason, extra)
+    if not GRID.Turf.IsLockdownActive() then return end
+    SetGlobalBool("GRID_LockdownActive", false)
+
+    -- Silence sirens on all clients
+    for _, p in ipairs(player.GetAll()) do
+        p:StopSound("ambient/alarms/citadel_alert_loop2.wav")
+        p:EmitSound("ambient/alarms/klaxon1.wav", 65, 120)
+    end
+
+    local msg = "[LOCKDOWN LIFTED] The citywide martial law lockdown has concluded."
+    if reason == "police_capture" then
+        msg = string.format("[LOCKDOWN LIFTED] Civil Protection reclaimed %s! Normal law enforcement protocols restored.", extra or "territory")
+    elseif reason == "mayor_death" then
+        msg = "[LOCKDOWN TERMINATED] The Mayor was eliminated in the line of duty! Citywide martial law has been suspended."
+    elseif reason == "mayor_manual" then
+        msg = "[LOCKDOWN LIFTED] The Mayor has officially terminated the citywide lockdown."
+    elseif reason == "admin" then
+        msg = "[LOCKDOWN LIFTED] An administrator terminated the citywide lockdown."
+    end
+
+    for _, p in ipairs(player.GetAll()) do
+        GRID.Notify(p, msg, NOTIFY_HINT, 10)
+    end
+end
+
+-- Net Receiver for Mayor F4 Menu Lockdown Action
+net.Receive("GRID_TurfLockdownAction", function(len, ply)
+    if not IsValid(ply) then return end
+    local action = net.ReadString()
+
+    if action == "initiate" then
+        GRID.Turf.InitiateLockdown(ply)
+    elseif action == "lift" then
+        local isMayorOrAdmin = (ply.GetJob and ply:GetJob() == "mayor") or ply:IsAdmin() or ply:IsSuperAdmin()
+        if isMayorOrAdmin then
+            GRID.Turf.EndLockdown(ply:IsAdmin() and "admin" or "mayor_manual")
+        end
+    end
+end)
+
+-- Chat commands /lockdown and /unlockdown
+hook.Add("PlayerSay", "GRID_TurfLockdownChatCommands", function(ply, text)
+    local lower = string.lower(string.Trim(text))
+
+    if lower == "/lockdown" or lower == "!lockdown" then
+        local isMayorOrAdmin = (ply.GetJob and ply:GetJob() == "mayor") or ply:IsAdmin() or ply:IsSuperAdmin()
+        if not isMayorOrAdmin then
+            GRID.Notify(ply, "Only the Mayor or an Admin can initiate a citywide lockdown!", NOTIFY_ERROR)
+            return ""
+        end
+        GRID.Turf.InitiateLockdown(ply)
+        return ""
+    end
+
+    if lower == "/unlockdown" or lower == "!unlockdown" then
+        local isMayorOrAdmin = (ply.GetJob and ply:GetJob() == "mayor") or ply:IsAdmin() or ply:IsSuperAdmin()
+        if not isMayorOrAdmin then
+            GRID.Notify(ply, "Only the Mayor or an Admin can lift the citywide lockdown!", NOTIFY_ERROR)
+            return ""
+        end
+        GRID.Turf.EndLockdown(ply:IsAdmin() and "admin" or "mayor_manual")
+        return ""
+    end
+end)
 
 -- Auto-sync existing zones to connected clients on Lua hot-reload
 timer.Simple(0.5, function()

@@ -1972,7 +1972,73 @@ function GRID.UI.RenderPoliceDispatchContent(scroll, mainFrame)
         draw.SimpleText(sub, "GRID_UI_Caption", 16, 38, Color(148, 163, 184))
     end
 
-    local bodyY = 76
+    -- Citywide Lockdown Status & Control Banner
+    local lockdownCard = vgui.Create("DPanel", container)
+    lockdownCard:SetPos(0, 72)
+    lockdownCard:SetSize(scrollW, 52)
+    lockdownCard.Paint = function(s, w, h)
+        local isLockdown = GRID.Turf and GRID.Turf.IsLockdownActive and GRID.Turf.IsLockdownActive()
+        local bg = isLockdown and Color(35, 15, 20, 240) or Color(17, 24, 39, 230)
+        local border = isLockdown and Color(239, 68, 68, 220) or Color(30, 41, 59, 180)
+        draw.RoundedBox(8, 0, 0, w, h, bg)
+        surface.SetDrawColor(border)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+        if isLockdown then
+            local pulse = math.abs(math.sin(CurTime() * 4))
+            local pulseCol = Color(239, 68, 68, math.floor(180 + 75 * pulse))
+            draw.RoundedBoxEx(4, 0, 0, w, 3, pulseCol, true, true, false, false)
+            draw.SimpleText("[!] MARTIAL LAW LOCKDOWN IN EFFECT", "GRID_UI_Header", 16, 8, pulseCol)
+            draw.SimpleText("Warrantless arrests & taser compliance authorized against all non-police citizens until a zone is captured.", "GRID_UI_Caption", 16, 30, Color(248, 250, 252))
+        else
+            local gangCount, totalCount, allControlled = 0, 0, false
+            if GRID.Turf and GRID.Turf.GetGangControlStats then
+                gangCount, totalCount, allControlled = GRID.Turf.GetGangControlStats()
+            end
+            local statCol = allControlled and Color(52, 211, 153) or Color(245, 158, 11)
+            local statusTxt = allControlled and
+                string.format("Street Gang Territory Control: %d/%d (100%%) - LOCKDOWN READY", gangCount, totalCount) or
+                string.format("Street Gang Territory Control: %d/%d (%d%%) - Requires 100%% gang control to declare martial law", gangCount, totalCount, totalCount > 0 and math.floor((gangCount / totalCount) * 100) or 0)
+
+            draw.SimpleText("CITYWIDE LOCKDOWN PROTOCOL", "GRID_UI_Badge", 16, 8, statCol)
+            draw.SimpleText(statusTxt, "GRID_UI_Caption", 16, 28, Color(203, 213, 225))
+        end
+    end
+
+    if isMayor then
+        local btnLockdown = vgui.Create("DButton", lockdownCard)
+        btnLockdown:SetSize(220, 36)
+        btnLockdown:SetPos(scrollW - 232, 8)
+        btnLockdown:SetText("")
+        btnLockdown.Paint = function(s, w, h)
+            local isLockdown = GRID.Turf and GRID.Turf.IsLockdownActive and GRID.Turf.IsLockdownActive()
+            local gangCount, totalCount, allControlled = 0, 0, false
+            if GRID.Turf and GRID.Turf.GetGangControlStats then
+                gangCount, totalCount, allControlled = GRID.Turf.GetGangControlStats()
+            end
+
+            if isLockdown then
+                local bg = s:IsHovered() and Color(239, 68, 68, 240) or Color(185, 28, 28, 200)
+                draw.RoundedBox(6, 0, 0, w, h, bg)
+                draw.SimpleText("LIFT CITYWIDE LOCKDOWN", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            elseif allControlled then
+                local bg = s:IsHovered() and Color(245, 158, 11, 240) or Color(217, 119, 6, 200)
+                draw.RoundedBox(6, 0, 0, w, h, bg)
+                draw.SimpleText("INITIATE LOCKDOWN", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            else
+                draw.RoundedBox(6, 0, 0, w, h, Color(30, 41, 59, 140))
+                draw.SimpleText("LOCKDOWN UNAVAILABLE", "GRID_UI_Btn", w / 2, h / 2, Color(100, 116, 139), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+        end
+        btnLockdown.DoClick = function()
+            local isLockdown = GRID.Turf and GRID.Turf.IsLockdownActive and GRID.Turf.IsLockdownActive()
+            net.Start("GRID_TurfLockdownAction")
+            net.WriteString(isLockdown and "lift" or "initiate")
+            net.SendToServer()
+        end
+    end
+
+    local bodyY = 132
     local bodyH = totalH - bodyY
     local leftW = math.floor(scrollW * 0.44)
     local rightW = scrollW - leftW - 16

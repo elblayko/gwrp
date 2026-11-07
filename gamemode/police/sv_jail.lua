@@ -126,7 +126,7 @@ function GRID.Jail.GetBestCell()
 end
 
 -- Jail execution
-function GRID.Jail.JailPlayer(target, officer, duration, bail)
+function GRID.Jail.JailPlayer(target, officer, duration, bail, customReason)
     if not IsValid(target) or not target:IsPlayer() or not target:Alive() then return false end
     if target:IsJailed() then return false end
 
@@ -185,7 +185,10 @@ function GRID.Jail.JailPlayer(target, officer, duration, bail)
 
     -- Notifications
     local officerName = IsValid(officer) and officer:Nick() or "Civil Protection"
-    GRID.Notify(target, string.format("You were arrested by %s! Sentence: %ds. Bail: $%d.", officerName, duration, bail), NOTIFY_ERROR, 10)
+    local arrestMsg = customReason and
+        string.format("You were arrested under %s by %s! Sentence: %ds. Bail: $%d.", customReason, officerName, duration, bail) or
+        string.format("You were arrested by %s! Sentence: %ds. Bail: $%d.", officerName, duration, bail)
+    GRID.Notify(target, arrestMsg, NOTIFY_ERROR, 10)
 
     if IsValid(officer) and officer:IsPlayer() then
         GRID.Notify(officer, string.format("Successfully booked %s! +$150 Booking Bounty & +75 XP.", target:Nick()), NOTIFY_GENERIC, 8)

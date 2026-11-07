@@ -124,7 +124,8 @@ function SWEP:SecondaryAttack()
     local target = tr.Entity
     if IsValid(target) and target:IsPlayer() then
         if SERVER then
-            if target:IsWanted() then
+            local isLockdownWarrantless = (GRID.Turf and GRID.Turf.IsLockdownActive and GRID.Turf.IsLockdownActive() and not target:IsPolice())
+            if target:IsWanted() or isLockdownWarrantless then
                 self:SendWeaponAnim(ACT_VM_HITCENTER)
                 self:EmitSound("weapons/stunstick/spark" .. math.random(1, 3) .. ".wav", 80, 100)
 
@@ -133,7 +134,8 @@ function SWEP:SecondaryAttack()
                 ed:SetNormal(tr.HitNormal)
                 util.Effect("cball_explode", ed)
 
-                GRID.Jail.JailPlayer(target, owner)
+                local bookingReason = isLockdownWarrantless and "Martial Law Curfew Enforcement" or nil
+                GRID.Jail.JailPlayer(target, owner, nil, nil, bookingReason)
             else
                 owner:EmitSound("buttons/button10.wav", 65, 100)
                 GRID.Notify(owner, "Suspect is not wanted!", NOTIFY_ERROR, 5)

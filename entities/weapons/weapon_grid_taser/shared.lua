@@ -88,8 +88,9 @@ function SWEP:PrimaryAttack()
     local target = tr.Entity
     if IsValid(target) and target:IsPlayer() then
         if SERVER then
-            if target:IsWanted() then
-                -- Target is valid wanted suspect: immobilize with ragdoll
+            local isLockdownWarrantless = (GRID.Turf and GRID.Turf.IsLockdownActive and GRID.Turf.IsLockdownActive() and not target:IsPolice())
+            if target:IsWanted() or isLockdownWarrantless then
+                -- Target is valid wanted suspect or martial law curfew violator: immobilize with ragdoll
                 target:EmitSound("ambient/energy/zap7.wav", 80, 100)
                 local spark = EffectData()
                 spark:SetOrigin(tr.HitPos)
@@ -98,7 +99,8 @@ function SWEP:PrimaryAttack()
                 util.Effect("Sparks", spark)
 
                 GRID.Jail.TasePlayer(target)
-                GRID.Notify(owner, string.format("Tased %s! Suspect immobilized for 3s.", target:Nick()), NOTIFY_HINT, 4)
+                local msg = isLockdownWarrantless and string.format("Curfew violator subdued! Tased %s for 3s.", target:Nick()) or string.format("Tased %s! Suspect immobilized for 3s.", target:Nick())
+                GRID.Notify(owner, msg, NOTIFY_HINT, 4)
             else
                 -- Target is NOT wanted: fizzle & safety lock
                 owner:EmitSound("buttons/button10.wav", 65, 100)
