@@ -106,24 +106,20 @@ function GRID.Turf.DrawHUD()
         local ownerCol = (GRID.GetGangColor and GRID.GetGangColor(owner)) or Color(245, 158, 11)
         local taxRate = tonumber(activeZone.tax_rate) or 10
 
-        -- Extortion Tax Severity Color & Label:
+        -- Extortion Tax Severity Color:
         -- Low (<= 10%): Green
         -- Moderate (11% - 20%): Yellow
         -- High (21% - 30%): Orange
         -- Very High (> 30%): Red
-        local taxCol, taxLabel
+        local taxCol
         if taxRate <= 10 then
             taxCol = Color(74, 222, 128)   -- Bright Green
-            taxLabel = "Low"
         elseif taxRate <= 20 then
             taxCol = Color(250, 204, 21)  -- Yellow
-            taxLabel = "Moderate"
         elseif taxRate <= 30 then
             taxCol = Color(251, 146, 60)  -- Orange
-            taxLabel = "High"
         else
             taxCol = Color(248, 113, 113) -- Crimson Red
-            taxLabel = "Very High"
         end
 
         -- Background obsidian banner card
@@ -143,7 +139,7 @@ function GRID.Turf.DrawHUD()
         -- Controller & Color-Coded Extortion Tax Subtext
         surface.SetFont("GRID_UI_Caption")
         local prefix = string.format("Controlled by %s   •   Extortion Tax: ", owner)
-        local taxSuffix = string.format("%d%% (%s)", taxRate, taxLabel)
+        local taxSuffix = string.format("%d%%", taxRate)
         local preW = surface.GetTextSize(prefix)
         local sufW = surface.GetTextSize(taxSuffix)
         local totalLineW = preW + sufW
