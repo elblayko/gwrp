@@ -1437,6 +1437,7 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             DECLARE v_amount INT DEFAULT 1;
             DECLARE v_item_data JSON;
             DECLARE v_claimed TINYINT;
+            DECLARE v_created_at_unix INT UNSIGNED;
             DECLARE v_out_status VARCHAR(32) DEFAULT 'ERROR_SQL';
 
             DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN
@@ -1445,16 +1446,20 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             END;
 
             START TRANSACTION;
-            SELECT item_id, item_type, amount, item_data, claimed
-            INTO v_item_id, v_item_type, v_amount, v_item_data, v_claimed
+            SELECT item_id, item_type, amount, item_data, claimed, created_at_unix
+            INTO v_item_id, v_item_type, v_amount, v_item_data, v_claimed, v_created_at_unix
             FROM grid_auction_collection WHERE collection_id = p_collection_id AND steamid = p_steamid FOR UPDATE;
 
             IF v_item_id IS NULL THEN
                 SET v_out_status = 'ERR_NOT_FOUND';
                 ROLLBACK;
-            ELSEIF v_claimed = 1 THEN
+            ELSEIF v_claimed != 0 THEN
                 SET v_out_status = 'ERR_ALREADY_CLAIMED';
                 ROLLBACK;
+            ELSEIF (v_created_at_unix + 86400) <= p_now_unix THEN
+                UPDATE grid_auction_collection SET claimed = 2, claimed_at_unix = p_now_unix WHERE collection_id = p_collection_id;
+                SET v_out_status = 'ERR_COLLECTION_EXPIRED';
+                COMMIT;
             ELSE
                 INSERT INTO grid_inventory (steamid, bag_index, slot_index, item_id, item_type, amount, item_data)
                 VALUES (p_steamid, p_bag_index, p_slot_index, v_item_id, v_item_type, v_amount, v_item_data);
@@ -1464,6 +1469,9 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             END IF;
             SELECT v_out_status AS status, COALESCE(v_item_id, '') AS item_id, COALESCE(v_item_type, 'generic') AS item_type,
                    COALESCE(v_amount, 1) AS amount, COALESCE(v_item_data, '{}') AS item_data;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_auction_process_collection_expirations(IN p_cutoff_unix INT UNSIGNED, IN p_now_unix INT UNSIGNED) BEGIN
+            UPDATE grid_auction_collection SET claimed = 2, claimed_at_unix = p_now_unix WHERE claimed = 0 AND created_at_unix <= p_cutoff_unix;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_auction_process_expirations(IN p_now_unix INT UNSIGNED) BEGIN
             DECLARE done INT DEFAULT FALSE;
@@ -2809,7 +2817,9 @@ function GRID.Database.GetPlayerAuctions(steamID, callback)
 end
 
 function GRID.Database.GetPlayerCollection(steamID, callback)
-    GRID.Database.QueryView("v_auction_collection", "steamid = ? AND claimed = 0 ORDER BY created_at_unix DESC", { steamID }, function(rows)
+    local retention = (GRID.Auction and GRID.Auction.CollectionRetentionTime) or 86400
+    local cutoff = os.time() - retention
+    GRID.Database.QueryView("v_auction_collection", "steamid = ? AND claimed = 0 AND created_at_unix > ? ORDER BY created_at_unix DESC", { steamID, cutoff }, function(rows)
         if callback then callback(rows or {}) end
     end, function(err)
         ErrorNoHalt(string.format("[GRID AUCTION DB ERROR] GetPlayerCollection failed: %s\n", tostring(err)))
@@ -3290,8 +3300,15 @@ function GRID.Database.ClaimAuctionCollection(collectionID, steamID, bagIndex, s
             if callback then callback(false, "ERR_NOT_FOUND") end
             return
         end
-        if tonumber(item.claimed) == 1 then
+        if tonumber(item.claimed) ~= 0 then
             if callback then callback(false, "ERR_ALREADY_CLAIMED") end
+            return
+        end
+
+        local retention = (GRID.Auction and GRID.Auction.CollectionRetentionTime) or 86400
+        if (tonumber(item.created_at_unix) or 0) + retention <= now then
+            GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_auction_collection SET claimed = 2, claimed_at_unix = ? WHERE collection_id = ?;", { now, collectionID }))
+            if callback then callback(false, "ERR_COLLECTION_EXPIRED") end
             return
         end
 
@@ -3381,6 +3398,29 @@ function GRID.Database.ProcessAuctionExpirations(callback)
         if callback then callback() end
     end, function(err)
         ErrorNoHalt(string.format("[GRID AUCTION DB ERROR] ProcessAuctionExpirations failed: %s\n", tostring(err)))
+        if callback then callback() end
+    end)
+end
+
+function GRID.Database.ProcessCollectionExpirations(callback)
+    local now = os.time()
+    local retention = (GRID.Auction and GRID.Auction.CollectionRetentionTime) or 86400
+    local cutoff = now - retention
+
+    if not GRID.Database.UseSQLiteFallback and not GRID.Database.UseDirectMariaDBSQL then
+        GRID.Database.CallProcedure("grid_auction_process_collection_expirations", { cutoff, now }, function()
+            if callback then callback() end
+        end, function(err)
+            ErrorNoHalt(string.format("[GRID AUCTION DB ERROR] grid_auction_process_collection_expirations failed: %s\n", tostring(err)))
+            if callback then callback() end
+        end)
+        return
+    end
+
+    GRID.Database.Execute(GRID.Database.FormatQuery("UPDATE grid_auction_collection SET claimed = 2, claimed_at_unix = ? WHERE claimed = 0 AND created_at_unix <= ?;", { now, cutoff }), function()
+        if callback then callback() end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID AUCTION DB ERROR] ProcessCollectionExpirations failed: %s\n", tostring(err)))
         if callback then callback() end
     end)
 end

@@ -27,10 +27,16 @@ end
 -- --------------------------------------------------------
 
 function GRID.Auction.CheckExpirations()
-    if not GRID.Database or not GRID.Database.ProcessAuctionExpirations then return end
-    GRID.Database.ProcessAuctionExpirations(function()
-        -- Expirations handled cleanly via database procedure
-    end)
+    if GRID.Database and GRID.Database.ProcessAuctionExpirations then
+        GRID.Database.ProcessAuctionExpirations(function()
+            -- Expirations handled cleanly via database procedure
+        end)
+    end
+    if GRID.Database and GRID.Database.ProcessCollectionExpirations then
+        GRID.Database.ProcessCollectionExpirations(function()
+            -- Collection expirations purged cleanly via database procedure
+        end)
+    end
 end
 
 timer.Create("GRID_Auction_ExpiryTimer", 60, 0, function()
@@ -78,6 +84,26 @@ function GRID.Auction.SendListings(target)
         else
             net.Broadcast()
         end
+    end)
+end
+
+function GRID.Auction.SendCollection(ply)
+    if not IsValid(ply) then return end
+    GRID.Database.GetPlayerCollection(ply:SteamID(), function(rows)
+        if not IsValid(ply) then return end
+        rows = rows or {}
+        net.Start("GRID_Auction_SendCollection")
+        net.WriteUInt(#rows, 16)
+        for _, r in ipairs(rows) do
+            net.WriteUInt(tonumber(r.collection_id) or 0, 32)
+            net.WriteString(r.item_id or "")
+            net.WriteString(r.item_type or "generic")
+            net.WriteUInt(tonumber(r.amount) or 1, 16)
+            net.WriteString(r.item_data or "{}")
+            net.WriteString(r.source_reason or "")
+            net.WriteUInt(tonumber(r.created_at_unix) or 0, 32)
+        end
+        net.Send(ply)
     end)
 end
 
@@ -241,6 +267,8 @@ net.Receive("GRID_Auction_Buyout", function(len, ply)
         if success then
             GRID.Notify(ply, "Item purchased! It has been delivered to your Terminal Collection Box.", NOTIFY_GENERIC)
             ply:EmitSound("items/ammo_pickup.wav", 65, 100)
+            GRID.Auction.SendListings()
+            GRID.Auction.SendCollection(ply)
         else
             if status == "ERR_INSUFFICIENT_FUNDS" then
                 GRID.Notify(ply, "You do not have enough funds for buyout!", NOTIFY_ERROR)
@@ -272,7 +300,8 @@ net.Receive("GRID_Auction_Cancel", function(len, ply)
         if success then
             GRID.Notify(ply, "Auction cancelled. The listing deposit was forfeited, and the item was returned to your Collection Box.", NOTIFY_GENERIC)
             ply:EmitSound("buttons/button19.wav", 60, 100)
-            GRID.Auction.SendListings(ply)
+            GRID.Auction.SendListings()
+            GRID.Auction.SendCollection(ply)
         else
             if status == "ERR_HAS_BIDS" then
                 GRID.Notify(ply, "Cannot cancel auction: An active bid already exists on this item!", NOTIFY_ERROR)
@@ -290,21 +319,7 @@ net.Receive("GRID_Auction_RequestCollection", function(len, ply)
     if not IsValid(ply) then return end
     if not GRID.CheckRateLimit(ply, "auction_req_col", 3) then return end
 
-    GRID.Database.GetPlayerCollection(ply:SteamID(), function(rows)
-        if not IsValid(ply) then return end
-        net.Start("GRID_Auction_SendCollection")
-        net.WriteUInt(#rows, 16)
-        for _, r in ipairs(rows) do
-            net.WriteUInt(tonumber(r.collection_id) or 0, 32)
-            net.WriteString(r.item_id or "")
-            net.WriteString(r.item_type or "generic")
-            net.WriteUInt(tonumber(r.amount) or 1, 16)
-            net.WriteString(r.item_data or "{}")
-            net.WriteString(r.source_reason or "")
-            net.WriteUInt(tonumber(r.created_at_unix) or 0, 32)
-        end
-        net.Send(ply)
-    end)
+    GRID.Auction.SendCollection(ply)
 end)
 
 -- H. Claim Item from Collection Box
@@ -321,6 +336,7 @@ net.Receive("GRID_Auction_ClaimItem", function(len, ply)
     local freeBag, freeSlot = GRID.Database.FindOpenSlot(ply:SteamID())
     if not freeBag or not freeSlot then
         GRID.Notify(ply, "Your bags are completely full! Clear a slot before claiming.", NOTIFY_ERROR)
+        GRID.Auction.SendCollection(ply)
         return
     end
 
@@ -332,8 +348,14 @@ net.Receive("GRID_Auction_ClaimItem", function(len, ply)
             if GRID.Inventory and GRID.Inventory.Sync then
                 GRID.Inventory.Sync(ply)
             end
+            GRID.Auction.SendCollection(ply)
         else
-            GRID.Notify(ply, "Failed to claim item: " .. tostring(status), NOTIFY_ERROR)
+            if status == "ERR_COLLECTION_EXPIRED" then
+                GRID.Notify(ply, "This item has expired and can no longer be claimed!", NOTIFY_ERROR)
+            else
+                GRID.Notify(ply, "Failed to claim item: " .. tostring(status), NOTIFY_ERROR)
+            end
+            GRID.Auction.SendCollection(ply)
         end
     end)
 end)

@@ -148,14 +148,14 @@ function GRID.Turf.DrawHUD()
 
     local scrW = ScrW()
     local hasZones = #zonesList > 0
+    local pillY = 10
+    local pillH = 24
 
     if hasZones then
         local maxPillsW = math.min(scrW - 48, #zonesList * 140)
         local pillW = math.Clamp(math.floor(maxPillsW / #zonesList), 100, 150)
-        local pillH = 24
         local totalW = #zonesList * pillW + (#zonesList - 1) * 6
         local startX = (scrW - totalW) / 2
-        local pillY = 10
 
         for idx, z in ipairs(zonesList) do
             local zId = z.id or idx
@@ -185,7 +185,47 @@ function GRID.Turf.DrawHUD()
         end
     end
 
-    -- 2. Draw Active Territory Banner (Smooth animated fade when inside a zone)
+    local topOffset = hasZones and (pillY + pillH + 6) or 10
+
+    -- 2. Draw Sleek Martial Law Emergency Ticker (Dynamic stack, zero overlap)
+    local isLockdown = (GRID.Turf and GRID.Turf.IsLockdownActive and GRID.Turf.IsLockdownActive()) or false
+    if isLockdown then
+        local pulse = math.abs(math.sin(CurTime() * 3.5))
+        local borderCol = Color(239, 68, 68, math.floor(180 + (75 * pulse)))
+
+        local bannerW = math.Clamp(scrW - 48, 380, 560)
+        local bannerH = 26
+        local bannerX = (scrW - bannerW) / 2
+        local bannerY = topOffset
+
+        draw.RoundedBox(4, bannerX, bannerY, bannerW, bannerH, Color(11, 15, 25, 240))
+        surface.SetDrawColor(borderCol.r, borderCol.g, borderCol.b, borderCol.a)
+        surface.DrawOutlinedRect(bannerX, bannerY, bannerW, bannerH, 1)
+
+        -- Left glowing accent indicator
+        draw.RoundedBoxEx(4, bannerX, bannerY, 3, bannerH, borderCol, true, false, true, false)
+
+        -- Tag: [!] MARTIAL LAW
+        surface.SetFont("GRID_UI_Badge")
+        local tagText = "[!] MARTIAL LAW"
+        local tagW = surface.GetTextSize(tagText)
+        draw.SimpleText(tagText, "GRID_UI_Badge", bannerX + 10, bannerY + bannerH / 2, borderCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+        -- Vertical divider
+        local sepX = bannerX + 10 + tagW + 8
+        draw.SimpleText("|", "GRID_UI_Caption", sepX, bannerY + bannerH / 2, Color(100, 116, 139), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+        -- Subtitle: Clean single line
+        local subX = sepX + 12
+        local maxSubW = bannerW - (subX - bannerX) - 10
+        local subText = "Curfew in effect: police authorized to arrest and tase on sight"
+        local fitSub = (GRID.UI.FitText and GRID.UI.FitText(subText, "GRID_UI_Caption", maxSubW)) or subText
+        draw.SimpleText(fitSub, "GRID_UI_Caption", subX, bannerY + bannerH / 2, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+        topOffset = bannerY + bannerH + 6
+    end
+
+    -- 3. Draw Active Territory Banner (Smooth animated fade when inside a zone)
     local inAnyZone = (activeZone ~= nil)
     local targetAlpha = inAnyZone and 255 or 0
     currentAlpha = math.Approach(currentAlpha, targetAlpha, FrameTime() * 450)
@@ -195,7 +235,7 @@ function GRID.Turf.DrawHUD()
         local cardW = 420
         local cardH = 56
         local cardX = (scrW - cardW) / 2
-        local cardY = hasZones and 40 or 14
+        local cardY = topOffset
 
         local owner = activeZone.owner
         local isOwned = (owner and owner ~= "" and owner ~= "neutral")
@@ -327,30 +367,3 @@ local function HandleOpenTurfTaxMenu()
 end
 
 net.Receive("GRID_OpenTurfTaxMenu", HandleOpenTurfTaxMenu)
-
--- ========================================================
--- MARTIAL LAW CITYWIDE LOCKDOWN HUD BANNER
--- ========================================================
-
-hook.Add("HUDPaint", "GRID_TurfLockdownHUD", function()
-    if not GRID.Turf or not GRID.Turf.IsLockdownActive or not GRID.Turf.IsLockdownActive() then return end
-
-    local scrW = ScrW()
-    local bannerW, bannerH = 540, 52
-    local bannerX = (scrW - bannerW) / 2
-    local bannerY = 16
-
-    local pulse = math.abs(math.sin(CurTime() * 4))
-    local borderCol = Color(239, 68, 68, math.floor(180 + (75 * pulse)))
-
-    draw.RoundedBox(8, bannerX, bannerY, bannerW, bannerH, Color(11, 15, 25, 245))
-    surface.SetDrawColor(borderCol)
-    surface.DrawOutlinedRect(bannerX, bannerY, bannerW, bannerH, 1)
-
-    -- Top pulsing red stripe
-    draw.RoundedBoxEx(4, bannerX, bannerY, bannerW, 3, borderCol, true, true, false, false)
-
-    -- Text
-    draw.SimpleText("[!] MARTIAL LAW: CITYWIDE LOCKDOWN [!]", "GRID_UI_Header", scrW / 2, bannerY + 8, borderCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-    draw.SimpleText("Warrantless arrests & curfew enforcement authorized until a territory is recaptured.", "GRID_UI_Caption", scrW / 2, bannerY + 30, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_TOP)
-end)

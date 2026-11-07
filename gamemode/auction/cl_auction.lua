@@ -1274,12 +1274,27 @@ function GRID.Auction.RenderMyListingsTab(parent)
                         net.WriteUInt(inst.auction_id, 32)
                         net.SendToServer()
 
+                        -- 1. Remove from active listings immediately
                         for idx, a in ipairs(GRID.Auction.Listings or {}) do
                             if a.auction_id == inst.auction_id then
                                 table.remove(GRID.Auction.Listings, idx)
                                 break
                             end
                         end
+
+                        -- 2. Reactively increment collection box (n + 1) and add cancelled item
+                        GRID.Auction.Collection = GRID.Auction.Collection or {}
+                        table.insert(GRID.Auction.Collection, 1, {
+                            collection_id = 0,
+                            item_id = inst.item_id,
+                            item_type = inst.item_type or "generic",
+                            amount = inst.amount or 1,
+                            item_data = inst.item_data or "{}",
+                            source_reason = "CANCELLED_AUCTION",
+                            created_at_unix = os.time()
+                        })
+
+                        -- 3. Re-render current tab immediately
                         if GRID.Auction.RefreshCurrentTab then
                             GRID.Auction.RefreshCurrentTab()
                         end
@@ -1318,7 +1333,7 @@ function GRID.Auction.RenderCollectionTab(parent)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
 
         draw.SimpleText("Terminal Collection Box (" .. #GRID.Auction.Collection .. " Items Pending)", "GRID_UI_Header", 16, 28, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText("Ensure you have empty inventory slots before claiming.", "GRID_UI_Caption", w - 16, 28, Color(74, 222, 128), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        draw.SimpleText("24h Claim Window: Items left uncollected expire and are forfeited.", "GRID_UI_Caption", w - 16, 28, Color(245, 158, 11), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end
 
     local scroll = vgui.Create("DScrollPanel", parent)
@@ -1382,6 +1397,31 @@ function GRID.Auction.RenderCollectionTab(parent)
                 draw.SimpleText(b.text, "GRID_UI_Badge", bx + bw / 2, by + 10, b.color, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
                 bx = bx + bw + 6
             end
+
+            -- Live Collection Expiration Timer Badge
+            local timeLeftStr, isExpired, secLeft = GRID.Auction.FormatCollectionTimeRemaining(item.created_at_unix)
+            local timerCol = Color(56, 189, 248)
+            local timerBg = Color(6, 182, 212, 35)
+            if isExpired then
+                timerCol = Color(239, 68, 68)
+                timerBg = Color(239, 68, 68, 45)
+            elseif secLeft <= 7200 then
+                timerCol = Color(239, 68, 68)
+                timerBg = Color(239, 68, 68, 35)
+            elseif secLeft <= 43200 then
+                timerCol = Color(245, 158, 11)
+                timerBg = Color(245, 158, 11, 35)
+            end
+
+            surface.SetFont("GRID_UI_Badge")
+            local timerText = isExpired and "EXPIRED (FORFEITED)" or ("Expires: " .. timeLeftStr)
+            local tw = surface.GetTextSize(timerText) + 16
+            local tx = w - 138 - tw
+            local ty = 24
+            draw.RoundedBox(4, tx, ty, tw, 26, timerBg)
+            surface.SetDrawColor(timerCol.r, timerCol.g, timerCol.b, 120)
+            surface.DrawOutlinedRect(tx, ty, tw, 26, 1)
+            draw.SimpleText(timerText, "GRID_UI_Badge", tx + tw / 2, ty + 13, timerCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
 
         local btnClaim = vgui.Create("DButton", card)
@@ -1391,17 +1431,45 @@ function GRID.Auction.RenderCollectionTab(parent)
         card.PerformLayout = function(s, w, h)
             btnClaim:SetPos(w - 124, 19)
         end
-        btnClaim.Paint = function(s, w, h)
-            local isHov = s:IsHovered()
-            draw.RoundedBox(4, 0, 0, w, h, isHov and Color(16, 185, 129, 240) or Color(16, 185, 129, 160))
-            surface.SetDrawColor(16, 185, 129, 220)
-            surface.DrawOutlinedRect(0, 0, w, h, 1)
-            draw.SimpleText("Claim to Bag", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        end
-        btnClaim.DoClick = function()
-            net.Start("GRID_Auction_ClaimItem")
-            net.WriteUInt(item.collection_id, 32)
-            net.SendToServer()
+
+        local _, isExpiredNow = GRID.Auction.FormatCollectionTimeRemaining(item.created_at_unix)
+        if isExpiredNow then
+            btnClaim:SetEnabled(false)
+            btnClaim.Paint = function(s, w, h)
+                draw.RoundedBox(4, 0, 0, w, h, Color(30, 41, 59, 140))
+                surface.SetDrawColor(30, 41, 59, 200)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+                draw.SimpleText("Forfeited", "GRID_UI_Btn", w / 2, h / 2, Color(148, 163, 184), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+        else
+            btnClaim.Paint = function(s, w, h)
+                local isHov = s:IsHovered()
+                draw.RoundedBox(4, 0, 0, w, h, isHov and Color(16, 185, 129, 240) or Color(16, 185, 129, 160))
+                surface.SetDrawColor(16, 185, 129, 220)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+                draw.SimpleText("Claim to Bag", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+            btnClaim.DoClick = function()
+                local targetColId = item.collection_id
+
+                -- 1. Remove from client collection immediately (reactive instant feedback)
+                for idx, c in ipairs(GRID.Auction.Collection or {}) do
+                    if c == item or (targetColId > 0 and c.collection_id == targetColId) then
+                        table.remove(GRID.Auction.Collection, idx)
+                        break
+                    end
+                end
+
+                -- 2. Reactively refresh UI (collection box = n - 1, card removed)
+                if GRID.Auction.RefreshCurrentTab then
+                    GRID.Auction.RefreshCurrentTab()
+                end
+
+                -- 3. Send claim to server
+                net.Start("GRID_Auction_ClaimItem")
+                net.WriteUInt(targetColId, 32)
+                net.SendToServer()
+            end
         end
     end
 end

@@ -12,6 +12,10 @@ GRID.Auction.MaxListingsPerPlayer = 10
 GRID.Auction.SalesTaxRate = 0.075 -- 7.5% House Transaction Tax
 GRID.Auction.MinDeposit = 100
 
+-- Collection Box Retention: uncollected items expire after 24h to prevent free inventory space hoarding
+GRID.Auction.CollectionRetentionHours = 24
+GRID.Auction.CollectionRetentionTime = GRID.Auction.CollectionRetentionHours * 3600
+
 GRID.Auction.Durations = {
     [12] = { name = "12 Hours", hours = 12, depositRate = 0.02 },
     [24] = { name = "24 Hours", hours = 24, depositRate = 0.04 },
@@ -47,7 +51,7 @@ function GRID.Auction.GetItemAttributeBadges(itemData)
     local badges = {}
 
     -- 1. Rolled Combat Modifiers
-    if data.modifiers then
+    if data.modifiers and istable(data.modifiers) then
         if data.modifiers.damage_mult and data.modifiers.damage_mult ~= 1.0 then
             local pct = math.Round((data.modifiers.damage_mult - 1.0) * 100)
             local sign = pct > 0 and "+" or ""
@@ -100,9 +104,15 @@ function GRID.Auction.GetItemAttributeBadges(itemData)
     end
 
     -- 2. Durability
-    if data.durability then
-        local cur = tonumber(data.durability.current) or 100
-        local max = tonumber(data.durability.max) or 100
+    if data.durability ~= nil then
+        local cur = 100
+        local max = tonumber(data.max_durability) or tonumber(data.maxDurability) or 100
+        if istable(data.durability) then
+            cur = tonumber(data.durability.current) or tonumber(data.durability.cur) or 100
+            max = tonumber(data.durability.max) or max
+        else
+            cur = tonumber(data.durability) or 100
+        end
         local pct = max > 0 and (cur / max) or 1
         local col = Color(74, 222, 128)
         if pct < 0.3 then
@@ -118,7 +128,7 @@ function GRID.Auction.GetItemAttributeBadges(itemData)
     end
 
     -- 3. Named Affixes
-    if data.affixes and type(data.affixes) == "table" then
+    if data.affixes and istable(data.affixes) then
         for _, affix in ipairs(data.affixes) do
             table.insert(badges, {
                 text = tostring(affix),
@@ -129,12 +139,15 @@ function GRID.Auction.GetItemAttributeBadges(itemData)
     end
 
     -- 4. Crafter Signature
-    if data.crafter and data.crafter.name then
-        table.insert(badges, {
-            text = "Crafted by " .. tostring(data.crafter.name),
-            color = Color(148, 163, 184),
-            bg = Color(51, 65, 85, 45)
-        })
+    if data.crafter then
+        local crafterName = istable(data.crafter) and data.crafter.name or tostring(data.crafter)
+        if crafterName and crafterName ~= "" then
+            table.insert(badges, {
+                text = "Crafted by " .. crafterName,
+                color = Color(148, 163, 184),
+                bg = Color(51, 65, 85, 45)
+            })
+        end
     end
 
     return badges
@@ -153,6 +166,27 @@ function GRID.Auction.FormatTimeRemaining(expiresAtUnix)
         return string.format("%dh %dm", hours, minutes)
     else
         return string.format("%dm", math.max(1, minutes))
+    end
+end
+
+function GRID.Auction.FormatCollectionTimeRemaining(createdAtUnix)
+    local retention = GRID.Auction.CollectionRetentionTime or 86400
+    local expiresAt = (tonumber(createdAtUnix) or 0) + retention
+    local diff = expiresAt - os.time()
+    if diff <= 0 then
+        return "Expired", true, 0
+    end
+    local hours = math.floor(diff / 3600)
+    local minutes = math.floor((diff % 3600) / 60)
+    local seconds = diff % 60
+    if hours >= 24 then
+        local days = math.floor(hours / 24)
+        local remHours = hours % 24
+        return string.format("%dd %dh", days, remHours), false, diff
+    elseif hours > 0 then
+        return string.format("%dh %dm", hours, minutes), false, diff
+    else
+        return string.format("%dm %ds", minutes, seconds), false, diff
     end
 end
 
