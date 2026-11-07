@@ -5,9 +5,11 @@
 
 ENT.Type = "anim"
 ENT.Base = "grid_printer_base"
-ENT.PrintName = "Money Printer"
+ENT.PrintName = "Bronze Money Printer"
 ENT.Author = "Juicebox"
+ENT.Category = "GridRP - Contraband Printers"
 ENT.Spawnable = true
+ENT.AdminOnly = true
 
 -- Configurable Item Quality
 ENT.ItemQuality = "common"

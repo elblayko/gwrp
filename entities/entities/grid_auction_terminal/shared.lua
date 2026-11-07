@@ -9,7 +9,7 @@ ENT.Base = "base_gmodentity"
 
 ENT.PrintName = "Auction Terminal"
 ENT.Author = "Juicebox & Antigravity"
-ENT.Category = "GridRP"
+ENT.Category = "GridRP - World Infrastructure"
 ENT.Spawnable = true
 ENT.AdminOnly = true
 

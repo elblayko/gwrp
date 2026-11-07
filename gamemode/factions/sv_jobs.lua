@@ -13,6 +13,11 @@ function meta:SetJob(jobId, force)
     local oldJobId = self:GetJob()
     if oldJobId == jobId and not force then return false end
 
+    -- Hook override check (e.g. Onboarding gates)
+    if not force and hook.Run("GRID_CanChangeJob", self, jobId) == false then
+        return false
+    end
+
     -- 1. Anti-Job-Hopping Cooldown Check (15 minutes by default)
     local now = CurTime()
     if not force and (self.NextJobChangeTime or 0) > now then

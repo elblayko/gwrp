@@ -6,7 +6,10 @@ ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Turf Flag Pole"
 ENT.Author = "Juicebox"
-ENT.Spawnable = false
+ENT.Category = "GridRP - World Infrastructure"
+ENT.Spawnable = true
+ENT.AdminOnly = true
+ENT.IsPersistentMapEntity = true
 ENT.RenderGroup = RENDERGROUP_BOTH
 
 -- Exempt Gameplay Objective (No Item Quality)
@@ -19,4 +22,6 @@ function ENT:SetupDataTables()
     self:NetworkVar("Float", 1, "CaptureEndTime")
     self:NetworkVar("Entity", 0, "CapturingPlayer")
     self:NetworkVar("String", 0, "CapturingGang")
+    self:NetworkVar("Int", 1, "CaptureRadius")
+    self:NetworkVar("Int", 2, "InfluenceRadius")
 end

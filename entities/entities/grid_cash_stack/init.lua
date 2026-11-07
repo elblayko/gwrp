@@ -14,6 +14,10 @@ function ENT:Initialize()
     self:SetSolid(SOLID_VPHYSICS)
     self:SetUseType(SIMPLE_USE)
 
+    if self:GetAmount() <= 0 then
+        self:SetAmount(10000)
+    end
+
     local phys = self:GetPhysicsObject()
     if IsValid(phys) then
         phys:Wake()

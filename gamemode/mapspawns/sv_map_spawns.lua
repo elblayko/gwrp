@@ -180,6 +180,33 @@ hook.Add("PlayerSpawnedSENT", "GRID_MapSpawns_PlayerSpawnedSENT", function(ply, 
     -- Safeguards 2, 3, 4: World protection
     GRID.MapSpawns.ApplyWorldProtection(ent)
 
+    -- Auto-zone allocation for live spawned turf flag poles
+    if className == "grid_flag_pole" and ent.GetTurfID and ent:GetTurfID() <= 0 then
+        local nextId = 1
+        if GRID.Turf and GRID.Turf.Zones then
+            while GRID.Turf.Zones[nextId] do
+                nextId = nextId + 1
+            end
+            GRID.Turf.Zones[nextId] = {
+                id = nextId,
+                name = "Turf Zone #" .. nextId,
+                pos = ent:GetPos(),
+                radius = 450,
+                owner = "neutral",
+                progress = 100,
+                tax_rate = 10,
+                entity = ent
+            }
+            ent:SetTurfID(nextId)
+            if GRID.Turf.SaveMapProfile then
+                GRID.Turf.SaveMapProfile()
+            end
+            if GRID.Turf.SyncToAll then
+                GRID.Turf.SyncToAll()
+            end
+        end
+    end
+
     -- Safeguard 10: Check if entity provides initial custom metadata
     local customData = nil
     if ent.GetMapData and isfunction(ent.GetMapData) then
@@ -367,6 +394,147 @@ hook.Add("EntityTakeDamage", "GRID_MapSpawns_EntityTakeDamage", function(target,
             target:Extinguish()
         end
         return true
+    end
+end)
+
+-- --------------------------------------------------------
+-- SuperAdmin In-World Infrastructure Configurator (Physgun + E)
+-- --------------------------------------------------------
+
+--- Opens the configuration UI for a persistent world entity on the client
+-- @param ply Player SuperAdmin
+-- @param ent Entity Target persistent entity
+function GRID.MapSpawns.OpenEntityConfig(ply, ent)
+    if not IsValid(ply) or not ply:IsSuperAdmin() then return end
+    if not IsValid(ent) then return end
+
+    local className = ent:GetClass()
+    local configData = {}
+
+    -- Handle grid_flag_pole / Turf Zone configuration
+    if className == "grid_flag_pole" then
+        local turfId = ent:GetTurfID()
+        local zone = GRID.Turf and GRID.Turf.Zones and GRID.Turf.Zones[turfId]
+        local capRad = (ent.GetCaptureRadius and ent:GetCaptureRadius() > 0 and ent:GetCaptureRadius()) or (zone and (tonumber(zone.capture_radius) or tonumber(zone.radius))) or 250
+        local infRad = (ent.GetInfluenceRadius and ent:GetInfluenceRadius() > 0 and ent:GetInfluenceRadius()) or (zone and (tonumber(zone.influence_radius) or tonumber(zone.radius))) or 800
+
+        if zone then
+            configData.turf_id = turfId
+            configData.name = zone.name or ("Turf Zone #" .. turfId)
+            configData.capture_radius = capRad
+            configData.influence_radius = infRad
+            configData.owner = zone.owner or "neutral"
+            configData.tax_rate = tonumber(zone.tax_rate) or 10
+        else
+            configData.turf_id = turfId
+            configData.name = "Turf Zone #" .. turfId
+            configData.capture_radius = capRad
+            configData.influence_radius = infRad
+            configData.owner = "neutral"
+            configData.tax_rate = 10
+        end
+    end
+
+    -- Allow other entities to supply their custom config table via ent:GetMapData() if present
+    if ent.GetMapData and isfunction(ent.GetMapData) then
+        local ok, data = pcall(ent.GetMapData, ent)
+        if ok and istable(data) then
+            for k, v in pairs(data) do
+                configData[k] = v
+            end
+        end
+    end
+
+    local json = util.TableToJSON(configData) or "{}"
+    net.Start("GRID_OpenEntityConfig")
+        net.WriteEntity(ent)
+        net.WriteString(className)
+        net.WriteString(json)
+    net.Send(ply)
+end
+
+-- Catch PlayerUse globally for any persistent map entity when SuperAdmin holds Physgun
+hook.Add("PlayerUse", "GRID_MapSpawns_PhysgunConfigUse", function(ply, ent)
+    if not IsValid(ply) or not ply:IsSuperAdmin() then return end
+    if not IsValid(ent) or not ent.GRID_IsPersistentMapEntity then return end
+
+    local activeWep = ply:GetActiveWeapon()
+    if IsValid(activeWep) and activeWep:GetClass() == "weapon_physgun" then
+        ply._nextPhysgunConfigUse = ply._nextPhysgunConfigUse or 0
+        if CurTime() > ply._nextPhysgunConfigUse then
+            ply._nextPhysgunConfigUse = CurTime() + 0.8
+            GRID.MapSpawns.OpenEntityConfig(ply, ent)
+        end
+        return false -- Suppress standard entity use action
+    end
+end)
+
+-- Receive saved configuration from client
+net.Receive("GRID_SaveEntityConfig", function(len, ply)
+    if not IsValid(ply) or not ply:IsSuperAdmin() then return end
+
+    local ent = net.ReadEntity()
+    local className = net.ReadString()
+    local json = net.ReadString()
+
+    if not IsValid(ent) then return end
+    local data = util.JSONToTable(json)
+    if not istable(data) then return end
+
+    if className == "grid_flag_pole" then
+        local turfId = tonumber(data.turf_id) or ent:GetTurfID()
+        local zone = GRID.Turf and GRID.Turf.Zones and GRID.Turf.Zones[turfId]
+        if zone then
+            local cleanName = string.Trim(tostring(data.name or zone.name))
+            if #cleanName > 0 then
+                zone.name = cleanName
+            end
+            local capRad = math.Clamp(tonumber(data.capture_radius) or 250, 50, 1500)
+            local infRad = math.Clamp(tonumber(data.influence_radius) or 800, 100, 5000)
+
+            zone.capture_radius = capRad
+            zone.influence_radius = infRad
+            zone.radius = infRad -- backward compatibility
+            zone.owner = tostring(data.owner or "neutral")
+            zone.tax_rate = math.Clamp(tonumber(data.tax_rate) or 10, 0, 50)
+
+            if ent.SetCaptureRadius then ent:SetCaptureRadius(capRad) end
+            if ent.SetInfluenceRadius then ent:SetInfluenceRadius(infRad) end
+
+            -- Persist to database & JSON backup
+            if GRID.Turf.SaveMapProfile then
+                GRID.Turf.SaveMapProfile()
+            end
+            if GRID.Turf.SyncToAll then
+                GRID.Turf.SyncToAll()
+            end
+
+            -- Update database persistent entity custom_data if recorded
+            if ent.GRID_MapSpawnID and GRID.Database and GRID.Database.SaveMapEntity then
+                local customMeta = {
+                    turf_id = turfId,
+                    name = zone.name,
+                    capture_radius = zone.capture_radius,
+                    influence_radius = zone.influence_radius,
+                    radius = zone.influence_radius,
+                    owner = zone.owner,
+                    tax_rate = zone.tax_rate
+                }
+                GRID.Database.SaveMapEntity(ent.GRID_MapSpawnID, game.GetMap(), className, ent:GetPos(), ent:GetAngles(), ply:SteamID(), customMeta)
+            end
+
+            GRID.Notify(ply, string.format("Configured Turf Pole #%d: '%s' (Capture: %d, Influence: %d, Owner: %s, Tax: %d%%)", turfId, zone.name, capRad, infRad, zone.owner, zone.tax_rate), NOTIFY_HINT, 6)
+            print(string.format("[GRID MapSpawns] SuperAdmin %s configured turf pole #%d: '%s'.", ply:Nick(), turfId, zone.name))
+        end
+    else
+        -- Generic persistent entity custom data update
+        if ent.SetMapData and isfunction(ent.SetMapData) then
+            pcall(ent.SetMapData, ent, data)
+        end
+        if ent.GRID_MapSpawnID and GRID.Database and GRID.Database.SaveMapEntity then
+            GRID.Database.SaveMapEntity(ent.GRID_MapSpawnID, game.GetMap(), className, ent:GetPos(), ent:GetAngles(), ply:SteamID(), data)
+        end
+        GRID.Notify(ply, string.format("Saved configuration for persistent %s (#%d)!", className, ent.GRID_MapSpawnID or 0), NOTIFY_HINT, 5)
     end
 end)
 

@@ -6,9 +6,11 @@
 
 ENT.Type = "anim"
 ENT.Base = "grid_network_switch_base"
-ENT.PrintName = "L3 Network Switch (2-Cu + 2-SFP)"
+ENT.PrintName = "L3 Network Switch (4-Port)"
 ENT.Author = "Juicebox"
+ENT.Category = "GridRP - Networking & Cyber"
 ENT.Spawnable = true
+ENT.AdminOnly = true
 
 -- Central Item Quality
 ENT.ItemQuality = "uncommon"

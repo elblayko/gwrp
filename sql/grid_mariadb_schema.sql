@@ -14,12 +14,14 @@ SET FOREIGN_KEY_CHECKS = 0;
 CREATE TABLE IF NOT EXISTS grid_players (
     steamid VARCHAR(20) NOT NULL PRIMARY KEY,
     name VARCHAR(64) NOT NULL,
-    money BIGINT NOT NULL DEFAULT 1000,
+    money BIGINT NOT NULL DEFAULT 0,
+    bank BIGINT NOT NULL DEFAULT 0,
     respect INT NOT NULL DEFAULT 0,
     gang VARCHAR(32) NOT NULL DEFAULT '',
     job VARCHAR(32) NOT NULL DEFAULT 'citizen',
     level INT NOT NULL DEFAULT 1,
     xp BIGINT NOT NULL DEFAULT 0,
+    onboarding_stage TINYINT UNSIGNED NOT NULL DEFAULT 0,
     last_seen INT UNSIGNED NOT NULL DEFAULT 0,
     INDEX idx_players_gang (gang),
     INDEX idx_players_job (job)
@@ -187,11 +189,13 @@ SELECT
     p.steamid,
     p.name,
     p.money,
+    p.bank,
     p.respect,
     p.gang,
     p.job,
     p.level,
     p.xp,
+    p.onboarding_stage,
     p.last_seen,
     m.rank AS gang_rank
 FROM grid_players p
@@ -424,6 +428,17 @@ BEGIN
     WHERE steamid = p_steamid;
 END$$
 
+CREATE OR REPLACE PROCEDURE grid_update_player_bank(
+    IN p_steamid VARCHAR(20),
+    IN p_bank BIGINT,
+    IN p_last_seen INT UNSIGNED
+)
+BEGIN
+    UPDATE grid_players
+    SET bank = p_bank, last_seen = p_last_seen
+    WHERE steamid = p_steamid;
+END$$
+
 CREATE OR REPLACE PROCEDURE grid_update_player_level_xp(
     IN p_steamid VARCHAR(20),
     IN p_level INT,
@@ -434,6 +449,51 @@ BEGIN
     UPDATE grid_players
     SET level = p_level, xp = p_xp, last_seen = p_last_seen
     WHERE steamid = p_steamid;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_update_onboarding_stage(
+    IN p_steamid VARCHAR(20),
+    IN p_stage TINYINT UNSIGNED
+)
+BEGIN
+    UPDATE grid_players
+    SET onboarding_stage = p_stage
+    WHERE steamid = p_steamid;
+END$$
+
+CREATE OR REPLACE PROCEDURE grid_complete_onboarding(
+    IN p_steamid VARCHAR(20),
+    IN p_bonus_clean_cash INT UNSIGNED
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+    END;
+
+    START TRANSACTION;
+
+    UPDATE grid_players
+    SET onboarding_stage = 3,
+        level = GREATEST(level, 2),
+        money = 0,
+        bank = bank + p_bonus_clean_cash
+    WHERE steamid = p_steamid AND onboarding_stage < 3;
+
+    IF ROW_COUNT() > 0 THEN
+        INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
+        VALUES (
+            UNIX_TIMESTAMP(),
+            'PLAYER_ACTION',
+            'ONBOARDING_COMPLETED',
+            p_steamid,
+            '',
+            p_bonus_clean_cash,
+            JSON_OBJECT('new_level', 2)
+        );
+    END IF;
+
+    COMMIT;
 END$$
 
 -- Gangs & Atomic Vault Transfers

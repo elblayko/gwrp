@@ -164,12 +164,32 @@ GRID.Database.MariaDBDirectProcedures = {
     end,
     grid_upsert_player = function(p, run)
         run(GRID.Database.FormatQuery(
-            "INSERT INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), money = VALUES(money), respect = VALUES(respect), gang = VALUES(gang), job = VALUES(job), level = VALUES(level), xp = VALUES(xp), last_seen = VALUES(last_seen);",
+            "INSERT INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen, onboarding_stage, bank) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name = VALUES(name), money = VALUES(money), respect = VALUES(respect), gang = VALUES(gang), job = VALUES(job), level = VALUES(level), xp = VALUES(xp), last_seen = VALUES(last_seen), onboarding_stage = VALUES(onboarding_stage), bank = VALUES(bank);",
             p
         ))
     end,
     grid_update_player_money = function(p, run)
         run(GRID.Database.FormatQuery("UPDATE grid_players SET money = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] }))
+    end,
+    grid_update_player_bank = function(p, run)
+        run(GRID.Database.FormatQuery("UPDATE grid_players SET bank = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] }))
+    end,
+    grid_update_onboarding_stage = function(p, run)
+        run(GRID.Database.FormatQuery("UPDATE grid_players SET onboarding_stage = ? WHERE steamid = ?;", { p[2], p[1] }))
+    end,
+    grid_complete_onboarding = function(p, run)
+        -- p = { steamID, bonusCleanCash }
+        local steamID = p[1]
+        local bonusCash = tonumber(p[2]) or 3500
+        GRID.Database.Execute(GRID.Database.FormatQuery(
+            "UPDATE grid_players SET onboarding_stage = 3, level = GREATEST(level, 2), money = 0, bank = bank + ? WHERE steamid = ? AND onboarding_stage < 3;",
+            { bonusCash, steamID }
+        ), function()
+            GRID.Database.Execute(GRID.Database.FormatQuery(
+                "INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (?, 'PLAYER_ACTION', 'ONBOARDING_COMPLETED', ?, '', ?, ?);",
+                { os.time(), steamID, bonusCash, '{"new_level":2}' }
+            ))
+        end)
     end,
     grid_update_player_gang = function(p, run)
         run(GRID.Database.FormatQuery("UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] }))
@@ -374,9 +394,22 @@ GRID.Database.SQLiteProcedures = {
         return GRID.Database.FormatQuery("UPDATE grid_turfs SET tax_rate = ? WHERE map = ? AND turf_id = ?;", { p[3], p[1], p[2] })
     end,
     grid_set_setting = "INSERT OR REPLACE INTO grid_settings (key, val) VALUES (?, ?);",
-    grid_upsert_player = "INSERT OR REPLACE INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
+    grid_upsert_player = "INSERT OR REPLACE INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen, onboarding_stage, bank) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);",
     grid_update_player_money = function(p)
         return GRID.Database.FormatQuery("UPDATE grid_players SET money = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
+    end,
+    grid_update_player_bank = function(p)
+        return GRID.Database.FormatQuery("UPDATE grid_players SET bank = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
+    end,
+    grid_update_onboarding_stage = function(p)
+        return GRID.Database.FormatQuery("UPDATE grid_players SET onboarding_stage = ? WHERE steamid = ?;", { p[2], p[1] })
+    end,
+    grid_complete_onboarding = function(p)
+        local steamID = p[1]
+        local bonusCash = tonumber(p[2]) or 3500
+        sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET onboarding_stage = 3, level = MAX(level, 2), money = 0, bank = bank + ? WHERE steamid = ? AND onboarding_stage < 3;", { bonusCash, steamID }))
+        local qMeta = sql.SQLStr('{"new_level":2}')
+        return string.format("INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (%d, 'PLAYER_ACTION', 'ONBOARDING_COMPLETED', %s, '', %d, %s);", os.time(), sql.SQLStr(steamID), bonusCash, qMeta)
     end,
     grid_update_player_gang = function(p)
         return GRID.Database.FormatQuery("UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
@@ -508,12 +541,14 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
         [[CREATE TABLE IF NOT EXISTS grid_players (
             steamid VARCHAR(20) NOT NULL PRIMARY KEY,
             name VARCHAR(64) NOT NULL,
-            money BIGINT NOT NULL DEFAULT 1000,
+            money BIGINT NOT NULL DEFAULT 0,
+            bank BIGINT NOT NULL DEFAULT 0,
             respect INT NOT NULL DEFAULT 0,
             gang VARCHAR(32) NOT NULL DEFAULT '',
             job VARCHAR(32) NOT NULL DEFAULT 'citizen',
             level INT NOT NULL DEFAULT 1,
             xp BIGINT NOT NULL DEFAULT 0,
+            onboarding_stage TINYINT UNSIGNED NOT NULL DEFAULT 0,
             last_seen INT UNSIGNED NOT NULL DEFAULT 0,
             INDEX idx_players_gang (gang),
             INDEX idx_players_job (job)
@@ -663,7 +698,7 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
 
     local viewDDLs = {
         [[CREATE OR REPLACE VIEW v_player_profile AS
-            SELECT p.steamid, p.name, p.money, p.respect, p.gang, p.job, p.level, p.xp, p.last_seen, m.rank AS gang_rank
+            SELECT p.steamid, p.name, p.money, p.bank, p.respect, p.gang, p.job, p.level, p.xp, p.onboarding_stage, p.last_seen, m.rank AS gang_rank
             FROM grid_players p LEFT JOIN grid_gang_members m ON p.steamid = m.steamid;]],
         [[CREATE OR REPLACE VIEW v_player_inventory AS
             SELECT id, steamid, bag_index, slot_index, item_id, item_type, amount, item_data FROM grid_inventory;]],
@@ -743,6 +778,48 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             IN p_steamid VARCHAR(20), IN p_money BIGINT, IN p_last_seen INT UNSIGNED
         ) BEGIN
             UPDATE grid_players SET money = p_money, last_seen = p_last_seen WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_update_player_bank(
+            IN p_steamid VARCHAR(20), IN p_bank BIGINT, IN p_last_seen INT UNSIGNED
+        ) BEGIN
+            UPDATE grid_players SET bank = p_bank, last_seen = p_last_seen WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_update_onboarding_stage(
+            IN p_steamid VARCHAR(20), IN p_stage TINYINT UNSIGNED
+        ) BEGIN
+            UPDATE grid_players SET onboarding_stage = p_stage WHERE steamid = p_steamid;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_complete_onboarding(
+            IN p_steamid VARCHAR(20), IN p_bonus_clean_cash INT UNSIGNED
+        ) BEGIN
+            DECLARE EXIT HANDLER FOR SQLEXCEPTION
+            BEGIN
+                ROLLBACK;
+            END;
+
+            START TRANSACTION;
+
+            UPDATE grid_players
+            SET onboarding_stage = 3,
+                level = GREATEST(level, 2),
+                money = 0,
+                bank = bank + p_bonus_clean_cash
+            WHERE steamid = p_steamid AND onboarding_stage < 3;
+
+            IF ROW_COUNT() > 0 THEN
+                INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
+                VALUES (
+                    UNIX_TIMESTAMP(),
+                    'PLAYER_ACTION',
+                    'ONBOARDING_COMPLETED',
+                    p_steamid,
+                    '',
+                    p_bonus_clean_cash,
+                    JSON_OBJECT('new_level', 2)
+                );
+            END IF;
+
+            COMMIT;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_update_player_gang(
             IN p_steamid VARCHAR(20), IN p_gang VARCHAR(32), IN p_last_seen INT UNSIGNED
@@ -1311,12 +1388,14 @@ function GRID.Database.InitSQLiteFallback()
         CREATE TABLE IF NOT EXISTS grid_players (
             steamid TEXT PRIMARY KEY,
             name TEXT,
-            money INTEGER DEFAULT 1000,
+            money INTEGER DEFAULT 0,
+            bank INTEGER DEFAULT 0,
             respect INTEGER DEFAULT 0,
             gang TEXT DEFAULT '',
             job TEXT DEFAULT 'citizen',
             level INTEGER DEFAULT 1,
             xp INTEGER DEFAULT 0,
+            onboarding_stage INTEGER DEFAULT 0,
             last_seen INTEGER
         );
         CREATE TABLE IF NOT EXISTS grid_gangs (
@@ -1451,34 +1530,45 @@ function GRID.Database.LoadPlayer(ply, callback)
         local playerData = {}
         if rows and rows[1] then
             playerData = rows[1]
-            local m = tonumber(playerData.money) or (GRID.Config and GRID.Config.StartingMoney or 1000)
+            local m = tonumber(playerData.money) or 0
+            local b = tonumber(playerData.bank) or 0
             local r = tonumber(playerData.respect) or 0
             local g = playerData.gang or ""
             local j = (playerData.job and playerData.job ~= "") and playerData.job or "citizen"
             local lvl = math.max(1, tonumber(playerData.level) or 1)
             local xp = math.max(0, tonumber(playerData.xp) or 0)
+            local stage = tonumber(playerData.onboarding_stage)
+            if not stage then
+                stage = (lvl >= 2) and 3 or 0
+            end
 
             ply:SetNWInt("GRID_Money", m)
+            ply:SetNWInt("GRID_Bank", b)
             ply:SetNWInt("GRID_Respect", r)
             ply:SetNWString("GRID_Gang", g)
             ply:SetNWString("GRID_Job", j)
             ply:SetNWInt("GRID_Level", lvl)
             ply:SetNWInt("GRID_XP", xp)
+            ply:SetNWInt("GRID_OnboardingStage", stage)
 
             if playerData.gang_rank == "leader" then
                 ply:SetNWBool("GRID_IsGangLeader", true)
             end
         else
-            local initialMoney = GRID.Config and GRID.Config.StartingMoney or 1000
+            local initialMoney = 0
+            local initialBank = 0
+            local initialStage = 0
             playerData = {
                 steamid = steamID,
                 name = ply:Nick(),
                 money = initialMoney,
+                bank = initialBank,
                 respect = 0,
                 gang = "",
                 job = "citizen",
                 level = 1,
                 xp = 0,
+                onboarding_stage = initialStage,
                 last_seen = os.time()
             }
 
@@ -1492,15 +1582,19 @@ function GRID.Database.LoadPlayer(ply, callback)
                 "citizen",
                 1,
                 0,
-                os.time()
+                os.time(),
+                initialStage,
+                initialBank
             })
 
             ply:SetNWInt("GRID_Money", initialMoney)
+            ply:SetNWInt("GRID_Bank", initialBank)
             ply:SetNWInt("GRID_Respect", 0)
             ply:SetNWString("GRID_Gang", "")
             ply:SetNWString("GRID_Job", "citizen")
             ply:SetNWInt("GRID_Level", 1)
             ply:SetNWInt("GRID_XP", 0)
+            ply:SetNWInt("GRID_OnboardingStage", initialStage)
         end
 
         GRID.Database.Cache.Players[steamID] = playerData
@@ -1550,19 +1644,54 @@ function GRID.Database.SavePlayer(ply)
         ply:GetJob(),
         ply:GetNWInt("GRID_Level", 1),
         ply:GetNWInt("GRID_XP", 0),
-        os.time()
+        os.time(),
+        ply:GetNWInt("GRID_OnboardingStage", 0),
+        ply:GetNWInt("GRID_Bank", 0)
     })
 
     if GRID.Database.Cache.Players[steamID] then
         local p = GRID.Database.Cache.Players[steamID]
         p.name = ply:Nick()
         p.money = ply:GetMoney()
+        p.bank = ply:GetNWInt("GRID_Bank", 0)
         p.respect = ply:GetNWInt("GRID_Respect", 0)
         p.gang = ply:GetGang()
         p.job = ply:GetJob()
         p.level = ply:GetNWInt("GRID_Level", 1)
         p.xp = ply:GetNWInt("GRID_XP", 0)
+        p.onboarding_stage = ply:GetNWInt("GRID_OnboardingStage", 0)
         p.last_seen = os.time()
+    end
+end
+
+function GRID.Database.SavePlayerBank(ply, amount)
+    if not IsValid(ply) or not ply.GRID_DataLoaded then return end
+    local steamID = ply:SteamID()
+    local bank = tonumber(amount) or 0
+
+    GRID.Database.CallProcedure("grid_update_player_bank", {
+        steamID,
+        bank,
+        os.time()
+    })
+
+    if GRID.Database.Cache.Players[steamID] then
+        GRID.Database.Cache.Players[steamID].bank = bank
+    end
+end
+
+function GRID.Database.SavePlayerOnboardingStage(ply, stage)
+    if not IsValid(ply) or not ply.GRID_DataLoaded then return end
+    local steamID = ply:SteamID()
+    stage = math.Clamp(tonumber(stage) or 0, 0, 3)
+
+    GRID.Database.CallProcedure("grid_update_onboarding_stage", {
+        steamID,
+        stage
+    })
+
+    if GRID.Database.Cache.Players[steamID] then
+        GRID.Database.Cache.Players[steamID].onboarding_stage = stage
     end
 end
 

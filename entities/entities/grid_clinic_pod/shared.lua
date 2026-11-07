@@ -9,7 +9,8 @@ ENT.Base = "base_gmodentity"
 ENT.PrintName = "Clinical Triage Pod"
 ENT.Author = "Juicebox"
 ENT.Spawnable = true
-ENT.Category = "GridRP"
+ENT.AdminOnly = true
+ENT.Category = "GridRP - World Infrastructure"
 
 -- Exclude from rarity badges
 ENT.NoQuality = true

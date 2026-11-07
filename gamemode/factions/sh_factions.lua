@@ -156,7 +156,7 @@ GRID.Jobs = {
     -- ========================================================
     ["police_officer"] = {
         name = "Police Officer",
-        level = 1,
+        level = 2,
         faction = GRID.Factions.FACTION_POLICE,
         salary = 16,
         weapons = { "weapon_fists", "weapon_grid_glock", "weapon_stunstick", "weapon_grid_scanner" },

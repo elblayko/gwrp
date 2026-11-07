@@ -14,25 +14,32 @@ local function HandleSyncTurfZones()
         local id = net.ReadUInt(8)
         local name = net.ReadString()
         local pos = net.ReadVector()
-        local radius = net.ReadUInt(16)
+        local infRadius = net.ReadUInt(16)
         local owner = net.ReadString()
         local progress = net.ReadUInt(8)
         local tax_rate = net.ReadUInt(8)
+        local capRadius = net.ReadUInt(16)
+        if not capRadius or capRadius == 0 then capRadius = 250 end
+        local capturedAt = net.ReadUInt(32)
 
         GRID.Turf.Zones[id] = {
             id = id,
             name = name,
             pos = pos,
-            radius = radius,
+            radius = infRadius,
+            influence_radius = infRadius,
+            capture_radius = capRadius,
             owner = owner,
             progress = progress,
-            tax_rate = tax_rate
+            tax_rate = tax_rate,
+            captured_at = capturedAt
         }
 
         GRID.TurfData[id] = {
             owner = owner,
             progress = progress,
-            tax_rate = tax_rate
+            tax_rate = tax_rate,
+            captured_at = capturedAt
         }
     end
 
@@ -49,51 +56,73 @@ local function HandleTurfUpdate()
     local owner = net.ReadString()
     local progress = net.ReadUInt(8)
     local tax_rate = net.ReadUInt(8)
+    local capturedAt = net.ReadUInt(32)
 
     GRID.TurfData[id] = {
         owner = owner,
         progress = progress,
-        tax_rate = tax_rate
+        tax_rate = tax_rate,
+        captured_at = capturedAt
     }
 
     if GRID.Turf.Zones[id] then
         GRID.Turf.Zones[id].owner = owner
         GRID.Turf.Zones[id].progress = progress
         GRID.Turf.Zones[id].tax_rate = tax_rate
+        GRID.Turf.Zones[id].captured_at = capturedAt
     end
 end
 
 net.Receive("GRID_TurfUpdate", HandleTurfUpdate)
 
+local currentAlpha = 0
+local lastTerritoryName = ""
+
 function GRID.Turf.DrawHUD()
-    local zoneCount = table.Count(GRID.Turf.Zones)
-    if zoneCount == 0 then return end
+    local ply = LocalPlayer()
+    if not IsValid(ply) then return end
 
-    local scrW = ScrW()
-    local startY = 16
-    local totalW = zoneCount * 160 + (zoneCount - 1) * 12
-    local startX = (scrW - totalW) / 2
+    -- Detect if player is currently inside a controlled territory
+    local pos = ply:GetPos()
+    local activeZone, activeId = nil, nil
+    if GRID.Turf and GRID.Turf.GetZoneAtPos then
+        activeZone, activeId = GRID.Turf.GetZoneAtPos(pos)
+    end
 
-    local idx = 0
-    for id, zone in pairs(GRID.Turf.Zones) do
-        local data = GRID.TurfData[id] or { owner = zone.owner, progress = 100 }
-        local curX = startX + idx * 172
-        idx = idx + 1
+    local isControlled = activeZone and activeZone.owner and activeZone.owner ~= "" and activeZone.owner ~= "neutral"
 
-        -- Background Pill
-        draw.RoundedBox(6, curX, startY, 160, 32, (GRID.Colors and GRID.Colors.Background) or Color(15, 23, 42, 230))
+    -- Smooth animated fade in/out
+    local targetAlpha = isControlled and 255 or 0
+    currentAlpha = math.Approach(currentAlpha, targetAlpha, FrameTime() * 450)
 
-        -- Zone Name
-        draw.SimpleText(zone.name, "GRID_FontSmall", curX + 80, startY + 4, (GRID.Colors and GRID.Colors.White) or Color(248, 250, 252), TEXT_ALIGN_CENTER)
+    if currentAlpha > 0 and activeZone then
+        local scrW = ScrW()
+        local cardW = 380
+        local cardH = 54
+        local cardX = (scrW - cardW) / 2
+        local cardY = 16
 
-        -- Owner String & Dynamic Color
-        local ownerStr = (data.owner and data.owner ~= "" and data.owner ~= "neutral") and data.owner or "Neutral"
-        local ownerCol = GRID.GetGangColor(data.owner)
-        draw.SimpleText(ownerStr, "GRID_FontSmall", curX + 80, startY + 16, ownerCol, TEXT_ALIGN_CENTER)
+        local owner = activeZone.owner
+        local ownerCol = (GRID.GetGangColor and GRID.GetGangColor(owner)) or Color(245, 158, 11)
+        local taxRate = tonumber(activeZone.tax_rate) or 10
 
-        -- Progress bar underline
-        draw.RoundedBox(2, curX + 8, startY + 28, 144, 2, Color(30, 41, 59))
-        draw.RoundedBox(2, curX + 8, startY + 28, 144 * (data.progress / 100), 2, ownerCol)
+        -- Background obsidian banner card
+        draw.RoundedBox(8, cardX, cardY, cardW, cardH, Color(15, 23, 42, math.floor(currentAlpha * 0.94)))
+        
+        -- Border with faction accent
+        surface.SetDrawColor(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(currentAlpha * 0.8))
+        surface.DrawOutlinedRect(cardX, cardY, cardW, cardH, 2)
+
+        -- Top glowing accent strip
+        draw.RoundedBox(2, cardX, cardY, cardW, 3, Color(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(currentAlpha)))
+
+        -- Territory Name Header (e.g. "DOWNTOWN PLAZA")
+        local titleText = string.upper(tostring(activeZone.name or "GANG TERRITORY"))
+        draw.SimpleText(titleText, "GRID_UI_Header", cardX + (cardW / 2), cardY + 14, Color(248, 250, 252, math.floor(currentAlpha)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+        -- Controller & Extortion Tax Info Subtext
+        local infoText = string.format("Controlled by %s   •   Extortion Tax: %d%%", owner, taxRate)
+        draw.SimpleText(infoText, "GRID_UI_Caption", cardX + (cardW / 2), cardY + 36, Color(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(currentAlpha)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 end
 

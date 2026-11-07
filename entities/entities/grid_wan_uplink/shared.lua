@@ -8,7 +8,9 @@ ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Satellite WAN Uplink"
 ENT.Author = "Juicebox"
+ENT.Category = "GridRP - Networking & Cyber"
 ENT.Spawnable = true
+ENT.AdminOnly = true
 
 ENT.ItemQuality = "rare"
 ENT.ItemSubType = "Wireless Gateway"

@@ -6,9 +6,11 @@
 
 ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
-ENT.PrintName = "Personal Computer"
+ENT.PrintName = "Personal Computer Terminal"
 ENT.Author = "Juicebox"
+ENT.Category = "GridRP - Networking & Cyber"
 ENT.Spawnable = true
+ENT.AdminOnly = true
 
 -- Central Item Quality
 ENT.ItemQuality = "rare"

@@ -146,6 +146,11 @@ net.Receive("GRID_Auction_CreateListing", function(len, ply)
         return
     end
 
+    -- Hook check for onboarding / soulbound items / level gate
+    if hook.Run("GRID_CanCreateAuction", ply, item) == false then
+        return
+    end
+
     local deposit = GRID.Auction.CalculateDeposit(startBid, durationHours)
     if ply:GetMoney() < deposit then
         GRID.Notify(ply, string.format("Insufficient funds! Required listing deposit: $%s", string.Comma(deposit)), NOTIFY_ERROR)

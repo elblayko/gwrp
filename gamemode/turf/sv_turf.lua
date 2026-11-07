@@ -26,10 +26,13 @@ function GRID.Turf.SaveMapProfile()
             id = tonumber(id),
             name = zone.name,
             pos = { x = math.Round(zone.pos.x, 2), y = math.Round(zone.pos.y, 2), z = math.Round(zone.pos.z, 2) },
-            radius = tonumber(zone.radius) or 450,
+            radius = tonumber(zone.influence_radius) or tonumber(zone.radius) or 800,
+            capture_radius = tonumber(zone.capture_radius) or 250,
+            influence_radius = tonumber(zone.influence_radius) or tonumber(zone.radius) or 800,
             owner = zone.owner or "neutral",
             progress = tonumber(zone.progress) or 100,
-            tax_rate = tonumber(zone.tax_rate) or 10
+            tax_rate = tonumber(zone.tax_rate) or 10,
+            captured_at = tonumber(zone.captured_at) or 0
         })
     end
 
@@ -61,14 +64,19 @@ function GRID.Turf.LoadMapProfile()
 
             for _, item in ipairs(tbl) do
                 local id = tonumber(item.id) or (table.Count(zones) + 1)
+                local infRad = tonumber(item.influence_radius) or tonumber(item.radius) or 800
+                local capRad = tonumber(item.capture_radius) or 250
                 zones[id] = {
                     id = id,
                     name = item.name or ("Turf Zone #" .. id),
                     pos = Vector(item.pos.x, item.pos.y, item.pos.z),
-                    radius = tonumber(item.radius) or 450,
+                    radius = infRad,
+                    capture_radius = capRad,
+                    influence_radius = infRad,
                     owner = item.owner or "neutral",
                     progress = tonumber(item.progress) or 100,
-                    tax_rate = tonumber(item.tax_rate) or 10
+                    tax_rate = tonumber(item.tax_rate) or 10,
+                    captured_at = tonumber(item.captured_at) or 0
                 }
             end
             applyAndSpawn(zones, "JSON profile")
@@ -129,13 +137,17 @@ function GRID.Turf.SyncToPlayer(ply)
     net.Start("GRID_SyncTurfZones")
         net.WriteUInt(count, 8)
         for id, zone in pairs(GRID.Turf.Zones) do
+            local infRad = tonumber(zone.influence_radius) or tonumber(zone.radius) or 800
+            local capRad = tonumber(zone.capture_radius) or 250
             net.WriteUInt(id, 8)
             net.WriteString(zone.name)
             net.WriteVector(zone.pos)
-            net.WriteUInt(zone.radius or 450, 16)
+            net.WriteUInt(infRad, 16)
             net.WriteString(zone.owner or "neutral")
             net.WriteUInt(zone.progress or 100, 8)
             net.WriteUInt(zone.tax_rate or 10, 8)
+            net.WriteUInt(capRad, 16)
+            net.WriteUInt(tonumber(zone.captured_at) or 0, 32)
         end
     net.Send(ply)
 end
@@ -145,13 +157,17 @@ function GRID.Turf.SyncToAll()
     net.Start("GRID_SyncTurfZones")
         net.WriteUInt(count, 8)
         for id, zone in pairs(GRID.Turf.Zones) do
+            local infRad = tonumber(zone.influence_radius) or tonumber(zone.radius) or 800
+            local capRad = tonumber(zone.capture_radius) or 250
             net.WriteUInt(id, 8)
             net.WriteString(zone.name)
             net.WriteVector(zone.pos)
-            net.WriteUInt(zone.radius or 450, 16)
+            net.WriteUInt(infRad, 16)
             net.WriteString(zone.owner or "neutral")
             net.WriteUInt(zone.progress or 100, 8)
             net.WriteUInt(zone.tax_rate or 10, 8)
+            net.WriteUInt(capRad, 16)
+            net.WriteUInt(tonumber(zone.captured_at) or 0, 32)
         end
     net.Broadcast()
 end
@@ -165,6 +181,7 @@ function GRID.Turf.BroadcastUpdate(turfId)
         net.WriteString(zone.owner or "neutral")
         net.WriteUInt(zone.progress or 100, 8)
         net.WriteUInt(zone.tax_rate or 10, 8)
+        net.WriteUInt(tonumber(zone.captured_at) or 0, 32)
     net.Broadcast()
 end
 
@@ -217,6 +234,8 @@ function GRID.Turf.FinalizeCapture(turfId, ply, claimant)
 
     zone.owner = claimant
     zone.progress = 100
+    zone.captured_at = os.time()
+    GRID.Turf.SaveMapProfile()
     GRID.Turf.BroadcastUpdate(turfId)
 
     local reward = (GRID.Config and GRID.Config.TurfCaptureReward) or 40

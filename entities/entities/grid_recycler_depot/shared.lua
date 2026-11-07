@@ -8,7 +8,7 @@ ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Street Recycling Depot"
 ENT.Author = "Juicebox & Antigravity"
-ENT.Category = "GridRP Scavenging"
+ENT.Category = "GridRP - World Infrastructure"
 ENT.Spawnable = true
 ENT.AdminOnly = true
 

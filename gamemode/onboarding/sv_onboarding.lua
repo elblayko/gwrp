@@ -1,0 +1,364 @@
+--[[
+    gamemode/onboarding/sv_onboarding.lua
+    GridRP First-5-Minutes Onboarding & Syndicate Initiation - Server Authority
+    Author: GRID Core Team & Antigravity
+    Namespace: GRID.Onboarding
+--]]
+
+GRID = GRID or {}
+GRID.Onboarding = GRID.Onboarding or {}
+
+util.AddNetworkString("GRID_OnboardingSync")
+util.AddNetworkString("GRID_OnboardingCompleted")
+util.AddNetworkString("GRID_OnboardingGatedAlert")
+
+-- --------------------------------------------------------
+-- Step 1: Claim Fixer Dead-Drop
+-- --------------------------------------------------------
+function GRID.Onboarding.ClaimDeadDrop(ply, lockerEnt)
+    if not IsValid(ply) or not ply:Alive() then return false end
+    if not IsValid(lockerEnt) or lockerEnt:GetClass() ~= "grid_deaddrop_locker" then return false end
+
+    -- Verify distance (anti-remote-trigger exploit)
+    if ply:EyePos():DistToSqr(lockerEnt:GetPos()) > (120 * 120) then
+        return false
+    end
+
+    -- Server-authoritative stage check (anti-replay exploit)
+    if ply:GetOnboardingStage() ~= GRID.Onboarding.STAGE_ROOKIE then
+        GRID.Notify(ply, "You have already claimed this dead-drop!", NOTIFY_ERROR, 4)
+        return false
+    end
+
+    -- Atomic progression to Stage 1
+    ply:SetOnboardingStage(GRID.Onboarding.STAGE_DEAD_DROP)
+
+    -- Grant $2,500 dirty cash
+    ply:AddMoney(GRID.Onboarding.REWARD_DEAD_DROP_CASH)
+
+    -- Give 1x Starter Glock-18 (at 90% durability)
+    local glock = ply:Give(GRID.Onboarding.STARTER_WEAPON_CLASS)
+    if IsValid(glock) then
+        if glock.SetDurability then
+            glock:SetDurability(GRID.Onboarding.STARTER_WEAPON_DURABILITY)
+        end
+        glock.GRID_IsStarterItem = true
+    end
+
+    -- Give 1x Tactical Lockpick
+    local lockpick = ply:Give("weapon_grid_lockpick")
+    if IsValid(lockpick) then
+        lockpick.GRID_IsStarterItem = true
+    end
+
+    -- Audio & feedback
+    lockerEnt:EmitSound("doors/door_latch3.wav", 75, 100)
+    ply:EmitSound("garrysmod/save_load1.wav", 65, 110)
+
+    GRID.Notify(ply, string.format("Starter kit claimed! +$%s dirty cash, Glock-18 (90%% Durability) & Tactical Lockpick.", string.Comma(GRID.Onboarding.REWARD_DEAD_DROP_CASH)), NOTIFY_HINT, 6)
+    GRID.Notify(ply, "[STEP 2/3] Check your Burner Pager. Locate the Practice Stash and pick it!", NOTIFY_GENERIC, 7)
+
+    net.Start("GRID_OnboardingSync")
+        net.WriteUInt(GRID.Onboarding.STAGE_DEAD_DROP, 4)
+    net.Send(ply)
+
+    if GRID.Telemetry and GRID.Telemetry.Log then
+        GRID.Telemetry.Log("PLAYER_ACTION", "ONBOARDING_CLAIM_DROP", ply:SteamID(), "", GRID.Onboarding.REWARD_DEAD_DROP_CASH, {
+            weapon = GRID.Onboarding.STARTER_WEAPON_CLASS,
+            durability = GRID.Onboarding.STARTER_WEAPON_DURABILITY
+        })
+    end
+
+    return true
+end
+
+-- --------------------------------------------------------
+-- Step 2: Breach Practice Stash
+-- --------------------------------------------------------
+function GRID.Onboarding.CompletePracticeStash(ply, stashEnt)
+    if not IsValid(ply) or not ply:Alive() then return false end
+    if not IsValid(stashEnt) or stashEnt:GetClass() ~= "grid_practice_stash" then return false end
+
+    -- Distance verification
+    if ply:EyePos():DistToSqr(stashEnt:GetPos()) > (120 * 120) then
+        return false
+    end
+
+    -- Stage check: must be at Stage 1
+    if ply:GetOnboardingStage() ~= GRID.Onboarding.STAGE_DEAD_DROP then
+        if ply:GetOnboardingStage() >= GRID.Onboarding.STAGE_STASH then
+            GRID.Notify(ply, "You have already completed the practice breach!", NOTIFY_ERROR, 3)
+        end
+        return false
+    end
+
+    -- Advance to Stage 2
+    ply:SetOnboardingStage(GRID.Onboarding.STAGE_STASH)
+
+    -- Grant Kevlar Armor (+50)
+    ply:SetArmor(math.min(100, ply:Armor() + GRID.Onboarding.REWARD_ARMOR))
+
+    -- Grant +$1,000 cash (total wallet cash now $3,500)
+    ply:AddMoney(GRID.Onboarding.REWARD_STASH_CASH)
+
+    -- Feedback
+    stashEnt:EmitSound("ambient/materials/wood_box_break1.wav", 75, 100)
+    ply:EmitSound("items/ammo_pickup.wav", 65, 100)
+
+    GRID.Notify(ply, string.format("Stash breached! +%d Kevlar Armor & +$%s dirty cash (Total: $3,500).", GRID.Onboarding.REWARD_ARMOR, string.Comma(GRID.Onboarding.REWARD_STASH_CASH)), NOTIFY_HINT, 6)
+    GRID.Notify(ply, "[STEP 3/3] Take your dirty cash to a Street ATM to wash and bank it!", NOTIFY_GENERIC, 7)
+
+    net.Start("GRID_OnboardingSync")
+        net.WriteUInt(GRID.Onboarding.STAGE_STASH, 4)
+    net.Send(ply)
+
+    if GRID.Telemetry and GRID.Telemetry.Log then
+        GRID.Telemetry.Log("PLAYER_ACTION", "ONBOARDING_BREACH_STASH", ply:SteamID(), "", GRID.Onboarding.REWARD_STASH_CASH, {
+            armor = GRID.Onboarding.REWARD_ARMOR,
+            total_cash = ply:GetMoney()
+        })
+    end
+
+    return true
+end
+
+-- --------------------------------------------------------
+-- Step 3: Wash & Bank Cut (Initiation Completion)
+-- --------------------------------------------------------
+function GRID.Onboarding.CompleteInitiation(ply, atmEnt)
+    if not IsValid(ply) or not ply:Alive() then return false end
+    if not IsValid(atmEnt) or atmEnt:GetClass() ~= "grid_atm" then return false end
+
+    -- Distance verification
+    if ply:EyePos():DistToSqr(atmEnt:GetPos()) > (120 * 120) then
+        return false
+    end
+
+    -- Stage check: must be at Stage 2
+    if ply:GetOnboardingStage() ~= GRID.Onboarding.STAGE_STASH then
+        return false
+    end
+
+    local cleanBonus = GRID.Onboarding.TOTAL_CLEAN_CASH
+    local steamID = ply:SteamID()
+
+    -- Atomic execution via MariaDB Stored Procedure / SQLite fallback
+    if GRID.Database and GRID.Database.CallProcedure then
+        GRID.Database.CallProcedure("grid_complete_onboarding", {
+            steamID,
+            cleanBonus
+        }, function()
+            if not IsValid(ply) then return end
+
+            ply:SetNWInt("GRID_OnboardingStage", GRID.Onboarding.STAGE_COMPLETED)
+            ply:SetNWInt("GRID_Money", 0)
+            ply:SetNWInt("GRID_Bank", ply:GetBank() + cleanBonus)
+
+            local currentLvl = ply:GetLevel()
+            if currentLvl < 2 then
+                ply:SetNWInt("GRID_Level", 2)
+                ply:SetNWInt("GRID_XP", 0)
+            end
+
+            -- Update in-memory player cache
+            if GRID.Database.Cache and GRID.Database.Cache.Players and GRID.Database.Cache.Players[steamID] then
+                local p = GRID.Database.Cache.Players[steamID]
+                p.onboarding_stage = 3
+                p.level = math.max(p.level or 1, 2)
+                p.money = 0
+                p.bank = (p.bank or 0) + cleanBonus
+            end
+
+            -- Audio & Celebration Banner Dispatch
+            atmEnt:EmitSound("ambient/levels/labs/coinslot1.wav", 75, 100)
+            ply:EmitSound("garrysmod/save_load1.wav", 70, 100)
+
+            net.Start("GRID_OnboardingCompleted")
+                net.WriteUInt(cleanBonus, 32)
+            net.Send(ply)
+
+            GRID.Notify(ply, string.format("🎉 [SYNDICATE VERIFIED] Deposited $%s clean cash into personal bank! Promoted to Level 2!", string.Comma(cleanBonus)), NOTIFY_GENERIC, 8)
+            GRID.Notify(ply, "Base building, Toolgun, Auction House listings, and advanced careers are now unlocked!", NOTIFY_HINT, 10)
+        end)
+    end
+
+    return true
+end
+
+-- --------------------------------------------------------
+-- Anti-Troll Level 2 Gates & Griefing Protection
+-- --------------------------------------------------------
+local function HandleGatedAttempt(ply, actionName)
+    if not IsValid(ply) or not ply:IsPlayer() then return end
+    if ply:IsAdmin() then return end
+
+    if ply:GetLevel() < 2 or ply:GetOnboardingStage() < GRID.Onboarding.STAGE_COMPLETED then
+        ply:EmitSound("buttons/button10.wav", 60, 100)
+
+        GRID.Notify(ply, "[SYNDICATE UNVERIFIED] The Fixer doesn't trust you yet! Complete your 60-second Alleyway Dead-Drop (marked on HUD) to earn your Grid Credentials, $3,500 cash, and a free 9mm Pistol!", NOTIFY_ERROR, 7)
+
+        net.Start("GRID_OnboardingGatedAlert")
+            net.WriteString(actionName or "This Action")
+        net.Send(ply)
+
+        return true -- Block action
+    end
+
+    return false
+end
+
+-- Gate 1: Prop & Entity Sandbox Spawning
+hook.Add("PlayerSpawnProp", "GRID_Onboarding_GateProp", function(ply, model)
+    if HandleGatedAttempt(ply, "Spawning Props") then return false end
+end)
+
+hook.Add("PlayerSpawnRagdoll", "GRID_Onboarding_GateRagdoll", function(ply, model)
+    if HandleGatedAttempt(ply, "Spawning Ragdolls") then return false end
+end)
+
+hook.Add("PlayerSpawnVehicle", "GRID_Onboarding_GateVehicle", function(ply, model, name, table)
+    if HandleGatedAttempt(ply, "Spawning Vehicles") then return false end
+end)
+
+hook.Add("PlayerSpawnEffect", "GRID_Onboarding_GateEffect", function(ply, model)
+    if HandleGatedAttempt(ply, "Spawning Effects") then return false end
+end)
+
+-- Gate 2: Toolgun Usage
+hook.Add("CanTool", "GRID_Onboarding_GateToolgun", function(ply, tr, toolname)
+    if HandleGatedAttempt(ply, "Using Toolgun") then return false end
+end)
+
+-- Gate 3: Careers & Job Progression Gate
+hook.Add("GRID_CanChangeJob", "GRID_Onboarding_GateJobs", function(ply, jobId)
+    if not IsValid(ply) or ply:IsAdmin() then return end
+
+    local highImpactJobs = {
+        ["police_officer"]      = true,
+        ["police_chief"]        = true,
+        ["swat_specialist"]     = true,
+        ["arms_dealer"]         = true,
+        ["black_market_dealer"] = true
+    }
+
+    if highImpactJobs[jobId] then
+        if ply:GetLevel() < 2 or ply:GetOnboardingStage() < GRID.Onboarding.STAGE_COMPLETED then
+            HandleGatedAttempt(ply, "Joining Career")
+            return false
+        end
+    end
+end)
+
+-- Gate 4: Auction House Listing Gate
+hook.Add("GRID_CanCreateAuction", "GRID_Onboarding_GateAuctions", function(ply, item)
+    if not IsValid(ply) or ply:IsAdmin() then return end
+
+    if ply:GetLevel() < 2 or ply:GetOnboardingStage() < GRID.Onboarding.STAGE_COMPLETED then
+        HandleGatedAttempt(ply, "Posting Auction Listings")
+        return false
+    end
+
+    -- Block soulbound starter items
+    if item and (item.GRID_IsStarterItem or (item.item_data and item.item_data.is_starter)) then
+        GRID.Notify(ply, "Introductory syndicate starter items are Soulbound and cannot be auctioned!", NOTIFY_ERROR, 5)
+        return false
+    end
+end)
+
+-- Soulbound Drop Protection: Block dropping starter Glock-18
+hook.Add("PlayerCanDropWeapon", "GRID_Onboarding_BlockDropStarter", function(ply, wep)
+    if IsValid(wep) and wep.GRID_IsStarterItem then
+        GRID.Notify(ply, "This starter firearm is Soulbound to your syndicate identity and cannot be dropped!", NOTIFY_ERROR, 4)
+        return false
+    end
+end)
+
+-- --------------------------------------------------------
+-- Admin Testing & Diagnostics ConCommands
+-- --------------------------------------------------------
+concommand.Add("grid_onboarding_reset", function(ply, cmd, args)
+    if IsValid(ply) and not ply:IsSuperAdmin() then
+        GRID.Notify(ply, "Access Denied: SuperAdmin only.", NOTIFY_ERROR)
+        return
+    end
+
+    local target = ply
+    if args[1] and args[1] ~= "" then
+        for _, p in ipairs(player.GetAll()) do
+            if string.find(string.lower(p:Nick()), string.lower(args[1]), 1, true) or p:SteamID() == args[1] then
+                target = p
+                break
+            end
+        end
+    end
+
+    if not IsValid(target) then
+        print("[GRID Onboarding] Target player not found.")
+        return
+    end
+
+    target:SetOnboardingStage(GRID.Onboarding.STAGE_ROOKIE)
+    target:SetNWInt("GRID_Money", 0)
+    target:SetNWInt("GRID_Level", 1)
+    target:SetNWInt("GRID_XP", 0)
+
+    if GRID.Database and GRID.Database.SavePlayer then
+        GRID.Database.SavePlayer(target)
+    end
+
+    net.Start("GRID_OnboardingSync")
+        net.WriteUInt(GRID.Onboarding.STAGE_ROOKIE, 4)
+    net.Send(target)
+
+    local msg = string.format("[GRID Onboarding] Reset %s to Stage 0 (Rookie, Level 1, $0).", target:Nick())
+    print(msg)
+    if IsValid(ply) then
+        GRID.Notify(ply, msg, NOTIFY_HINT, 5)
+    end
+end)
+
+concommand.Add("grid_onboarding_setstage", function(ply, cmd, args)
+    if IsValid(ply) and not ply:IsSuperAdmin() then
+        GRID.Notify(ply, "Access Denied: SuperAdmin only.", NOTIFY_ERROR)
+        return
+    end
+
+    local newStage = tonumber(args[1]) or 0
+    newStage = math.Clamp(newStage, 0, 3)
+
+    local target = ply
+    if args[2] and args[2] ~= "" then
+        for _, p in ipairs(player.GetAll()) do
+            if string.find(string.lower(p:Nick()), string.lower(args[2]), 1, true) or p:SteamID() == args[2] then
+                target = p
+                break
+            end
+        end
+    end
+
+    if not IsValid(target) then
+        print("[GRID Onboarding] Target player not found.")
+        return
+    end
+
+    target:SetOnboardingStage(newStage)
+    if newStage >= 3 and target:GetLevel() < 2 then
+        target:SetNWInt("GRID_Level", 2)
+    end
+
+    if GRID.Database and GRID.Database.SavePlayer then
+        GRID.Database.SavePlayer(target)
+    end
+
+    net.Start("GRID_OnboardingSync")
+        net.WriteUInt(newStage, 4)
+    net.Send(target)
+
+    local msg = string.format("[GRID Onboarding] Set %s to Stage %d.", target:Nick(), newStage)
+    print(msg)
+    if IsValid(ply) then
+        GRID.Notify(ply, msg, NOTIFY_HINT, 5)
+    end
+end)
+
+

@@ -9,7 +9,9 @@ ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Weapon Shipment"
 ENT.Author = "GRID Core Team"
-ENT.Spawnable = false
+ENT.Category = "GridRP - Economy & Items"
+ENT.Spawnable = true
+ENT.AdminOnly = true
 
 -- Configurable Item Quality
 ENT.ItemQuality = "rare"

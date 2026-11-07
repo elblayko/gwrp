@@ -7,9 +7,9 @@ ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Resource Fabricator"
 ENT.Author = "Juicebox & Antigravity"
-ENT.Category = "GridRP"
+ENT.Category = "GridRP - World Infrastructure"
 ENT.Spawnable = true
-ENT.AdminOnly = false
+ENT.AdminOnly = true
 
 ENT.IsNetworkDevice = true
 ENT.ItemQuality = 1 -- Common

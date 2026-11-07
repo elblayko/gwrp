@@ -20,14 +20,19 @@ function SWEP:StartLockpick(ply, ent)
         end
     end
 
+    local pickDuration = self.LockpickTime
+    if ent:GetClass() == "grid_practice_stash" or ent.IsPracticeStash then
+        pickDuration = ent.LockpickTime or 4.0
+    end
+
     self:SetHoldType("pistol")
     self:SetIsLockpicking(true)
     self:SetPickTarget(ent)
     self:SetPickStartTime(CurTime())
-    self:SetPickEndTime(CurTime() + self.LockpickTime)
+    self:SetPickEndTime(CurTime() + pickDuration)
     self.NextClickSound = CurTime() + 0.65
 
-    GRID.Notify(ply, string.format("Lockpicking started... stay close (%ds)!", math.Round(self.LockpickTime)),
+    GRID.Notify(ply, string.format("Lockpicking started... stay close (%ds)!", math.Round(pickDuration)),
         NOTIFY_GENERIC, 3)
 
     -- Silent Alarm Security Trip
@@ -105,5 +110,9 @@ function SWEP:OnLockpickSuccess(ply, target)
             phys:Wake()
         end
         GRID.Notify(ply, "Prop unsealed!", NOTIFY_HINT, 4)
+    elseif target:GetClass() == "grid_practice_stash" or target.IsPracticeStash then
+        if GRID.Onboarding and GRID.Onboarding.CompletePracticeStash then
+            GRID.Onboarding.CompletePracticeStash(ply, target)
+        end
     end
 end

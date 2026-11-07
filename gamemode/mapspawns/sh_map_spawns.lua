@@ -27,6 +27,9 @@ GRID.MapSpawns.WhitelistedClasses = {
     ["grid_scavenge_scrappile"] = true,
     ["grid_scavenge_trashbin"]  = true,
     ["grid_flag_pole"]         = true,
+    ["grid_deaddrop_locker"]   = true,
+    ["grid_practice_stash"]    = true,
+    ["grid_atm"]               = true,
 }
 
 -- Objective entities that should maintain map-wide transmit state (Safeguard 12)
@@ -34,6 +37,7 @@ GRID.MapSpawns.TransmitAlwaysClasses = {
     ["grid_auction_terminal"]  = true,
     ["grid_clinic_pod"]        = true,
     ["grid_recycler_depot"]    = true,
+    ["grid_atm"]               = true,
 }
 
 -- --------------------------------------------------------

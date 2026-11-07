@@ -7,9 +7,9 @@ ENT.Type = "anim"
 ENT.Base = "base_gmodentity"
 ENT.PrintName = "Crafting Material"
 ENT.Author = "Juicebox"
-ENT.Category = "GridRP"
+ENT.Category = "GridRP - Economy & Items"
 ENT.Spawnable = true
-ENT.AdminOnly = false
+ENT.AdminOnly = true
 
 function ENT:SetupDataTables()
     self:NetworkVar("String", 0, "MaterialID")

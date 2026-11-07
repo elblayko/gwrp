@@ -81,7 +81,8 @@ function SWEP:PrimaryAttack()
     if not IsValid(ent) or tr.HitPos:DistToSqr(ply:EyePos()) > distSqr then return end
 
     local isDoor = ent.isDoor and ent:isDoor() or (ent.IsDoor and ent:IsDoor())
-    if not isDoor and ent:GetClass() ~= "prop_physics" then return end
+    local isPracticeStash = (ent:GetClass() == "grid_practice_stash" or ent.IsPracticeStash == true)
+    if not isDoor and ent:GetClass() ~= "prop_physics" and not isPracticeStash then return end
 
     if SERVER then
         self:StartLockpick(ply, ent)

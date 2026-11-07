@@ -21,6 +21,8 @@ AddCSLuaFile("crafting/sh_crafting.lua")
 AddCSLuaFile("core/sh_scavenge_config.lua")
 AddCSLuaFile("auction/sh_auction.lua")
 AddCSLuaFile("mapspawns/sh_map_spawns.lua")
+AddCSLuaFile("onboarding/sh_onboarding.lua")
+AddCSLuaFile("onboarding/cl_onboarding.lua")
 
 -- Add Client Files to Client
 AddCSLuaFile("mapspawns/cl_map_spawns.lua")
@@ -67,6 +69,8 @@ include("auction/sh_auction.lua")
 include("auction/sv_auction.lua")
 include("mapspawns/sh_map_spawns.lua")
 include("mapspawns/sv_map_spawns.lua")
+include("onboarding/sh_onboarding.lua")
+include("onboarding/sv_onboarding.lua")
 
 function GM:Initialize()
     math.randomseed(os.time() + math.floor(SysTime() * 1000))
@@ -332,8 +336,9 @@ function GM:PlayerDeath(victim, inflictor, attacker)
     net.WriteUInt(respawnSecs, 8)
     net.Send(victim)
 
-    -- Drop a small amount of cash on death
-    local dropAmount = math.min(GRID.Config.DropMoneyOnDeathMax or 75, math.floor(victim:GetMoney() * 0.1))
+    -- Drop a small amount of cash on death (Protected during onboarding)
+    local isRookie = (victim:GetNWInt("GRID_OnboardingStage", 0) < 3)
+    local dropAmount = isRookie and 0 or math.min(GRID.Config.DropMoneyOnDeathMax or 75, math.floor(victim:GetMoney() * 0.1))
     if dropAmount > 0 then
         victim:AddMoney(-dropAmount)
         GRID.Economy.SpawnCashStack(victim:GetPos() + Vector(0, 0, 10), dropAmount)

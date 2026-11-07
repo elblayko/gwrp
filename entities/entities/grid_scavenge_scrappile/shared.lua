@@ -8,7 +8,7 @@ ENT.Type = "anim"
 ENT.Base = "grid_scavenge_node_base"
 ENT.PrintName = "Scrap Debris Pile"
 ENT.Author = "Juicebox & Antigravity"
-ENT.Category = "GridRP Scavenging"
+ENT.Category = "GridRP - Scavenging"
 ENT.Spawnable = true
 ENT.AdminOnly = true
 

@@ -13,6 +13,24 @@ if meta then
         return self:GetMoney() >= amount
     end
 
+    -- Personal Bank Methods
+    function meta:GetBank()
+        return self:GetNWInt("GRID_Bank", 0)
+    end
+
+    function meta:CanAffordBank(amount)
+        return self:GetBank() >= amount
+    end
+
+    -- Onboarding & Syndicate Verification
+    function meta:GetOnboardingStage()
+        return self:GetNWInt("GRID_OnboardingStage", 0)
+    end
+
+    function meta:IsSyndicateVerified()
+        return self:GetOnboardingStage() >= 3 or self:GetLevel() >= 2
+    end
+
     -- Job Methods
     function meta:GetJob()
         return self:GetNWString("GRID_Job", "citizen")
@@ -112,6 +130,26 @@ if meta then
 
         function meta:AddMoney(amount)
             self:SetMoney(self:GetMoney() + amount)
+        end
+
+        function meta:SetBank(amount)
+            amount = math.max(0, math.floor(amount))
+            self:SetNWInt("GRID_Bank", amount)
+            if GRID.Database and GRID.Database.SavePlayerBank then
+                GRID.Database.SavePlayerBank(self, amount)
+            end
+        end
+
+        function meta:AddBank(amount)
+            self:SetBank(self:GetBank() + amount)
+        end
+
+        function meta:SetOnboardingStage(stage)
+            stage = math.Clamp(math.floor(tonumber(stage) or 0), 0, 3)
+            self:SetNWInt("GRID_OnboardingStage", stage)
+            if GRID.Database and GRID.Database.SavePlayerOnboardingStage then
+                GRID.Database.SavePlayerOnboardingStage(self, stage)
+            end
         end
 
         function meta:SetGang(gangName)

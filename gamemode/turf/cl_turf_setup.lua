@@ -966,132 +966,19 @@ function GRID.Turf.RenderSpawnersTab(parent)
         net.SendToServer()
     end
 
-    -- Section: Scavenging & Recycling Persistence Spawners
-    local secScav = scroll:Add("DPanel")
-    secScav:Dock(TOP)
-    secScav:DockMargin(0, 0, 0, 14)
-    secScav:SetTall(160)
-    secScav.Paint = function(s, w, h)
-        draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
-        surface.SetDrawColor(30, 41, 59, 180)
+    -- Section: Q-Menu Migration Notice
+    local secNotice = scroll:Add("DPanel")
+    secNotice:Dock(TOP)
+    secNotice:DockMargin(0, 0, 0, 14)
+    secNotice:SetTall(110)
+    secNotice.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 220))
+        surface.SetDrawColor(6, 182, 212, 180)
         surface.DrawOutlinedRect(0, 0, w, h, 1)
-        draw.SimpleText("Scavenging & Street Recycling Spawners (Auto-Persists to DB & JSON)", "GRID_UI_Header", 16, 12,
-            Color(52, 211, 153))
-        draw.SimpleText("Spawns an anchored entity at crosshair and immediately saves to the Map Profile.",
-            "GRID_UI_Caption", 16, 36, Color(148, 163, 184))
-    end
 
-    local scavSpawners = {
-        { name = "Dumpster",        class = "grid_scavenge_dumpster",  col = Color(56, 189, 248) },
-        { name = "Trash Can",       class = "grid_scavenge_trashbin",  col = Color(52, 211, 153) },
-        { name = "Scrap Pile",      class = "grid_scavenge_scrappile", col = Color(251, 191, 36) },
-        { name = "Recycling Depot", class = "grid_recycler_depot",     col = Color(168, 85, 247) }
-    }
-
-    local scX = 16
-    for _, sp in ipairs(scavSpawners) do
-        local btn = vgui.Create("DButton", secScav)
-        btn:SetPos(scX, 60)
-        btn:SetSize(185, 36)
-        btn:SetText("+ Spawn " .. sp.name)
-        btn:SetFont("GRID_UI_Badge")
-        btn:SetTextColor(Color(248, 250, 252))
-        btn.Paint = function(s, w, h)
-            local bg = s:IsHovered() and Color(sp.col.r, sp.col.g, sp.col.b, 220) or Color(30, 41, 59, 200)
-            draw.RoundedBox(4, 0, 0, w, h, bg)
-            surface.SetDrawColor(sp.col.r, sp.col.g, sp.col.b, 180)
-            surface.DrawOutlinedRect(0, 0, w, h, 1)
-        end
-        btn.DoClick = function()
-            net.Start("GRID_AdminDebugAction")
-            net.WriteString("spawn_entity")
-            net.WriteString(sp.class)
-            net.SendToServer()
-        end
-        scX = scX + 195
-    end
-
-    -- Management Controls for Scavenge Profile
-    local btnSaveScav = vgui.Create("DButton", secScav)
-    btnSaveScav:SetPos(16, 110)
-    btnSaveScav:SetSize(240, 32)
-    btnSaveScav:SetText("💾 Save All to DB & JSON Profile")
-    btnSaveScav:SetFont("GRID_UI_Caption")
-    btnSaveScav:SetTextColor(Color(248, 250, 252))
-    btnSaveScav.Paint = function(s, w, h)
-        local bg = s:IsHovered() and Color(16, 185, 129, 220) or Color(5, 150, 105, 180)
-        draw.RoundedBox(4, 0, 0, w, h, bg)
-    end
-    btnSaveScav.DoClick = function()
-        net.Start("GRID_AdminDebugAction")
-        net.WriteString("save_scavenge_profile")
-        net.SendToServer()
-    end
-
-    local btnRespawnScav = vgui.Create("DButton", secScav)
-    btnRespawnScav:SetPos(266, 110)
-    btnRespawnScav:SetSize(220, 32)
-    btnRespawnScav:SetText("🔄 Reload / Respawn from DB")
-    btnRespawnScav:SetFont("GRID_UI_Caption")
-    btnRespawnScav:SetTextColor(Color(248, 250, 252))
-    btnRespawnScav.Paint = function(s, w, h)
-        local bg = s:IsHovered() and Color(56, 189, 248, 220) or Color(14, 116, 144, 180)
-        draw.RoundedBox(4, 0, 0, w, h, bg)
-    end
-    btnRespawnScav.DoClick = function()
-        net.Start("GRID_AdminDebugAction")
-        net.WriteString("respawn_scavenge_profile")
-        net.SendToServer()
-    end
-
-    local btnClearScav = vgui.Create("DButton", secScav)
-    btnClearScav:SetPos(496, 110)
-    btnClearScav:SetSize(180, 32)
-    btnClearScav:SetText("🗑 Clear All Map Nodes")
-    btnClearScav:SetFont("GRID_UI_Caption")
-    btnClearScav:SetTextColor(Color(248, 250, 252))
-    btnClearScav.Paint = function(s, w, h)
-        local bg = s:IsHovered() and Color(239, 68, 68, 220) or Color(153, 27, 27, 180)
-        draw.RoundedBox(4, 0, 0, w, h, bg)
-    end
-    btnClearScav.DoClick = function()
-        net.Start("GRID_AdminDebugAction")
-        net.WriteString("clear_scavenge_profile")
-        net.SendToServer()
-    end
-
-    -- Section: Entity Spawners
-    local secSpawn = scroll:Add("DPanel")
-    secSpawn:Dock(TOP)
-    secSpawn:DockMargin(0, 0, 0, 14)
-    secSpawn:SetTall(105)
-    secSpawn.Paint = function(s, w, h)
-        draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
-        surface.SetDrawColor(30, 41, 59, 180)
-        surface.DrawOutlinedRect(0, 0, w, h, 1)
-        draw.SimpleText("Contraband & Economy Spawners (Crosshair Placement)", "GRID_UI_Header", 16, 12,
-            Color(56, 189, 248))
-    end
-
-    local spawners = {
-        { name = "Bronze Printer",  class = "grid_printer_bronze" },
-        { name = "Silver Printer",  class = "grid_printer_silver" },
-        { name = "Diamond Printer", class = "grid_printer_diamond" },
-        { name = "$10k Cash Stack", class = "grid_cash_stack" }
-    }
-
-    local sx = 16
-    for _, sp in ipairs(spawners) do
-        local btn = vgui.Create("DButton", secSpawn)
-        btn:SetPos(sx, 48)
-        btn:SetSize(185, 36)
-        btn:SetText(sp.name)
-        btn.DoClick = function()
-            net.Start("GRID_AdminDebugAction")
-            net.WriteString("spawn_entity")
-            net.WriteString(sp.class)
-            net.SendToServer()
-        end
-        sx = sx + 195
+        draw.SimpleText("📌 Map Entity Placement Migrated to Q-Menu", "GRID_UI_Header", 16, 14, Color(6, 182, 212))
+        draw.SimpleText("Persistent objectives, salvage containers, ATMs, and contraband items are now placed directly", "GRID_UI_Body", 16, 42, Color(248, 250, 252))
+        draw.SimpleText("via Q Menu > Entities (under 'GridRP - World Infrastructure', 'GridRP - Scavenging', etc.).", "GRID_UI_Body", 16, 64, Color(245, 158, 11))
+        draw.SimpleText("SuperAdmins can spawn and freeze entities anywhere; they auto-anchor and persist to MariaDB.", "GRID_UI_Caption", 16, 88, Color(148, 163, 184))
     end
 end
