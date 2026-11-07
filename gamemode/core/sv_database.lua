@@ -393,7 +393,7 @@ GRID.Database.MariaDBDirectProcedures = {
 
 -- Direct MariaDB SQL queries for views, used if the DB user lacks CREATE VIEW privileges or if SQLite is active.
 GRID.Database.DirectViews = {
-    v_player_profile = "(SELECT p.steamid, p.name, p.money, p.respect, p.gang, p.job, p.level, p.xp, p.last_seen, m.rank AS gang_rank FROM grid_players p LEFT JOIN grid_gang_members m ON p.steamid = m.steamid) AS v_player_profile",
+    v_player_profile = "(SELECT p.steamid, p.name, p.money, p.bank, p.respect, p.gang, p.job, p.level, p.xp, p.onboarding_stage, p.last_seen, m.rank AS gang_rank FROM grid_players p LEFT JOIN grid_gang_members m ON p.steamid = m.steamid) AS v_player_profile",
     v_player_inventory = "grid_inventory",
     v_player_bags = "grid_player_bags",
     v_player_buffs = "grid_player_buffs",
@@ -796,12 +796,14 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_upsert_player(
             IN p_steamid VARCHAR(20), IN p_name VARCHAR(64), IN p_money BIGINT, IN p_respect INT,
-            IN p_gang VARCHAR(32), IN p_job VARCHAR(32), IN p_level INT, IN p_xp BIGINT, IN p_last_seen INT UNSIGNED
+            IN p_gang VARCHAR(32), IN p_job VARCHAR(32), IN p_level INT, IN p_xp BIGINT, IN p_last_seen INT UNSIGNED,
+            IN p_onboarding_stage TINYINT UNSIGNED, IN p_bank BIGINT
         ) BEGIN
-            INSERT INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen)
-            VALUES (p_steamid, p_name, p_money, p_respect, p_gang, p_job, p_level, p_xp, p_last_seen)
+            INSERT INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen, onboarding_stage, bank)
+            VALUES (p_steamid, p_name, p_money, p_respect, p_gang, p_job, p_level, p_xp, p_last_seen, p_onboarding_stage, p_bank)
             ON DUPLICATE KEY UPDATE name = p_name, money = p_money, respect = p_respect, gang = p_gang,
-                job = p_job, level = p_level, xp = p_xp, last_seen = p_last_seen;
+                job = p_job, level = p_level, xp = p_xp, last_seen = p_last_seen,
+                onboarding_stage = p_onboarding_stage, bank = p_bank;
         END]],
         [[CREATE OR REPLACE PROCEDURE grid_update_player_money(
             IN p_steamid VARCHAR(20), IN p_money BIGINT, IN p_last_seen INT UNSIGNED
@@ -1389,6 +1391,12 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
         END]]
     }
 
+    -- Schema Migrations: Safely alter existing tables if newer columns are missing
+    local migrationDDLs = {
+        "ALTER TABLE grid_players ADD COLUMN IF NOT EXISTS bank BIGINT NOT NULL DEFAULT 0 AFTER money;",
+        "ALTER TABLE grid_players ADD COLUMN IF NOT EXISTS onboarding_stage TINYINT UNSIGNED NOT NULL DEFAULT 0 AFTER xp;"
+    }
+
     local function runBatch(list, idx, onBatchDone, onItemError)
         if idx > #list then
             if onBatchDone then onBatchDone() end
@@ -1406,26 +1414,30 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
     end
 
     runBatch(tableDDLs, 1, function()
-        local viewsFailed = false
-        runBatch(viewDDLs, 1, function()
-            if viewsFailed then
-                GRID.Database.UseDirectViews = true
-                print("[GRID DB] MariaDB user lacks CREATE VIEW privilege; using direct table SELECT fallback.")
-            end
-            local procsFailed = false
-            runBatch(procDDLs, 1, function()
-                if procsFailed then
-                    GRID.Database.UseDirectMariaDBSQL = true
-                    print("[GRID DB] MariaDB user lacks CREATE ROUTINE privilege; using direct SQL query fallback.")
-                else
-                    print("[GRID DB] MariaDB tables, views, and stored procedures verified & seeded!")
+        runBatch(migrationDDLs, 1, function()
+            local viewsFailed = false
+            runBatch(viewDDLs, 1, function()
+                if viewsFailed then
+                    GRID.Database.UseDirectViews = true
+                    print("[GRID DB] MariaDB user lacks CREATE VIEW privilege; using direct table SELECT fallback.")
                 end
-                if onComplete then onComplete() end
+                local procsFailed = false
+                runBatch(procDDLs, 1, function()
+                    if procsFailed then
+                        GRID.Database.UseDirectMariaDBSQL = true
+                        print("[GRID DB] MariaDB user lacks CREATE ROUTINE privilege; using direct SQL query fallback.")
+                    else
+                        print("[GRID DB] MariaDB tables, views, and stored procedures verified & seeded!")
+                    end
+                    if onComplete then onComplete() end
+                end, function()
+                    procsFailed = true
+                end)
             end, function()
-                procsFailed = true
+                viewsFailed = true
             end)
-        end, function()
-            viewsFailed = true
+        end, function(mErr)
+            ErrorNoHalt(string.format("[GRID DB WARNING] Non-fatal migration error: %s\n", tostring(mErr)))
         end)
     end, function(err)
         ErrorNoHalt(string.format("[GRID DB ERROR] Failed creating MariaDB table: %s\n", tostring(err)))

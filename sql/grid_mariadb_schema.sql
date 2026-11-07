@@ -379,11 +379,13 @@ CREATE OR REPLACE PROCEDURE grid_upsert_player(
     IN p_job VARCHAR(32),
     IN p_level INT,
     IN p_xp BIGINT,
-    IN p_last_seen INT UNSIGNED
+    IN p_last_seen INT UNSIGNED,
+    IN p_onboarding_stage TINYINT UNSIGNED,
+    IN p_bank BIGINT
 )
 BEGIN
-    INSERT INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen)
-    VALUES (p_steamid, p_name, p_money, p_respect, p_gang, p_job, p_level, p_xp, p_last_seen)
+    INSERT INTO grid_players (steamid, name, money, respect, gang, job, level, xp, last_seen, onboarding_stage, bank)
+    VALUES (p_steamid, p_name, p_money, p_respect, p_gang, p_job, p_level, p_xp, p_last_seen, p_onboarding_stage, p_bank)
     ON DUPLICATE KEY UPDATE
         name = p_name,
         money = p_money,
@@ -392,7 +394,9 @@ BEGIN
         job = p_job,
         level = p_level,
         xp = p_xp,
-        last_seen = p_last_seen;
+        last_seen = p_last_seen,
+        onboarding_stage = p_onboarding_stage,
+        bank = p_bank;
 END$$
 
 CREATE OR REPLACE PROCEDURE grid_update_player_money(
