@@ -1,6 +1,6 @@
 --[[
     entities/entities/grid_atm/cl_init.lua
-    GridRP Street ATM & Syndicate Laundering Terminal - Client UI
+    GridRP Street ATM Banking Terminal - Client UI
     Author: GRID Core Team & Antigravity
 --]]
 

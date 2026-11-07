@@ -225,7 +225,7 @@ hook.Add("PlayerSpawnedSENT", "GRID_MapSpawns_PlayerSpawnedSENT", function(ply, 
         end
 
         -- Keep JSON backup profiles synchronized
-        if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (className == "grid_deaddrop_locker" or className == "grid_practice_stash" or className == "grid_atm") then
+        if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (className == "grid_deaddrop_locker" or className == "grid_practice_stash" or className == "grid_combat_target" or className == "grid_atm") then
             GRID.Onboarding.SaveMapProfile()
         end
         if GRID.Auction and GRID.Auction.SaveTerminals and className == "grid_auction_terminal" then
@@ -293,7 +293,7 @@ hook.Add("OnPhysgunFreeze", "GRID_MapSpawns_OnPhysgunFreeze", function(weapon, p
             GRID.Notify(ply, string.format("Updated persistent entity #%d position in MariaDB.", savedId), NOTIFY_HINT, 4)
 
             -- Keep JSON snapshots updated
-            if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_atm") then
+            if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_combat_target" or entClass == "grid_atm") then
                 GRID.Onboarding.SaveMapProfile()
             end
             if GRID.Auction and GRID.Auction.SaveTerminals and entClass == "grid_auction_terminal" then
@@ -363,7 +363,7 @@ hook.Add("CanUndo", "GRID_MapSpawns_CanUndo", function(ply, undoTable)
             end
 
             timer.Simple(0.1, function()
-                if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_atm") then
+                if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_combat_target" or entClass == "grid_atm") then
                     GRID.Onboarding.SaveMapProfile()
                 end
                 if GRID.Auction and GRID.Auction.SaveTerminals and entClass == "grid_auction_terminal" then
@@ -399,7 +399,7 @@ hook.Add("CanTool", "GRID_MapSpawns_CanTool", function(ply, tr, toolname)
         end
 
         timer.Simple(0.1, function()
-            if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_atm") then
+            if GRID.Onboarding and GRID.Onboarding.SaveMapProfile and (entClass == "grid_deaddrop_locker" or entClass == "grid_practice_stash" or entClass == "grid_combat_target" or entClass == "grid_atm") then
                 GRID.Onboarding.SaveMapProfile()
             end
             if GRID.Auction and GRID.Auction.SaveTerminals and entClass == "grid_auction_terminal" then

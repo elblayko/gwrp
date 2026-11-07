@@ -272,7 +272,7 @@ function GM:PlayerSwitchWeapon(ply, oldWep, newWep)
 
     local def = GRID.Inventory and GRID.Inventory.GetItemData and GRID.Inventory.GetItemData(class)
     local reqLvl = (def and def.level) or (newWep.RequiredLevel or 1)
-    if reqLvl > 1 and ply:GetLevel() < reqLvl then
+    if reqLvl > 1 and ply:GetLevel() < reqLvl and not newWep.GRID_IsStarterItem then
         GRID.Notify(ply, string.format("You must be Level %d to wield %s!", reqLvl, def and def.name or class),
             NOTIFY_ERROR)
         return true -- Blocks switching to this weapon

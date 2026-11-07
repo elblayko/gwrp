@@ -1,6 +1,6 @@
 --[[
     entities/entities/grid_atm/shared.lua
-    GridRP Street ATM & Syndicate Laundering Terminal - Shared
+    GridRP Street ATM Banking Terminal - Shared
     Author: GRID Core Team & Antigravity
 --]]
 

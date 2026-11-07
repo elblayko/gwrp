@@ -182,7 +182,7 @@ GRID.Database.MariaDBDirectProcedures = {
         local steamID = p[1]
         local bonusCash = tonumber(p[2]) or 3500
         GRID.Database.Execute(GRID.Database.FormatQuery(
-            "UPDATE grid_players SET onboarding_stage = 3, level = GREATEST(level, 2), money = 0, bank = bank + ? WHERE steamid = ? AND onboarding_stage < 3;",
+            "UPDATE grid_players SET onboarding_stage = 3, level = GREATEST(level, 2), bank = bank + ? WHERE steamid = ? AND onboarding_stage < 3;",
             { bonusCash, steamID }
         ), function()
             GRID.Database.Execute(GRID.Database.FormatQuery(
@@ -405,6 +405,12 @@ GRID.Database.DirectViews = {
 
 -- SQLite has no stored procedures (no CALL). Emulate the ones needed for local dev.
 GRID.Database.SQLiteProcedures = {
+    grid_log_telemetry = function(p)
+        return GRID.Database.FormatQuery(
+            "INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (?, ?, ?, ?, ?, ?, ?);",
+            { os.time(), p[1], p[2], p[3], p[4], p[5], p[6] }
+        )
+    end,
     grid_clear_map_turfs = "DELETE FROM grid_turfs WHERE map = ?;",
     grid_save_map_turf = "INSERT OR REPLACE INTO grid_turfs (map, turf_id, name, pos_x, pos_y, pos_z, radius, owner, tax_rate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);",
     grid_delete_map_turf = "DELETE FROM grid_turfs WHERE map = ? AND turf_id = ?;",
@@ -425,7 +431,7 @@ GRID.Database.SQLiteProcedures = {
     grid_complete_onboarding = function(p)
         local steamID = p[1]
         local bonusCash = tonumber(p[2]) or 3500
-        sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET onboarding_stage = 3, level = MAX(level, 2), money = 0, bank = bank + ? WHERE steamid = ? AND onboarding_stage < 3;", { bonusCash, steamID }))
+        sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET onboarding_stage = 3, level = MAX(level, 2), bank = bank + ? WHERE steamid = ? AND onboarding_stage < 3;", { bonusCash, steamID }))
         local qMeta = sql.SQLStr('{"new_level":2}')
         return string.format("INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (%d, 'PLAYER_ACTION', 'ONBOARDING_COMPLETED', %s, '', %d, %s);", os.time(), sql.SQLStr(steamID), bonusCash, qMeta)
     end,
@@ -833,7 +839,6 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
             UPDATE grid_players
             SET onboarding_stage = 3,
                 level = GREATEST(level, 2),
-                money = 0,
                 bank = bank + p_bonus_clean_cash
             WHERE steamid = p_steamid AND onboarding_stage < 3;
 

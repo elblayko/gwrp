@@ -25,9 +25,16 @@ end
 function ENT:Use(activator, caller)
     if not IsValid(activator) or not activator:IsPlayer() then return end
 
-    if activator:GetOnboardingStage() == GRID.Onboarding.STAGE_ROOKIE then
-        GRID.Onboarding.ClaimDeadDrop(activator, self)
-    elseif activator:GetOnboardingStage() > GRID.Onboarding.STAGE_ROOKIE then
+    local rookieStage = (GRID.Onboarding and GRID.Onboarding.STAGE_ROOKIE) or 0
+    local plyStage = activator.GetOnboardingStage and activator:GetOnboardingStage() or 0
+
+    if plyStage == rookieStage then
+        if GRID.Onboarding and GRID.Onboarding.ClaimDeadDrop then
+            GRID.Onboarding.ClaimDeadDrop(activator, self)
+        else
+            GRID.Notify(activator, "Onboarding authority module not loaded yet.", NOTIFY_ERROR, 3)
+        end
+    elseif plyStage > rookieStage then
         GRID.Notify(activator, "You have already claimed your starter dead-drop package.", NOTIFY_GENERIC, 3)
     else
         GRID.Notify(activator, "The locker is locked tight. No drop is pending for you.", NOTIFY_ERROR, 3)

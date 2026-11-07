@@ -11,6 +11,7 @@ SWEP.Category = "GridRP"
 
 SWEP.Spawnable = true
 SWEP.AdminOnly = false
+SWEP.RequiredLevel = 1
 
 SWEP.Slot = 4
 SWEP.SlotPos = 1

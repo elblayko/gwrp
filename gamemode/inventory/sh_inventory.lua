@@ -70,7 +70,7 @@ GRID.Inventory.Items = {
     },
     ["weapon_grid_lockpick"] = {
         name = "Tactical Lockpick",
-        level = 2,
+        level = 1,
         type = "weapon",
         subType = "Infiltration Tool",
         quality = 2, -- Uncommon

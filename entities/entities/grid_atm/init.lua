@@ -1,6 +1,6 @@
 --[[
     entities/entities/grid_atm/init.lua
-    GridRP Street ATM & Syndicate Laundering Terminal - Server
+    GridRP Street ATM Banking Terminal - Server
     Author: GRID Core Team & Antigravity
 --]]
 
@@ -27,12 +27,6 @@ end
 
 function ENT:Use(activator, caller)
     if not IsValid(activator) or not activator:IsPlayer() then return end
-
-    -- Check if completing Onboarding Stage 2 -> 3
-    if activator:GetOnboardingStage() == GRID.Onboarding.STAGE_STASH then
-        GRID.Onboarding.CompleteInitiation(activator, self)
-        return
-    end
 
     -- Regular ATM interface
     net.Start("GRID_ATM_Open")

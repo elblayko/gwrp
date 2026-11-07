@@ -288,7 +288,7 @@ GRID.ShopItems = {
     -- ========================================================
     ["weapon_lockpick"] = {
         name = "Tactical Lockpick",
-        level = 2,
+        level = 1,
         cost = 45,
         type = "weapon",
         class = "weapon_grid_lockpick",
@@ -298,7 +298,7 @@ GRID.ShopItems = {
     },
     ["shipment_lockpick"] = {
         name = "Shipment: Tactical Lockpick (5x)",
-        level = 2,
+        level = 1,
         cost = 120,
         type = "shipment",
         weapon = "weapon_grid_lockpick",

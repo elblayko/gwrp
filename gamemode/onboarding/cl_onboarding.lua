@@ -99,7 +99,7 @@ local function GetCurrentObjectiveTarget(stage)
     elseif stage == GRID.Onboarding.STAGE_DEAD_DROP then
         targetClass = "grid_practice_stash"
     elseif stage == GRID.Onboarding.STAGE_STASH then
-        targetClass = "grid_atm"
+        targetClass = "grid_combat_target"
     else
         return nil
     end
