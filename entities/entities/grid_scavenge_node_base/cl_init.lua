@@ -6,6 +6,4 @@
 
 include("shared.lua")
 
-function ENT:Draw()
-    self:DrawModel()
-end
+-- ENT:Draw is inherited from grid_base_interactive, handling both ENT:DrawModel and ENT.OverheadConfig

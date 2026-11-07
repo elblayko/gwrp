@@ -396,6 +396,10 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
     local tr = ply:GetEyeTrace()
     local ent = tr.Entity
     if IsValid(ent) then
+        if ent.IsGridInteractive and ent.InteractionConfig and ent.InteractionConfig.Enabled ~= false then
+            return
+        end
+
         local distSqr = tr.HitPos:DistToSqr(ply:EyePos())
         if ent.isDoor and ent:isDoor() and distSqr <= (200 * 200) then
             local tagX = ScrW() / 2

@@ -5,7 +5,7 @@
 --]]
 
 ENT.Type = "anim"
-ENT.Base = "base_gmodentity"
+ENT.Base = "grid_base_interactive"
 ENT.PrintName = "Base Scavenge Node"
 ENT.Author = "Juicebox & Antigravity"
 ENT.Spawnable = false
@@ -16,6 +16,87 @@ ENT.IsScavengeNode = true
 ENT.NodeTier = "trashbin"
 ENT.BaseCooldown = 180
 ENT.SearchDuration = 1.5
+
+ENT.OverheadConfig = {
+    Enabled = true,
+    Offset = Vector(0, 0, 48),
+    FaceCamera = true,
+    MaxDistance = 380,
+    FadeStart = 240,
+    Scale = 0.05,
+    GetTitle = function(self)
+        return self.PrintName or "Scavenge Node"
+    end,
+    GetColor = function(self)
+        if self:IsOnCooldown() then
+            return Color(239, 68, 68)
+        end
+        return Color(52, 211, 153)
+    end,
+    GetCustomText = function(self)
+        if self:IsOnCooldown() then
+            local remain = self:GetCooldownRemaining()
+            local mins = math.floor(remain / 60)
+            local secs = remain % 60
+            local timeStr = (mins > 0) and string.format("%dm %02ds", mins, secs) or string.format("%ds", secs)
+            return "Empty - Refreshes in " .. timeStr
+        end
+        return "Searchable - Salvageable Materials"
+    end
+}
+
+ENT.InteractionConfig = {
+    Enabled = true,
+    MaxUseDistance = 160,
+    GetBadge = function(self, ply)
+        if self:IsOnCooldown() then
+            return "PICKED CLEAN"
+        elseif self:GetIsSearching() then
+            return "SEARCHING"
+        end
+        return "SALVAGEABLE"
+    end,
+    GetBadgeColor = function(self, ply)
+        if self:IsOnCooldown() then
+            return Color(239, 68, 68)
+        elseif self:GetIsSearching() then
+            return Color(251, 191, 36)
+        end
+        return Color(52, 211, 153)
+    end,
+    GetTitle = function(self, ply)
+        return self.PrintName or "Scavenge Node"
+    end,
+    GetSubtext = function(self, ply)
+        local tier = self.GetNodeTier and self:GetNodeTier() or "trashbin"
+        local tierSubtitles = {
+            ["dumpster"] = "Industrial Refuse - High Scrap & Tech",
+            ["trashbin"] = "Public Waste Bin - Recyclables & Cash",
+            ["scrappile"] = "Metal Salvage Debris - Scrap & Chemicals"
+        }
+        return tierSubtitles[tier] or "Street Salvage Refuse"
+    end,
+    PrimaryAction = "Rummage",
+    PrimaryKey = "E",
+    ShowProgressBar = true,
+    GetProgress = function(self, ply)
+        if self:GetIsSearching() then
+            local duration = math.max(0.1, self:GetSearchDuration() or 1.5)
+            local progress = math.Clamp((CurTime() - (self:GetSearchStartTime() or CurTime())) / duration, 0, 1)
+            local isMe = (self:GetSearcher() == ply)
+            local text = isMe and string.format("RUMMAGING (%d%%)", math.floor(progress * 100)) or "SEARCH IN PROGRESS"
+            return progress, text
+        elseif self:IsOnCooldown() then
+            local remain = self:GetCooldownRemaining()
+            local text = string.format("COOLDOWN (%ds)", remain)
+            return 0, text
+        end
+        return 0, ""
+    end,
+    CanUse = function(self, ply)
+        return true
+    end
+}
 
 function ENT:SetupDataTables()
     self:NetworkVar("Float", 0, "CooldownExpires")
