@@ -106,6 +106,26 @@ function GRID.Turf.DrawHUD()
         local ownerCol = (GRID.GetGangColor and GRID.GetGangColor(owner)) or Color(245, 158, 11)
         local taxRate = tonumber(activeZone.tax_rate) or 10
 
+        -- Extortion Tax Severity Color & Label:
+        -- Low (<= 10%): Green
+        -- Moderate (11% - 20%): Yellow
+        -- High (21% - 30%): Orange
+        -- Very High (> 30%): Red
+        local taxCol, taxLabel
+        if taxRate <= 10 then
+            taxCol = Color(74, 222, 128)   -- Bright Green
+            taxLabel = "Low"
+        elseif taxRate <= 20 then
+            taxCol = Color(250, 204, 21)  -- Yellow
+            taxLabel = "Moderate"
+        elseif taxRate <= 30 then
+            taxCol = Color(251, 146, 60)  -- Orange
+            taxLabel = "High"
+        else
+            taxCol = Color(248, 113, 113) -- Crimson Red
+            taxLabel = "Very High"
+        end
+
         -- Background obsidian banner card
         draw.RoundedBox(8, cardX, cardY, cardW, cardH, Color(15, 23, 42, math.floor(currentAlpha * 0.94)))
         
@@ -120,9 +140,17 @@ function GRID.Turf.DrawHUD()
         local titleText = string.upper(tostring(activeZone.name or "GANG TERRITORY"))
         draw.SimpleText(titleText, "GRID_UI_Header", cardX + (cardW / 2), cardY + 14, Color(248, 250, 252, math.floor(currentAlpha)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        -- Controller & Extortion Tax Info Subtext
-        local infoText = string.format("Controlled by %s   •   Extortion Tax: %d%%", owner, taxRate)
-        draw.SimpleText(infoText, "GRID_UI_Caption", cardX + (cardW / 2), cardY + 36, Color(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(currentAlpha)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        -- Controller & Color-Coded Extortion Tax Subtext
+        surface.SetFont("GRID_UI_Caption")
+        local prefix = string.format("Controlled by %s   •   Extortion Tax: ", owner)
+        local taxSuffix = string.format("%d%% (%s)", taxRate, taxLabel)
+        local preW = surface.GetTextSize(prefix)
+        local sufW = surface.GetTextSize(taxSuffix)
+        local totalLineW = preW + sufW
+        local startLineX = cardX + (cardW - totalLineW) / 2
+
+        draw.SimpleText(prefix, "GRID_UI_Caption", startLineX, cardY + 36, Color(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(currentAlpha)), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(taxSuffix, "GRID_UI_Caption", startLineX + preW, cardY + 36, Color(taxCol.r, taxCol.g, taxCol.b, math.floor(currentAlpha)), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
     end
 end
 
