@@ -16,6 +16,12 @@ GridRP is a comprehensive, production-grade Garry's Mod roleplay gamemode built 
    - [Architecture](#architecture)
    - [Boot Sequence & Persistence](#boot-sequence--persistence)
    - [Runtime Loops](#runtime-loops)
+   - [Gang Stock Exchange Engine](#gang-stock-exchange-engine)
+   - [Citywide Martial Law & Emergency Lockdown](#citywide-martial-law--emergency-lockdown)
+   - [Law Enforcement & Multi-Cell Corrections System](#law-enforcement--multi-cell-corrections-system)
+   - [Unified Interactive Entity System (`grid_base_interactive`)](#unified-interactive-entity-system-grid_base_interactive)
+   - [Persistent World Entity Engine (`GRID.MapSpawns`)](#persistent-world-entity-engine-gridmapspawns)
+   - [Onboarding & Syndicate Initiation](#onboarding--syndicate-initiation)
    - [Auction House Engine](#auction-house-engine)
    - [Scavenging & Street Recycling Engine](#scavenging--street-recycling-engine)
    - [Dynamic Population Balancer](#dynamic-population-balancer)
@@ -36,6 +42,13 @@ GridRP is a comprehensive, production-grade Garry's Mod roleplay gamemode built 
 
 ## Features
 
+- **Gang Stock Exchange & Public Equity System**: Gang syndicates can launch an Initial Public Offering (IPO) to issue public equity. Real-time dynamic share pricing modeled on active printer yields, territory control, active member count, and combat sentiment shocks. Features interactive line/candlestick charts, ticker tape, ATM banking terminal integration, combat circuit breakers (halts trading for 30s during raids), automated dividend cycles garnishing revenue for shareholders, leader share buybacks, and 100% buyback delisting to allow re-IPOs.
+- **Citywide Martial Law & Emergency Lockdown**: Dynamic citywide lockdown triggered whenever a single street gang conquers 100% of all territorial turf. Triggers emergency audio broadcast sirens, an alert banner across the screen-space HUD, and grants law enforcement emergency powers including warrantless property searches and immediate detention.
+- **Law Enforcement & Multi-Cell Corrections System**: Comprehensive police overhaul featuring non-lethal conductive Tasers (`weapon_grid_taser`) with ragdoll shock physics, police Stun Batons (`weapon_grid_stunstick`) for instant arrest, crime scene forensic blood/casing investigation, warrant voting, and a persistent multi-cell jail system with dynamic cell allocation (`GRID.Jail.GetBestCell`), real-time sentence countdowns, bail bonds, and admin cell boundary tools.
+- **Unified Interactive Entity Base (`grid_base_interactive`)**: Clean object-oriented architecture unifying all world entities (ATMs, computers, flag poles, crafting tables, dead-drop lockers, printers, and scavenge nodes). Replaces cluttered, competing 3D billboard text with unified screen-space HUD interaction prompts and radial sweet-spot venting minigames.
+- **Persistent World Entity Engine (`GRID.MapSpawns`)**: Map-agnostic spawner for ATMs, dead-drop lockers, practice stashes, auction terminals, and scavenge nodes with dual MariaDB persistence and JSON file fallback.
+- **Onboarding & Tactical Initiation**: Live-fire drone trial and lockpicking initiation pipeline (`GRID.Onboarding`) introducing new recruits to combat mechanics and stealth burglary before full gang clearance.
+- **Modernized Obsidian UI Suite**: High-contrast obsidian glassmorphic theme across all Derma dialogs and screen-space HUDs. Features ammo counters, real-time weapon durability bars, color-coded turf extortion tax severity indicators, 16-slot + multi-tier bag inventory grids, and auction collection escrow with 24-hour expiration countdowns.
 - **Player-Driven Auction House**: Map-persistent Auction Terminals and integrated F4 tab featuring real-time bidding, instant buyouts, multi-duration listings (12h, 24h, 48h), listing deposit requirements, a 7.5% house transaction tax sink, database collection escrow, and dynamic attribute badges (combat damage/fire rate modifiers, elemental types, durability meters, and crafter signatures).
 - **Scavenging & Street Recycling Engine**: World-spawned dumpsters, trash bins, and scrap piles with dynamic respawns, weighted salvage pools, Hobo perks (faster search hold and +15% yield), and Recycler Depots featuring multi-category combo bonuses (up to +25%) and 10% gang bank tributes.
 - **Dynamic Population Balancer**: Real-time server monitoring that scales economy mechanics when player counts drop below threshold (<4 players): node cooldowns accelerate (1.5x speed), scavenge loot/cash multipliers increase (1.25x), and territory captures are locked to prevent ghost-town abuse.
@@ -292,11 +305,116 @@ sequenceDiagram
 | :--- | :--- | :--- | :--- |
 | **Payday** | 90 s | `sv_economy` | Each player receives their job salary. |
 | **Turf Dividends** | 90 s | `sv_turf` | Online members of an owning gang (or Police) receive $25 per owned turf and 25 XP. |
+| **Stock Dividend Cycle** | 900 s | `sv_stocks` | Garnishes gang earnings to distribute dividend payouts across public stock shareholders. |
+| **Stock History Snapshot** | 60 s | `sv_stocks` | Records price points for candlestick and line chart rendering. |
+| **Jail Sentence Tick** | 1 s | `sv_jail` | Decrements active prison sentences and checks bail release conditions. |
 | **Printer Cycle** | 20 s | `grid_printer_base` | Adds `PrintAmount x efficiency` to stored cash and raises core temperature. |
 | **Botnet C2 Cycle** | 20 s | `grid_computer` | Generates passive botnet revenue based on connected money printers and Cyber Engineer perk. |
 | **Auction Expirations** | 60 s | `sv_auction` | Sweeps active listings; expired lots are placed in escrow collection via stored procedure. |
 | **Population Balance** | 30 s | `sv_population_balancer` | Evaluates player counts, toggling low-pop mode (<4 players) with dynamic multipliers and alerts. |
 | **Buff Ticks** | Per buff | `sv_buffs` | Processes persistent HoT, poison, taser stuns, and wanted status timers. |
+
+---
+
+### Gang Stock Exchange Engine
+
+The Gang Stock Exchange (`gamemode/stocks/`) introduces a decentralized public equity market where street gangs can list corporate shares, raise capital through Initial Public Offerings (IPOs), and speculate on rival syndicate operations.
+
+```mermaid
+flowchart TD
+    Leader["Gang Leader"] -->|Executes /ipo| IPO["Initial Public Offering"]
+    IPO -->|Issues Shares| Exchange["Gang Stock Exchange"]
+    Civilian["Investors & Civilians"] -->|Buy / Sell Shares| ATM["Obsidian ATM / F4 Tab"]
+    ATM <--> Exchange
+    Printers["Connected Money Printers"] -->|Boost Valuation| Pricing["Dynamic Valuation Formula"]
+    Turf["Captured Turf Flags"] -->|Boost Valuation| Pricing
+    Combat["Raid Damage / Deaths"] -->|Negative Shock| Sentiment["Sentiment Drift"]
+    Sentiment --> Pricing
+    Pricing --> Exchange
+    Earnings["Gang Cash Collections"] -->|10% Garnish| Dividend["Automated Dividend Cycle"]
+    Dividend -->|Payouts every 15m| Civilian
+    Leader -->|Repurchases 100% Shares| Buyback["Share Buyback & Delisting"]
+    Buyback -->|Privatized Syndicate| IPO
+```
+
+- **Initial Public Offering (IPO)**: Gang leaders with sufficient standing can list their gang on the exchange via an ATM or `/ipo`, selecting an initial share issuance (up to 1,000 public shares) and opening public trading.
+- **Dynamic Pricing Formula**: Share prices update algorithmically in real time:
+  ```
+  Price = max(MinPrice, BasePrice + (Printers * PrinterWeight) + (TurfCount * TurfWeight) + (Members * MemberWeight) + SentimentModifier)
+  ```
+  - **Printers**: Active, connected money printers provide fundamental production backing.
+  - **Turf Domination**: Each captured territory flag pole contributes immediate real-estate valuation.
+  - **Sentiment Shocks**: Slaying rival gang members provides positive market sentiment, while member fatalities and lost territories inflict negative sentiment shocks that decay back to zero over time.
+- **Combat Circuit Breakers**: When any member of a publicly traded gang takes combat damage or is killed, trading on that gang's shares is immediately halted for 30 seconds (`GRID.Stocks.TriggerCombatHalt`).
+- **Automated Dividend Cycle**: Every 15 minutes (`GRID.Config.Stocks.DividendInterval`), `GRID.Stocks.ProcessDividendCycle()` garnishes 10% of the gang's revenue and distributes cash dividends proportionally across all public shareholders.
+- **Share Buybacks & Delisting**: Gang leaders can execute share buybacks at current market prices using gang vault funds. If a syndicate repurchases 100% of its publicly issued shares, the company is automatically delisted and returned to private ownership, unlocking the ability to execute a fresh IPO.
+- **Glassmorphic Trading Interface**: Integrated into physical Obsidian ATM terminals and the F4 menu. Displays live candlestick and line charts across selectable timeframes (5m, 15m, 1h, All), real-time order books, portfolio holdings, available share counters, and price alert tickers.
+
+---
+
+### Citywide Martial Law & Emergency Lockdown
+
+GridRP features a dynamic, server-wide Martial Law system monitored by `sv_turf.lua`.
+
+- **Trigger Condition**: Martial Law is automatically declared when a single street gang conquers 100% of all territory flag poles across the map, achieving total territorial hegemony.
+- **Atmospheric Emergency Alert**:
+  - A citywide emergency warning siren echoes across the map.
+  - A persistent, high-contrast emergency banner HUD strip pins to the top of every player's screen with flashing status advisories.
+  - Radio dispatch broadcasts orders to all municipal units.
+- **Emergency Powers & Legal Mechanics**:
+  - **Curfew Enforcement**: All civilians are ordered to remain indoors; unescorted individuals on public streets are designated as high-risk curfew violators.
+  - **Warrantless Search & Seizure**: Police officers are granted temporary authorization to search civilian properties and detain suspects without prior warrant votes.
+  - **Interdiction Bounties**: Police earn increased cash and XP bounties for neutralizing gang members and liberating contested flag poles during the lockdown.
+
+---
+
+### Law Enforcement & Multi-Cell Corrections System
+
+The law enforcement suite (`gamemode/police/`) provides non-lethal apprehension tools, dynamic investigations, and a persistent correctional facility engine.
+
+- **Non-Lethal Conductive Taser (`weapon_grid_taser`)**: Fires electrified twin-dart probes. Upon contact, targets undergo immediate electro-muscular disruption, collapsing into an involuntary physical ragdoll for 5 seconds with screen distortion and electrical crackle audio before recovering.
+- **Police Stun Baton (`weapon_grid_stunstick`)**: Secondary attack immediately restrains wanted suspects on contact, initiating instant booking and transfer into the municipal corrections system.
+- **Persistent Multi-Cell Jail System**:
+  - **Optimal Cell Allocation (`GRID.Jail.GetBestCell`)**: Dynamic routing algorithm automatically allocates incoming prisoners to the jail cell with the lowest current occupancy to prevent overcrowding.
+  - **Real-Time Sentence Countdowns**: Prison sentences scale based on accumulated crimes and Wanted star ratings, decrementing by 1 second on each server tick. Sentences persist across player disconnects, reconnects, and map cleanups via MariaDB records.
+  - **Bail Bond Mechanics (`GRID.Jail.PayBail`)**: Inmates or their associates can pay calculated cash bail at the jail terminal or an ATM to erase their remaining sentence and trigger immediate release.
+  - **Admin Setup & Calibration**: Administrators can configure cell spawn points and release drop zones using `grid_jail_setcell <id>`, `grid_jail_setrelease`, and `grid_jail_clear`.
+- **Crime Scene Investigation & Forensic Evidence**: Firefights dynamically generate blood splatters and spent ballistic bullet casings in world space. Police can inspect forensic markers to identify shooter identities and murder weapons.
+- **Democratic Warrant Voting**: Officers can initiate warrant voting (`/warrant <player> <reason>`), allowing online law enforcement personnel to review evidence and cast real-time votes before authorizing high-risk SWAT compound raids.
+
+---
+
+### Unified Interactive Entity System (`grid_base_interactive`)
+
+To eliminate visual clutter and establish consistent object-oriented entity interactions, GridRP consolidates all world props and interactive machines into a unified base entity (`grid_base_interactive`).
+
+- **Anti-Billboard UX Philosophy**: Traditional floating 3D2D world-space text overlays create visual clutter and tank client render frame rates. `grid_base_interactive` completely eliminates in-world 3D billboards in favor of clean, screen-space HUD interaction prompts rendered only when looking directly at an entity within reach (80-120 units).
+- **Inherited World Entities**: The base powers ATMs, computers, flag poles, crafting tables, dead-drop lockers, practice stashes, money printers, and street scavenge containers.
+- **Screen-Space Sweet-Spot Venting Minigame**: For high-stress interactions such as venting overheating money printers, the entity activates a responsive screen-space HUD gauge. Players press and hold **+USE (E)** to open cooling valves, then release precisely within a moving green sweet spot to safely vent heat without jamming the machine.
+
+---
+
+### Persistent World Entity Engine (`GRID.MapSpawns`)
+
+Implemented in `gamemode/core/sv_mapspawns.lua`, `GRID.MapSpawns` provides an enterprise world persistence architecture that automates utility entity lifecycle management.
+
+- **Automated Lifecycle**: Spawns and tracks ATMs, dead-drop lockers, practice stashes, auction terminals, and scavenge nodes across server boots and `PostCleanupMap` resets.
+- **Dual Persistence Architecture**: Entity transform coordinates, angles, and configuration options are written atomically to MariaDB (`grid_map_spawns`) and mirrored into `garrysmod/data/grid/spawns/<map>.json` for zero-configuration listen server and singleplayer development.
+- **Admin In-World Spawners**: Administrators can reposition and persist entities with a single command (`grid_spawn_atm`, `grid_save_atms`, `grid_spawn_locker`, `grid_save_lockers`, `grid_spawn_stash`, `grid_save_stashes`).
+
+---
+
+### Onboarding & Syndicate Initiation
+
+The initiation pipeline (`GRID.Onboarding`) replaces tedious starter tutorials with a fast-paced, tactical stage-based clearance pipeline:
+
+1. **Stage 0 (City Arrival)**: New players spawn in the transit terminal with essential starting cash and guidance on accessing city services.
+2. **Stage 1 (Burglary & Lockpicking)**: Recruits locate a hidden Practice Stash (`grid_practice_stash`) and crack its tumblers using a tactical lockpick to acquire starter contraband.
+3. **Stage 2 (Live-Fire Tactical Drone Drill)**: Recruits engage automated training drones in a live-fire weapon handling trial, proving aim tracking, recoil mitigation, and cover discipline under live fire.
+4. **Stage 3 (Dead-Drop Extraction)**: Operatives deliver acquired materials to a secure Dead-Drop Locker (`grid_deaddrop_locker`), proving their ability to navigate city surveillance.
+5. **Stage 4 (Syndicate Clearance)**: Recruits achieve full civilian/syndicate clearance, unlocking gang creation privileges, high-tier black-market weapons, and Auction House listings.
+
+---
 
 ---
 
@@ -435,7 +553,7 @@ GridRP implements an enterprise networking model directly within Lua, completely
 
 ## Configuration
 
-Core configuration files are located in `gamemode/core/sh_config.lua` and `gamemode/core/sh_scavenge_config.lua`.
+Core configuration files are located in `gamemode/core/sh_config.lua`, `gamemode/police/sh_jail.lua`, and `gamemode/core/sh_scavenge_config.lua`.
 
 | ConVar / Setting | Default | Description |
 | :--- | :--- | :--- |
@@ -458,6 +576,15 @@ Core configuration files are located in `gamemode/core/sh_config.lua` and `gamem
 | `BotnetBaseTrickle` | 2 | Minimum base cycle payout for the Cloud Botnet C2 daemon. |
 | `BotnetMaxCountedPrinters`| 3 | Maximum networked money printers that scale botnet yield. |
 | `DefaultShopMarkupPercent` | 65 | Retail markup applied to player vendor kiosks. |
+| `Stocks.TotalShares` | 1000 | Total shares issued per syndicate on the Gang Stock Exchange. |
+| `Stocks.MaxSharesForSalePct` | 0.49 | Maximum portion of shares (490 shares) available for public float. |
+| `Stocks.MinVaultForIPO` | 10000 | Minimum gang vault balance required to launch an IPO. |
+| `Stocks.IPOListingFeeFlat` | 1500 | Burned listing fee sink deducted upon IPO execution. |
+| `Stocks.DividendInterval` | 900 | Seconds between automated dividend cycles (15 minutes). |
+| `Stocks.CombatHaltDuration` | 30 | Seconds trading is halted when a gang member is injured or killed. |
+| `Stocks.SentimentDecayRate` | 0.10 | Decay rate per cycle restoring sentiment to 1.0x baseline. |
+| `Jail.DefaultSentence` | 90 | Base prison sentence duration (seconds) per booking. |
+| `Jail.DefaultBail` | 500 | Base cash bail bond cost to purchase immediate jail release. |
 
 ---
 
@@ -467,13 +594,13 @@ Core configuration files are located in `gamemode/core/sh_config.lua` and `gamem
 
 | Command | Binding / Shortcut | Description |
 | :--- | :--- | :--- |
-| **F4** | Keyboard Key | Opens the Command & Commerce Hub (Jobs, Inventory, Auction, Rules, Guide, Gang, Shop). |
+| **F4** | Keyboard Key | Opens the Command & Commerce Hub (Jobs, Inventory, Auction, Stocks, Rules, Guide, Gang, Shop). |
 | **F2** | Keyboard Key | Opens the Door / Property Management menu. |
 | `/inv`, `/inventory`, `/bag` | Chat | Opens your character backpack and bag inventory. |
 | `/dropmoney <amount>` | Chat | Drops a physical stack of cash at your crosshair. |
 | `/drop`, `/dropweapon` | Chat | Drops the currently equipped weapon on the ground. |
 
-### Gang Commands
+### Gang & Market Commands
 
 | Command | Description |
 | :--- | :--- |
@@ -487,6 +614,8 @@ Core configuration files are located in `gamemode/core/sh_config.lua` and `gamem
 | `/gang withdraw <amount>`| Withdraws funds from the syndicate vault (Leader only). |
 | `/settax <5-30>` | Sets territory protection tax rate on civilian printers (Leader only). |
 | `/g <message>`, `/gangchat` | Sends a private message to all online gang members. |
+| `/ipo` | Opens the IPO registration panel at an ATM or F4 Stock tab (Leader only). |
+| `/buyback <shares>` | Repurchases public shares using gang bank vault funds (Leader only). |
 
 ### Law Enforcement Commands
 
@@ -494,6 +623,8 @@ Core configuration files are located in `gamemode/core/sh_config.lua` and `gamem
 | :--- | :--- |
 | `/wanted <player> [reason]` | Issues a formal Wanted warrant for a suspect (survives disconnects). |
 | `/unwanted <player>` | Revokes an active Wanted warrant for a player. |
+| `/warrant <player> [reason]` | Initiates a democratic warrant vote among all online police officers. |
+| `/lockdown` | Declares or terminates Citywide Martial Law (Mayor or Admin only; requires 100% gang turf control). |
 
 ### PC Terminal CLI Commands
 
@@ -514,12 +645,14 @@ Core configuration files are located in `gamemode/core/sh_config.lua` and `gamem
 
 | Command | Console / Chat | Description |
 | :--- | :--- | :--- |
-| `/admin`, `/debug`, `grid_admin` | Both | Opens the interactive Admin Management & Debug HUD. |
+| `/admin`, `/debug`, `grid_admin` | Both | Opens the interactive Admin Management & Debug HUD. Features live role inspection, item debugging, full player database reset (`reset_player`), and holding cell management. |
 | `/turfsetup`, `/adminsetup`, `grid_turfsetup` | Both | Opens the in-game visual Turf Setup & Zone Editor. |
+| `Physgun + USE` | In-World | Holding a Physgun and pressing **+USE (E)** on any persistent entity opens the live Visual Infrastructure Configurator. |
 | `/setmoney <player> <amount>` | Chat | Sets a target player's wallet balance. |
 | `/addmoney <player> <amount>` | Chat | Grants cash to a target player's wallet. |
 | `/setlevel <player> <level>` | Chat (`grid_setlevel`) | Sets a target player's level. |
 | `/addxp <player> <amount>` | Chat (`grid_addxp`) | Grants XP to a target player. |
+| `grid_mapspawns_copy <map>` | Console | Copies persistent world spawns from a source map profile to the active map. |
 | `grid_spawn_auction_terminal` | Console | Spawns an Auction Terminal at crosshair and persists to map. |
 | `grid_save_auction_terminals` | Console | Saves all current Auction Terminals to the map profile. |
 | `grid_scavenge_add <type>` | Console | Spawns and persists a scavenge node (`dumpster`, `trash`, `scrap`, `recycler`). |
@@ -558,9 +691,9 @@ Every job receives baseline items (`weapon_fists`, `weapon_grid_keys`, `weapon_p
 
 | Job & Tier | Stats & Loadout | Core Capabilities & Exclusive Mechanics |
 | :--- | :--- | :--- |
-| **Police Officer**<br>`Lvl 1 - $16/90s - 6 slots` | - Armor: 30<br>- Speed: **230 / 350**<br>- Weapons: Glock, Stunstick, Scanner | Rapid pursuit interceptor (top 350 sprint speed); scans wireless contraband, earns **+50% printer bounties**, 5s rapid respawn timer. |
-| **Police Chief**<br>`Lvl 5 - $25/90s - 1 slot` | - Armor: 50<br>- Speed: 220 / 315<br>- Weapons: Deagle, Shotgun, Stunstick | Tactical commander; coordinates street patrols, issues warrants, initiates city lockdowns. |
-| **SWAT Specialist**<br>`Lvl 7 - $22/90s - 2 slots` | - Armor: **100**<br>- Speed: **160 / 230**<br>- Weapons: Shotgun, Battering Ram | Heavy siege breacher; instant dynamic door breaches with **Battering Ram**, absorbs heavy damage. Heavy speed penalty. |
+| **Police Officer**<br>`Lvl 1 - $16/90s - 6 slots` | - Armor: 30<br>- Speed: **230 / 350**<br>- Weapons: Glock, Stunstick, Taser, Scanner | Rapid pursuit interceptor (top 350 sprint speed); scans wireless contraband, earns **+50% printer bounties**, 5s rapid respawn timer. |
+| **Police Chief**<br>`Lvl 5 - $25/90s - 1 slot` | - Armor: 50<br>- Speed: 220 / 315<br>- Weapons: Deagle, Shotgun, Stunstick, Taser | Tactical commander; coordinates street patrols, issues warrants, initiates city lockdowns. |
+| **SWAT Specialist**<br>`Lvl 7 - $22/90s - 2 slots` | - Armor: **100**<br>- Speed: **160 / 230**<br>- Weapons: Shotgun, Battering Ram, Stunstick, Taser | Heavy siege breacher; instant dynamic door breaches with **Battering Ram**, absorbs heavy damage. Heavy speed penalty. |
 | **Mayor**<br>`Lvl 5 - $35/90s - 1 slot` | - Armor: 25<br>- Speed: 160 / 240<br>- Weapons: Deagle | Chief executive; declares citywide curfews, signs search warrants, manages public governance. High-value VIP target. |
 
 ---
@@ -599,6 +732,24 @@ gridrp/
 |   \---- grid_mariadb_schema.sql     # Complete MariaDB schema (Procedures & Views)
 |---- gamemode/
 |   |---- init.lua, cl_init.lua, shared.lua
+|   |---- stocks/                     # Gang Stock Exchange & Equity System
+|   |   |---- sh_stocks.lua           # Valuation models, pricing constants, network IDs
+|   |   |---- sv_stocks.lua           # Market lifecycle, dividends, circuit breakers, buybacks
+|   |   \---- cl_stocks.lua           # Real-time chart renderer, ticker tape & ATM VGUI
+|   |---- police/                     # Law enforcement & correctional facilities
+|   |   |---- sh_jail.lua             # Shared jail metadata & sentence formulas
+|   |   |---- sv_jail.lua             # Multi-cell allocation, persistent timers, bail bonds
+|   |   |---- cl_jail.lua             # Inmate HUD sentence display & bail dialogue
+|   |   |---- sh_police.lua           # Police radio & faction helpers
+|   |   \---- sv_police.lua           # Crime scene dispatch & warrant vote processing
+|   |---- mapspawns/                  # Persistent world infrastructure (GRID.MapSpawns)
+|   |   |---- sh_map_spawns.lua       # Whitelist registry, prop-block radius & inspector configs
+|   |   |---- sv_map_spawns.lua       # Map lifecycle spawner, DB/JSON persistence & physgun hooks
+|   |   \---- cl_map_spawns.lua       # In-world 3D visual infrastructure inspector
+|   |---- onboarding/                 # Tactical recruit initiation pipeline
+|   |   |---- sh_onboarding.lua       # Clearance stages & task definitions
+|   |   |---- sv_onboarding.lua       # Initiation state engine & database persistence
+|   |   \---- cl_onboarding.lua       # Screen-space objective tracker & navigational waypoints
 |   |---- auction/                    # Global Auction House system
 |   |   |---- sh_auction.lua          # Shared configs, sinks & attribute parsers
 |   |   |---- sv_auction.lua          # Server engine, expiration sweep, escrow
@@ -651,8 +802,12 @@ gridrp/
 |       \---- cl_deathscreen.lua      # Death screen & respawn timer
 \---- entities/
     |---- entities/                   # Scripted entities
+    |   |---- grid_base_interactive/  # Unified interactive prop base (sweet-spot HUD minigames)
+    |   |---- grid_atm/               # Obsidian ATM banking & Stock Exchange terminal
     |   |---- grid_auction_terminal/  # Persistent Auction House terminal
     |   |---- grid_recycler_depot/    # Street Recycling Depot machine
+    |   |---- grid_deaddrop_locker/   # Persistent secure contraband drop locker
+    |   |---- grid_practice_stash/    # Persistent tactical lockpick practice stash
     |   |---- grid_scavenge_dumpster/ # Scavenge container: Dumpster
     |   |---- grid_scavenge_trashbin/ # Scavenge container: Trash Bin
     |   |---- grid_scavenge_scrappile/# Scavenge container: Scrap Pile
@@ -680,6 +835,8 @@ gridrp/
         |---- weapon_grid_shotgun/    # Tactical Pump Shotgun
         |---- weapon_grid_deagle/     # Heavy .50 Desert Eagle
         |---- weapon_grid_ak47/       # Assault Rifle AK-47
+        |---- weapon_grid_taser/      # Conductive electrical taser with ragdoll shock
+        |---- weapon_grid_stunstick/  # Police stun baton with instant arrest & booking
         |---- weapon_grid_wiretool/   # Copper & Fiber network wiring tool
         |---- weapon_grid_repairtool/ # Cryo Calibrator & maintenance tool
         |---- weapon_grid_scanner/    # Police RF contraband detector
