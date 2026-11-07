@@ -91,7 +91,7 @@ function ENT:Draw()
         if not HasLineOfSight(self, eyePos, renderPos) then return end
 
         local toCamera = (eyePos - renderPos):Angle()
-        renderAng = Angle(0, toCamera.y - 90, 90)
+        renderAng = Angle(0, toCamera.y + 90, 90)
     else
         local localOffset = cfg.Offset or Vector(0, 0, 15)
         local worldOffset = self:GetForward() * localOffset.x + self:GetRight() * localOffset.y + self:GetUp() * localOffset.z
@@ -110,7 +110,10 @@ function ENT:Draw()
 
     cam.Start3D2D(renderPos, renderAng, scale)
         if cfg.CustomDraw and isfunction(cfg.CustomDraw) then
-            cfg.CustomDraw(self, renderPos, renderAng, alpha)
+            local success, err = pcall(cfg.CustomDraw, self, renderPos, renderAng, alpha)
+            if not success then
+                ErrorNoHaltWithStack(err)
+            end
         else
             self:DrawDefaultOverhead(alpha, cfg)
         end

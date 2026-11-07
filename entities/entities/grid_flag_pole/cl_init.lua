@@ -12,30 +12,37 @@ surface.CreateFont("GRID_Pole_Title", {
     font = "Roboto",
     size = 38,
     weight = 800,
-    antialias = true
+    antialias = true,
+    extended = true
 })
 surface.CreateFont("GRID_Pole_Sub", {
     font = "Roboto",
     size = 24,
     weight = 700,
-    antialias = true
+    antialias = true,
+    extended = true
 })
 surface.CreateFont("GRID_Pole_Body", {
     font = "Roboto",
     size = 20,
     weight = 500,
-    antialias = true
+    antialias = true,
+    extended = true
 })
 surface.CreateFont("GRID_Pole_Btn", {
     font = "Roboto",
     size = 22,
     weight = 800,
-    antialias = true
+    antialias = true,
+    extended = true
 })
 
 function ENT:DrawBillboardContents(pos, ang, alpha)
     local ply = LocalPlayer()
     if not IsValid(ply) then return end
+
+    local a = math.floor(math.Clamp(alpha or 255, 0, 255))
+    if a <= 0 then return end
 
     local id = self:GetTurfID()
     local zones = GRID.Turf and GRID.Turf.Zones
@@ -84,125 +91,108 @@ function ENT:DrawBillboardContents(pos, ang, alpha)
         end
     end
 
-    -- Project billboard outward from pole center facing toward player camera
-    local toPlayer = (eyePos - polePos)
-    toPlayer.z = 0
-    toPlayer:Normalize()
-
-    -- 22 units outward clears utility pole geometry
-    local billboardPos = polePos + Vector(0, 0, 115) + toPlayer * 22
-
-    -- Angle oriented with normal facing directly to player (+90 ensures proper text winding)
-    local ang = toPlayer:Angle()
-    ang:RotateAroundAxis(ang:Up(), 90)
-    ang:RotateAroundAxis(ang:Forward(), 90)
-
-    local cardW, cardH = 460, 220
+    local cardW, cardH = 380, 170
     local halfW, halfH = cardW / 2, cardH / 2
-    local scale = 0.085
 
-    cam.Start3D2D(billboardPos, ang, scale)
-        -- Glassmorphic Dark Slate Background
-        draw.RoundedBox(8, -halfW, -halfH, cardW, cardH, Color(11, 15, 25, math.min(245, alpha)))
+    -- Glassmorphic Dark Slate Background
+    draw.RoundedBox(8, -halfW, -halfH, cardW, cardH, Color(11, 15, 25, math.min(245, a)))
 
-        -- Accent Top Border
-        local activeBorderCol = isCapturing and capCol or gangCol
-        draw.RoundedBoxEx(8, -halfW, -halfH, cardW, 5, activeBorderCol, true, true, false, false)
-        surface.SetDrawColor(activeBorderCol.r, activeBorderCol.g, activeBorderCol.b, math.min(100, alpha))
-        surface.DrawOutlinedRect(-halfW, -halfH, cardW, cardH, 2)
+    -- Accent Top Border
+    local activeBorderCol = isCapturing and capCol or gangCol
+    draw.RoundedBoxEx(8, -halfW, -halfH, cardW, 4, activeBorderCol, true, true, false, false)
+    surface.SetDrawColor(activeBorderCol.r, activeBorderCol.g, activeBorderCol.b, math.min(120, a))
+    surface.DrawOutlinedRect(-halfW, -halfH, cardW, cardH, 1)
 
-        -- Territory Title
-        draw.SimpleText(zoneName, "GRID_Pole_Title", 0, -halfH + 30, Color(248, 250, 252, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    -- Territory Title
+    draw.SimpleText(zoneName, "GRID_UI_Header", 0, -halfH + 22, Color(248, 250, 252, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        -- Status Pill
-        local pillW, pillH = 360, 32
-        local pillY = -halfH + 56
-        draw.RoundedBox(4, -pillW / 2, pillY, pillW, pillH, Color(24, 32, 47, alpha))
-        draw.RoundedBox(4, -pillW / 2, pillY, 5, pillH, activeBorderCol)
+    -- Status Pill
+    local pillW, pillH = 320, 26
+    local pillY = -halfH + 42
+    draw.RoundedBox(4, -pillW / 2, pillY, pillW, pillH, Color(24, 32, 47, a))
+    draw.RoundedBox(4, -pillW / 2, pillY, 4, pillH, activeBorderCol)
 
-        local statusText = ""
-        local statusCol = gangCol
-        if isCapturing then
-            local pulse = (math.sin(CurTime() * 8) + 1) * 0.5
-            statusCol = Color(capCol.r, capCol.g, capCol.b, math.floor(180 + pulse * 75))
-            statusText = string.format("CONTESTING: %s (%d%%)", string.upper(capturingGang), math.floor(capProgress * 100))
-        elseif isNeutral then
-            statusText = "UNCLAIMED TERRITORY"
-            statusCol = Color(251, 191, 36, alpha)
-        else
-            statusText = "CONTROLLED BY: " .. string.upper(ownerStr)
-            statusCol = gangCol
+    local statusText = ""
+    local statusCol = gangCol
+    if isCapturing then
+        local pulse = (math.sin(CurTime() * 8) + 1) * 0.5
+        statusCol = Color(capCol.r, capCol.g, capCol.b, math.floor(180 + pulse * 75))
+        statusText = string.format("CONTESTING: %s (%d%%)", string.upper(capturingGang), math.floor(capProgress * 100))
+    elseif isNeutral then
+        statusText = "UNCLAIMED TERRITORY"
+        statusCol = Color(251, 191, 36, a)
+    else
+        statusText = "CONTROLLED BY: " .. string.upper(ownerStr)
+        statusCol = gangCol
+    end
+    draw.SimpleText(statusText, "GRID_UI_Badge", 0, pillY + pillH / 2, statusCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+    -- Real-time Progressive Capture Bar
+    local barW, barH = 340, 8
+    local barY = -halfH + 76
+    draw.RoundedBox(4, -barW / 2, barY, barW, barH, Color(30, 41, 59, a))
+
+    if isCapturing then
+        local fillW = math.max(0, barW * capProgress)
+        draw.RoundedBox(4, -barW / 2, barY, fillW, barH, capCol)
+    else
+        local holdProgress = math.Clamp((data.progress or 100) / 100, 0, 1)
+        if holdProgress > 0 and not isNeutral then
+            draw.RoundedBox(4, -barW / 2, barY, barW * holdProgress, barH, gangCol)
         end
-        draw.SimpleText(statusText, "GRID_Pole_Sub", 0, pillY + pillH / 2, statusCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
 
-        -- Real-time Progressive Capture Bar
-        local barW, barH = 390, 10
-        local barY = -halfH + 104
-        draw.RoundedBox(4, -barW / 2, barY, barW, barH, Color(30, 41, 59, alpha))
+    -- Turf Dividends Info
+    local dividendAmt = (GRID.Config and GRID.Config.TurfDividendAmount) or 25
+    local taxRate = data.tax_rate or (zone and zone.tax_rate) or 10
+    local dividendText = (not isNeutral and ownerStr ~= "Police") and string.format("Yield: +$%d/m | Protection Tax: %d%%", dividendAmt, taxRate) or ("Yields +$" .. dividendAmt .. "/m to controlling gang")
+    draw.SimpleText(dividendText, "GRID_UI_Caption", 0, -halfH + 96, Color(148, 163, 184, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        if isCapturing then
-            -- Smooth animated capture fill
-            local fillW = math.max(0, barW * capProgress)
-            draw.RoundedBox(4, -barW / 2, barY, fillW, barH, capCol)
+    -- Interaction / Progress Button
+    local btnW, btnH = 340, 32
+    local btnY = -halfH + 118
+    local btnBg, btnBorder, btnText, btnCol
+
+    if isCapturing then
+        local pct = math.floor(capProgress * 100)
+        if isMyCapture then
+            btnBg = Color(34, 197, 94, math.min(55, a))
+            btnBorder = Color(34, 197, 94, math.min(220, a))
+            btnText = string.format("HOLDING POSITION (%d%%) - Stay Close!", pct)
+            btnCol = Color(74, 222, 128, a)
+        elseif isTeammateCapture then
+            btnBg = Color(56, 189, 248, math.min(55, a))
+            btnBorder = Color(56, 189, 248, math.min(220, a))
+            btnText = string.format("ALLY CAPTURING (%d%%) - Guard Area!", pct)
+            btnCol = Color(125, 211, 252, a)
         else
-            -- Static owner hold bar
-            local holdProgress = math.Clamp((data.progress or 100) / 100, 0, 1)
-            if holdProgress > 0 and not isNeutral then
-                draw.RoundedBox(4, -barW / 2, barY, barW * holdProgress, barH, gangCol)
-            end
+            btnBg = Color(239, 68, 68, math.min(65, a))
+            btnBorder = Color(239, 68, 68, math.min(240, a))
+            btnText = string.format("CONTESTED BY %s (%d%%) - Intercept!", string.upper(capturingGang), pct)
+            btnCol = Color(248, 113, 113, a)
         end
+    elseif isOwner then
+        btnBg = Color(34, 197, 94, math.min(45, a))
+        btnBorder = Color(34, 197, 94, math.min(180, a))
+        local isLeader = ply:GetNWBool("GRID_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
+        btnText = (isLeader and ownerStr ~= "Police") and string.format("[E] Manage Protection Tax (%d%%)", taxRate) or string.format("Controlled by your gang (Tax: %d%%)", taxRate)
+        btnCol = Color(74, 222, 128, a)
+    elseif isNeutral then
+        btnBg = Color(245, 158, 11, math.min(45, a))
+        btnBorder = Color(245, 158, 11, math.min(180, a))
+        btnText = "[E] Claim Territory for Gang"
+        btnCol = Color(251, 191, 36, a)
+    else
+        btnBg = Color(239, 68, 68, math.min(45, a))
+        btnBorder = Color(239, 68, 68, math.min(180, a))
+        btnText = "[E] Contest Territory"
+        btnCol = Color(248, 113, 113, a)
+    end
 
-        -- Turf Dividends Info
-        local dividendAmt = (GRID.Config and GRID.Config.TurfDividendAmount) or 25
-        local taxRate = data.tax_rate or (zone and zone.tax_rate) or 10
-        local dividendText = (not isNeutral and ownerStr ~= "Police") and string.format("Yield: +$%d/m | Protection Tax: %d%%", dividendAmt, taxRate) or ("Yields +$" .. dividendAmt .. "/m to controlling gang")
-        draw.SimpleText(dividendText, "GRID_Pole_Body", 0, -halfH + 130, Color(148, 163, 184, alpha), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-
-        -- Interaction / Progress Button
-        local btnW, btnH = 380, 36
-        local btnY = -halfH + 158
-        local btnBg, btnBorder, btnText, btnCol
-
-        if isCapturing then
-            local pct = math.floor(capProgress * 100)
-            if isMyCapture then
-                btnBg = Color(34, 197, 94, math.min(55, alpha))
-                btnBorder = Color(34, 197, 94, math.min(220, alpha))
-                btnText = string.format("HOLDING POSITION (%d%%) - Stay Close!", pct)
-                btnCol = Color(74, 222, 128, alpha)
-            elseif isTeammateCapture then
-                btnBg = Color(56, 189, 248, math.min(55, alpha))
-                btnBorder = Color(56, 189, 248, math.min(220, alpha))
-                btnText = string.format("ALLY CAPTURING (%d%%) - Guard Area!", pct)
-                btnCol = Color(125, 211, 252, alpha)
-            else
-                btnBg = Color(239, 68, 68, math.min(65, alpha))
-                btnBorder = Color(239, 68, 68, math.min(240, alpha))
-                btnText = string.format("CONTESTED BY %s (%d%%) - Intercept!", string.upper(capturingGang), pct)
-                btnCol = Color(248, 113, 113, alpha)
-            end
-        elseif isOwner then
-            btnBg = Color(34, 197, 94, math.min(45, alpha))
-            btnBorder = Color(34, 197, 94, math.min(180, alpha))
-            local isLeader = ply:GetNWBool("GRID_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
-            btnText = (isLeader and ownerStr ~= "Police") and string.format("Press [E] to Manage Protection Tax (%d%%)", taxRate) or string.format("Controlled by your gang (Tax: %d%%)", taxRate)
-            btnCol = Color(74, 222, 128, alpha)
-        elseif isNeutral then
-            btnBg = Color(245, 158, 11, math.min(45, alpha))
-            btnBorder = Color(245, 158, 11, math.min(180, alpha))
-            btnText = "Press [E] to claim territory"
-            btnCol = Color(251, 191, 36, alpha)
-        else
-            btnBg = Color(239, 68, 68, math.min(45, alpha))
-            btnBorder = Color(239, 68, 68, math.min(180, alpha))
-            btnText = "Press [E] to contest territory"
-            btnCol = Color(248, 113, 113, alpha)
-        end
-
-        draw.RoundedBox(4, -btnW / 2, btnY, btnW, btnH, btnBg)
-        surface.SetDrawColor(btnBorder.r, btnBorder.g, btnBorder.b, btnBorder.a)
-        surface.DrawOutlinedRect(-btnW / 2, btnY, btnW, btnH, 1)
-        draw.SimpleText(btnText, "GRID_Pole_Btn", 0, btnY + btnH / 2, btnCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    draw.RoundedBox(4, -btnW / 2, btnY, btnW, btnH, btnBg)
+    surface.SetDrawColor(btnBorder.r, btnBorder.g, btnBorder.b, btnBorder.a)
+    surface.DrawOutlinedRect(-btnW / 2, btnY, btnW, btnH, 1)
+    draw.SimpleText(btnText, "GRID_UI_Btn", 0, btnY + btnH / 2, btnCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 end
 
 -- ENT:Draw is inherited from grid_base_interactive, calling ENT.OverheadConfig.CustomDraw (DrawBillboardContents)

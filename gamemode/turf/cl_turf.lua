@@ -82,72 +82,145 @@ function GRID.Turf.DrawHUD()
     local ply = LocalPlayer()
     if not IsValid(ply) then return end
 
-    -- Detect if player is currently inside a controlled territory
     local pos = ply:GetPos()
     local activeZone, activeId = nil, nil
     if GRID.Turf and GRID.Turf.GetZoneAtPos then
         activeZone, activeId = GRID.Turf.GetZoneAtPos(pos)
     end
 
-    local isControlled = activeZone and activeZone.owner and activeZone.owner ~= "" and activeZone.owner ~= "neutral"
+    -- Fallback: check nearby flag pole if player is near one
+    if not activeZone then
+        for _, pole in ipairs(ents.FindByClass("grid_flag_pole")) do
+            if IsValid(pole) then
+                local polePos = pole:GetPos()
+                local poleRadius = pole:GetInfluenceRadius()
+                if not poleRadius or poleRadius <= 0 then poleRadius = 800 end
+                if pos:DistToSqr(polePos) <= (poleRadius * poleRadius) then
+                    local id = pole:GetTurfID()
+                    activeId = id
+                    activeZone = (GRID.Turf.Zones and GRID.Turf.Zones[id]) or (GRID.TurfData and GRID.TurfData[id]) or {
+                        id = id,
+                        name = "Territory #" .. id,
+                        owner = "neutral",
+                        progress = 100,
+                        tax_rate = 10,
+                        pos = polePos,
+                        radius = poleRadius
+                    }
+                    break
+                end
+            end
+        end
+    end
 
-    -- Smooth animated fade in/out
-    local targetAlpha = isControlled and 255 or 0
+    -- 1. Draw Top Gang Zones Overview / Domination Pills
+    local zonesList = {}
+    if GRID.Turf and GRID.Turf.Zones then
+        for id, z in pairs(GRID.Turf.Zones) do
+            table.insert(zonesList, z)
+        end
+        table.sort(zonesList, function(a, b) return (a.id or 0) < (b.id or 0) end)
+    end
+
+    local scrW = ScrW()
+    local hasZones = #zonesList > 0
+
+    if hasZones then
+        local maxPillsW = math.min(scrW - 48, #zonesList * 140)
+        local pillW = math.Clamp(math.floor(maxPillsW / #zonesList), 100, 150)
+        local pillH = 24
+        local totalW = #zonesList * pillW + (#zonesList - 1) * 6
+        local startX = (scrW - totalW) / 2
+        local pillY = 10
+
+        for idx, z in ipairs(zonesList) do
+            local zId = z.id or idx
+            local isCurrent = (activeId and zId == activeId)
+            local owner = z.owner
+            local isOwned = (owner and owner ~= "" and owner ~= "neutral")
+            local gangCol = isOwned and (GRID.GetGangColor and GRID.GetGangColor(owner) or Color(168, 85, 247)) or Color(148, 163, 184)
+            local pX = startX + (idx - 1) * (pillW + 6)
+
+            -- Capsule background
+            local bgCol = isCurrent and Color(24, 32, 47, 245) or Color(11, 15, 25, 220)
+            draw.RoundedBox(4, pX, pillY, pillW, pillH, bgCol)
+
+            -- Border outline (highlighted if current)
+            local borderCol = isCurrent and Color(248, 250, 252, 220) or Color(gangCol.r, gangCol.g, gangCol.b, 120)
+            surface.SetDrawColor(borderCol.r, borderCol.g, borderCol.b, borderCol.a)
+            surface.DrawOutlinedRect(pX, pillY, pillW, pillH, isCurrent and 2 or 1)
+
+            -- Left indicator dot
+            draw.RoundedBox(2, pX + 5, pillY + 5, 6, pillH - 10, gangCol)
+
+            -- Zone Name
+            local zName = z.name or ("Zone #" .. zId)
+            local fitZName = (GRID.UI.FitText and GRID.UI.FitText(zName, "GRID_UI_Badge", pillW - 20)) or zName
+            local txtCol = isCurrent and Color(248, 250, 252) or Color(203, 213, 225)
+            draw.SimpleText(fitZName, "GRID_UI_Badge", pX + 16, pillY + pillH / 2, txtCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        end
+    end
+
+    -- 2. Draw Active Territory Banner (Smooth animated fade when inside a zone)
+    local inAnyZone = (activeZone ~= nil)
+    local targetAlpha = inAnyZone and 255 or 0
     currentAlpha = math.Approach(currentAlpha, targetAlpha, FrameTime() * 450)
 
     if currentAlpha > 0 and activeZone then
-        local scrW = ScrW()
-        local cardW = 380
-        local cardH = 54
+        local a = math.floor(currentAlpha)
+        local cardW = 420
+        local cardH = 56
         local cardX = (scrW - cardW) / 2
-        local cardY = 16
+        local cardY = hasZones and 40 or 14
 
         local owner = activeZone.owner
-        local ownerCol = (GRID.GetGangColor and GRID.GetGangColor(owner)) or Color(245, 158, 11)
+        local isOwned = (owner and owner ~= "" and owner ~= "neutral")
+        local ownerCol = isOwned and (GRID.GetGangColor and GRID.GetGangColor(owner) or Color(168, 85, 247)) or Color(251, 191, 36)
         local taxRate = tonumber(activeZone.tax_rate) or 10
 
-        -- Extortion Tax Severity Color:
-        -- Low (<= 10%): Green
-        -- Moderate (11% - 20%): Yellow
-        -- High (21% - 30%): Orange
-        -- Very High (> 30%): Red
-        local taxCol
-        if taxRate <= 10 then
-            taxCol = Color(74, 222, 128)   -- Bright Green
-        elseif taxRate <= 20 then
-            taxCol = Color(250, 204, 21)  -- Yellow
-        elseif taxRate <= 30 then
-            taxCol = Color(251, 146, 60)  -- Orange
-        else
-            taxCol = Color(248, 113, 113) -- Crimson Red
-        end
-
         -- Background obsidian banner card
-        draw.RoundedBox(8, cardX, cardY, cardW, cardH, Color(15, 23, 42, math.floor(currentAlpha * 0.94)))
-        
+        draw.RoundedBox(8, cardX, cardY, cardW, cardH, Color(11, 15, 25, math.floor(a * 0.95)))
+
         -- Border with faction accent
-        surface.SetDrawColor(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(currentAlpha * 0.8))
-        surface.DrawOutlinedRect(cardX, cardY, cardW, cardH, 2)
+        surface.SetDrawColor(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(a * 0.8))
+        surface.DrawOutlinedRect(cardX, cardY, cardW, cardH, 1)
 
         -- Top glowing accent strip
-        draw.RoundedBox(2, cardX, cardY, cardW, 3, Color(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(currentAlpha)))
+        draw.RoundedBoxEx(8, cardX, cardY, cardW, 3, Color(ownerCol.r, ownerCol.g, ownerCol.b, a), true, true, false, false)
 
         -- Territory Name Header (e.g. "DOWNTOWN PLAZA")
-        local titleText = string.upper(tostring(activeZone.name or "GANG TERRITORY"))
-        draw.SimpleText(titleText, "GRID_UI_Header", cardX + (cardW / 2), cardY + 14, Color(248, 250, 252, math.floor(currentAlpha)), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        local titleText = string.upper(tostring(activeZone.name or ("TERRITORY #" .. (activeId or 1))))
+        draw.SimpleText(titleText, "GRID_UI_Header", cardX + (cardW / 2), cardY + 16, Color(248, 250, 252, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
-        -- Controller & Color-Coded Extortion Tax Subtext
-        surface.SetFont("GRID_UI_Caption")
-        local prefix = string.format("Controlled by %s   -   Extortion Tax: ", owner)
-        local taxSuffix = string.format("%d%%", taxRate)
-        local preW = surface.GetTextSize(prefix)
-        local sufW = surface.GetTextSize(taxSuffix)
-        local totalLineW = preW + sufW
-        local startLineX = cardX + (cardW - totalLineW) / 2
+        -- Subtitle: Controlled vs Unclaimed
+        if isOwned then
+            local taxCol
+            if taxRate <= 10 then
+                taxCol = Color(74, 222, 128)
+            elseif taxRate <= 20 then
+                taxCol = Color(250, 204, 21)
+            elseif taxRate <= 30 then
+                taxCol = Color(251, 146, 60)
+            else
+                taxCol = Color(248, 113, 113)
+            end
 
-        draw.SimpleText(prefix, "GRID_UI_Caption", startLineX, cardY + 36, Color(ownerCol.r, ownerCol.g, ownerCol.b, math.floor(currentAlpha)), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        draw.SimpleText(taxSuffix, "GRID_UI_Caption", startLineX + preW, cardY + 36, Color(taxCol.r, taxCol.g, taxCol.b, math.floor(currentAlpha)), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            surface.SetFont("GRID_UI_Caption")
+            local prefix = string.format("Controlled by %s  -  Extortion Tax: ", string.upper(owner))
+            local taxSuffix = string.format("%d%%", taxRate)
+            local preW = surface.GetTextSize(prefix)
+            local sufW = surface.GetTextSize(taxSuffix)
+            local totalLineW = preW + sufW
+            local startLineX = cardX + (cardW - totalLineW) / 2
+
+            draw.SimpleText(prefix, "GRID_UI_Caption", startLineX, cardY + 38, Color(ownerCol.r, ownerCol.g, ownerCol.b, a), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            draw.SimpleText(taxSuffix, "GRID_UI_Caption", startLineX + preW, cardY + 38, Color(taxCol.r, taxCol.g, taxCol.b, a), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        else
+            local unclaimTxt = "Unclaimed Territory  -  Contest Flag Pole to Claim"
+            draw.SimpleText(unclaimTxt, "GRID_UI_Caption", cardX + cardW / 2, cardY + 38, Color(251, 191, 36, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+        end
     end
+end
 end
 
 -- ========================================================

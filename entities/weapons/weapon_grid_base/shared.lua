@@ -241,11 +241,6 @@ if CLIENT then
         surface.DrawLine(x + gap, y, x + len + gap, y)
         surface.DrawLine(x, y - len - gap, x, y - gap)
         surface.DrawLine(x, y + gap, x, y + len + gap)
-
-        -- Durability indicator
-        local dur = self:GetDurability() or 100
-        local durCol = dur > 50 and Color(74, 222, 128, 180) or (dur > 20 and Color(245, 158, 11, 180) or Color(239, 68, 68, 220))
-        draw.SimpleText(string.format("COND: %d%%", dur), "GRID_HUD_Small", x, y + 25, durCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
     end
 
     function SWEP:GetViewModelPosition(pos, ang)

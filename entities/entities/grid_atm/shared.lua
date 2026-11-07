@@ -17,15 +17,15 @@ ENT.TransmitAlways = true
 ENT.OverheadConfig = {
     Enabled = true,
     FaceCamera = true,
-    Offset = Vector(0, 0, 50),
-    MaxDistance = 350,
-    FadeStart = 240,
-    Scale = 0.08,
+    Offset = Vector(0, 0, 48),
+    MaxDistance = 280,
+    FadeStart = 180,
+    Scale = 0.065,
     GetTitle = function(self)
         return "STREET ATM"
     end,
     GetColor = function(self)
-        return Color(34, 197, 94)
+        return Color(52, 211, 153)
     end,
     GetCustomText = function(self)
         return "Personal Banking & Wire Vault"
@@ -37,7 +37,7 @@ ENT.InteractionConfig = {
     MaxUseDistance = 120,
     Badge = "BANKING",
     GetBadgeColor = function(self, ply)
-        return Color(34, 197, 94)
+        return Color(52, 211, 153)
     end,
     GetTitle = function(self, ply)
         return "Street ATM Terminal"

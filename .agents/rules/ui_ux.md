@@ -134,7 +134,7 @@ Always use the standardized dark tactical theme with semi-transparent obsidian s
   - Footer: `56px` tall with player wallet cash balance and drag/drop instructions.
 - **Slot Geometry & Interaction**:
   - Slots: Grid of `64x64px` squares with rounded `6px` sub-card fills `Color(20, 29, 47, 240)`.
-  - Quality border: 1–2px outline tinted to item quality color.
+  - Quality border: 1-2px outline tinted to item quality color.
   - Hover state: Accent glow border with 40% fill brightening.
   - Drag ghost: Floating `64x64px` icon under mouse cursor with item name and quality border.
 
@@ -174,7 +174,7 @@ Always use the standardized dark tactical theme with semi-transparent obsidian s
    - Title: `GRID_UI_Header` rendered in the item's quality color.
    - Description: Wrapped using `GRID.UI.WrapText` with font `GRID_UI_Body` and line height `22px`.
 3. **Pills & Badges**:
-   - Height: 20px–24px.
+   - Height: 20px-24px.
    - Corners: 4px rounded (`draw.RoundedBox(4, ...)`).
    - Text Font: `GRID_UI_Badge` (16pt bold).
    - Fill: Accent color with alpha `35` to `50`; border: accent color with alpha `120` to `160`.
@@ -187,8 +187,9 @@ Rules:
 You must strictly restrict all outputs, code, comments, documentation, and edits to 7-bit ASCII characters (code points 0x00 to 0x7F).
 
 NEVER output any character matching regex: [^\x00-\x7F]
-NO smart/curly quotes (' ', " ") -> use standard straight quotes (', ")
-NO em/en dashes (—, –) -> use standard hyphens (-, --)
-NO bullet glyphs (•, ▪) -> use - or \*
-NO emojis (🚀, ✅), degree symbols (°), or unicode arrows (→) -> use text equivalents ([OK], deg, C, F, ->)
+NO smart/curly quotes -> use standard straight quotes (', ")
+NO em/en dashes -> use standard hyphens (-, --)
+NO bullet glyphs -> use - or *
+NO emojis, degree symbols, or unicode arrows -> use text equivalents ([OK], deg, C, F, ->)
 If non-ASCII values are required in code, use escape sequences (\xNN, \uNNNN) instead of literal characters.
+Avoid using ALL CAPS when it's not necessary.

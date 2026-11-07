@@ -19,6 +19,35 @@ GRID.UI.FitText = GRID.UI.FitText or function(text, font, maxW)
     return s .. "..."
 end
 
+-- Standard Keycap Badge Helper (Reusable across HUD and interactive cards)
+GRID.UI.DrawKeycap = GRID.UI.DrawKeycap or function(x, y, key, label, keyCol, labelCol, fontKey, fontLabel)
+    fontKey = fontKey or "GRID_UI_Badge"
+    fontLabel = fontLabel or "GRID_UI_Caption"
+    keyCol = keyCol or Color(56, 189, 248)
+    labelCol = labelCol or Color(203, 213, 225)
+
+    surface.SetFont(fontKey)
+    local kw, _ = surface.GetTextSize(key)
+    local boxW = kw + 12
+    local boxH = 20
+
+    -- Keycap box
+    draw.RoundedBox(4, x, y - boxH / 2, boxW, boxH, Color(keyCol.r, keyCol.g, keyCol.b, 35))
+    surface.SetDrawColor(keyCol.r, keyCol.g, keyCol.b, 160)
+    surface.DrawOutlinedRect(x, y - boxH / 2, boxW, boxH, 1)
+    draw.SimpleText(key, fontKey, x + boxW / 2, y, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+
+    -- Action label
+    if label and label ~= "" then
+        draw.SimpleText(label, fontLabel, x + boxW + 8, y, labelCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+        surface.SetFont(fontLabel)
+        local lw = surface.GetTextSize(label)
+        return boxW + 8 + lw
+    end
+
+    return boxW
+end
+
 function GRID.UI.CreateFonts()
     local fontConfigs = {
         -- Legacy / In-Game HUD Fonts (Crisp & Readable)
@@ -140,15 +169,37 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
         (jobData.faction and jobData.faction.color or Color(56, 189, 248))
     local badgeText = isGang and (gangName .. " - " .. jobName) or jobName
 
-    -- Background Obsidian Card
-    draw.RoundedBox(8, hudX, hudY, hudW, hudH, Color(11, 15, 25, 246))
+    -- Health & Pulse calculations
+    local curHP = math.max(ply:Health(), 0)
+    local maxHP = math.max(ply:GetMaxHealth(), 100)
+    local curArmor = math.max(ply:Armor(), 0)
+    local maxArmor = math.max(ply:GetMaxArmor() or 100, 100)
+    if maxArmor <= 0 then maxArmor = 100 end
+
+    local curXP = ply.GetXP and ply:GetXP() or 0
+    local maxXP = ply.GetNextLevelXP and ply:GetNextLevelXP() or 1000
+    if maxXP <= 0 then maxXP = 1000 end
+    local maxLvl = (GRID.Config and GRID.Config.Level and GRID.Config.Level.MaxLevel) or 50
+
+    smoothHP = Lerp(FrameTime() * 10, smoothHP or curHP, curHP)
+    smoothArmor = Lerp(FrameTime() * 10, smoothArmor or curArmor, curArmor)
+    smoothXP = Lerp(FrameTime() * 10, smoothXP or curXP, curXP)
+
+    local isLowHP = (curHP / maxHP) <= 0.25
+    local hpPulse = isLowHP and math.abs(math.sin(CurTime() * 4.5)) or 0
+
+    -- Background Obsidian Card with subtle pulse when critical
+    local bgCol = isLowHP and Color(math.floor(Lerp(hpPulse, 11, 32)), 15, 25, 246) or Color(11, 15, 25, 246)
+    draw.RoundedBox(8, hudX, hudY, hudW, hudH, bgCol)
 
     -- Outer Border Outline
-    surface.SetDrawColor(30, 41, 59, 220)
+    local borderCol = isLowHP and Color(math.floor(Lerp(hpPulse, 30, 239)), math.floor(Lerp(hpPulse, 41, 68)), math.floor(Lerp(hpPulse, 59, 68)), math.floor(Lerp(hpPulse, 180, 255))) or Color(30, 41, 59, 220)
+    surface.SetDrawColor(borderCol.r, borderCol.g, borderCol.b, borderCol.a)
     surface.DrawOutlinedRect(hudX, hudY, hudW, hudH, 1)
 
-    -- Left Faction/Gang Identity Accent Strip
-    draw.RoundedBoxEx(8, hudX, hudY, 4, hudH, badgeCol, true, false, true, false)
+    -- Left Faction/Gang Identity Accent Strip (pulses on critical health)
+    local stripCol = isLowHP and Color(239, 68, 68, math.floor(Lerp(hpPulse, 180, 255))) or badgeCol
+    draw.RoundedBoxEx(8, hudX, hudY, 4, hudH, stripCol, true, false, true, false)
 
     -- Top Header Row: Level Badge + Player Name + Faction/Gang Capsule Badge
     local headerY = hudY + 10
@@ -186,46 +237,36 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
     draw.SimpleText(fitNick, "GRID_UI_Sub", nickX, headerY + 11, Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
     -- Interpolated Bars: Health, Armor & XP
-    local curHP = math.max(ply:Health(), 0)
-    local maxHP = math.max(ply:GetMaxHealth(), 100)
-    local curArmor = math.max(ply:Armor(), 0)
-    local maxArmor = math.max(ply:GetMaxArmor() or 100, 100)
-    if maxArmor <= 0 then maxArmor = 100 end
-
-    local curXP = ply.GetXP and ply:GetXP() or 0
-    local maxXP = ply.GetNextLevelXP and ply:GetNextLevelXP() or 1000
-    if maxXP <= 0 then maxXP = 1000 end
-    local maxLvl = (GRID.Config and GRID.Config.Level and GRID.Config.Level.MaxLevel) or 50
-
-    smoothHP = Lerp(FrameTime() * 10, smoothHP or curHP, curHP)
-    smoothArmor = Lerp(FrameTime() * 10, smoothArmor or curArmor, curArmor)
-    smoothXP = Lerp(FrameTime() * 10, smoothXP or curXP, curXP)
-
     local barH = 14
     local barPad = 7
     local trackX = hudX + 14 + 32
     local trackW = hudW - 28 - 32
 
-    -- Row 1: Health Bar (Vibrant Crimson)
+    -- Row 1: Health Bar (Vibrant Crimson with heartbeat warning)
     local hpY = hudY + 40
     local hpFrac = math.Clamp(smoothHP / maxHP, 0, 1)
+    local hpBadgeBg = isLowHP and Color(239, 68, 68, math.floor(Lerp(hpPulse, 40, 100))) or Color(239, 68, 68, 40)
+    local hpBadgeBorder = isLowHP and Color(239, 68, 68, math.floor(Lerp(hpPulse, 140, 240))) or Color(239, 68, 68, 140)
 
-    draw.RoundedBox(4, hudX + 14, hpY, 26, barH, Color(239, 68, 68, 40))
+    draw.RoundedBox(4, hudX + 14, hpY, 26, barH, hpBadgeBg)
+    surface.SetDrawColor(hpBadgeBorder.r, hpBadgeBorder.g, hpBadgeBorder.b, hpBadgeBorder.a)
+    surface.DrawOutlinedRect(hudX + 14, hpY, 26, barH, 1)
     draw.SimpleText("HP", "GRID_UI_Badge", hudX + 14 + 13, hpY + barH / 2, Color(248, 113, 113), TEXT_ALIGN_CENTER,
         TEXT_ALIGN_CENTER)
 
-    draw.RoundedBox(4, trackX, hpY, trackW, barH, Color(17, 24, 39, 200))
+    draw.RoundedBox(4, trackX, hpY, trackW, barH, Color(15, 23, 42, 220))
     surface.SetDrawColor(30, 41, 59, 180)
     surface.DrawOutlinedRect(trackX, hpY, trackW, barH, 1)
 
     if hpFrac > 0 then
         local fillW = math.max(math.floor(trackW * hpFrac), 4)
-        draw.RoundedBox(4, trackX, hpY, fillW, barH, Color(239, 68, 68, 225))
+        local hpFillCol = isLowHP and Color(math.floor(Lerp(hpPulse, 220, 255)), math.floor(Lerp(hpPulse, 38, 90)), math.floor(Lerp(hpPulse, 38, 90)), 235)
+            or Color(239, 68, 68, 225)
+        draw.RoundedBox(4, trackX, hpY, fillW, barH, hpFillCol)
     end
     local hpStr = string.format("%d / %d", math.ceil(curHP), maxHP)
     draw.SimpleText(hpStr, "GRID_UI_Badge", trackX + trackW - 7, hpY + barH / 2 + 1, Color(0, 0, 0, 180),
-        TEXT_ALIGN_RIGHT,
-        TEXT_ALIGN_CENTER)
+        TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     draw.SimpleText(hpStr, "GRID_UI_Badge", trackX + trackW - 8, hpY + barH / 2, Color(255, 255, 255, 240),
         TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
@@ -234,32 +275,40 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
     local armorFrac = math.Clamp(smoothArmor / maxArmor, 0, 1)
 
     draw.RoundedBox(4, hudX + 14, armorY, 26, barH, Color(6, 182, 212, 40))
+    surface.SetDrawColor(6, 182, 212, 120)
+    surface.DrawOutlinedRect(hudX + 14, armorY, 26, barH, 1)
     draw.SimpleText("AP", "GRID_UI_Badge", hudX + 14 + 13, armorY + barH / 2, Color(34, 211, 238), TEXT_ALIGN_CENTER,
         TEXT_ALIGN_CENTER)
 
-    draw.RoundedBox(4, trackX, armorY, trackW, barH, Color(17, 24, 39, 200))
+    draw.RoundedBox(4, trackX, armorY, trackW, barH, Color(15, 23, 42, 220))
     surface.SetDrawColor(30, 41, 59, 180)
     surface.DrawOutlinedRect(trackX, armorY, trackW, barH, 1)
 
     if armorFrac > 0 then
         local fillW = math.max(math.floor(trackW * armorFrac), 4)
         draw.RoundedBox(4, trackX, armorY, fillW, barH, Color(6, 182, 212, 225))
+        local armorStr = string.format("%d / %d", math.ceil(curArmor), maxArmor)
+        draw.SimpleText(armorStr, "GRID_UI_Badge", trackX + trackW - 7, armorY + barH / 2 + 1, Color(0, 0, 0, 180),
+            TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+        draw.SimpleText(armorStr, "GRID_UI_Badge", trackX + trackW - 8, armorY + barH / 2, Color(255, 255, 255, 240),
+            TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+    else
+        local armorStr = "0 / " .. maxArmor
+        draw.SimpleText(armorStr, "GRID_UI_Badge", trackX + trackW - 8, armorY + barH / 2, Color(100, 116, 139, 180),
+            TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
     end
-    local armorStr = string.format("%d / %d", math.ceil(curArmor), maxArmor)
-    draw.SimpleText(armorStr, "GRID_UI_Badge", trackX + trackW - 7, armorY + barH / 2 + 1, Color(0, 0, 0, 180),
-        TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-    draw.SimpleText(armorStr, "GRID_UI_Badge", trackX + trackW - 8, armorY + barH / 2, Color(255, 255, 255, 240),
-        TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
 
     -- Row 3: XP Progress Bar (Amber / Gold)
     local xpY = armorY + barH + barPad
     local xpFrac = (curLevel >= maxLvl) and 1.0 or math.Clamp(smoothXP / maxXP, 0, 1)
 
     draw.RoundedBox(4, hudX + 14, xpY, 26, barH, Color(245, 158, 11, 40))
+    surface.SetDrawColor(245, 158, 11, 120)
+    surface.DrawOutlinedRect(hudX + 14, xpY, 26, barH, 1)
     draw.SimpleText("XP", "GRID_UI_Badge", hudX + 14 + 13, xpY + barH / 2, Color(251, 191, 36), TEXT_ALIGN_CENTER,
         TEXT_ALIGN_CENTER)
 
-    draw.RoundedBox(4, trackX, xpY, trackW, barH, Color(17, 24, 39, 200))
+    draw.RoundedBox(4, trackX, xpY, trackW, barH, Color(15, 23, 42, 220))
     surface.SetDrawColor(30, 41, 59, 180)
     surface.DrawOutlinedRect(trackX, xpY, trackW, barH, 1)
 
@@ -360,33 +409,95 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
     if IsValid(wep) and wep:GetClass() ~= "weapon_grid_keys" and wep:GetClass() ~= "fists" and wep:GetClass() ~= "weapon_fists" then
         local clip = wep:Clip1()
         local ammoType = wep:GetPrimaryAmmoType()
-        local reserve = ply:GetAmmoCount(ammoType)
+        local reserve = (ammoType >= 0) and ply:GetAmmoCount(ammoType) or 0
 
         if clip >= 0 or reserve > 0 then
-            local ammoW, ammoH = 196, 76
+            local maxClip = wep:GetMaxClip1()
+            local hasClip = (clip >= 0)
+            local isLowClip = hasClip and ((maxClip > 0 and (clip / maxClip) <= 0.25) or (maxClip <= 0 and clip <= 5))
+            local isEmptyClip = hasClip and (clip == 0)
+            local ammoPulse = (isEmptyClip or isLowClip) and math.abs(math.sin(CurTime() * 6)) or 0
+
+            local ammoW, ammoH = 228, 82
             local ammoX, ammoY = ScrW() - ammoW - 24, ScrH() - ammoH - 24
 
+            -- Border color with warning pulse
+            local borderCol = isEmptyClip and Color(math.floor(Lerp(ammoPulse, 30, 239)), math.floor(Lerp(ammoPulse, 41, 68)), math.floor(Lerp(ammoPulse, 59, 68)), 240)
+                or (isLowClip and Color(math.floor(Lerp(ammoPulse, 30, 245)), math.floor(Lerp(ammoPulse, 41, 158)), math.floor(Lerp(ammoPulse, 59, 11)), 240)
+                or Color(30, 41, 59, 220))
+
             draw.RoundedBox(8, ammoX, ammoY, ammoW, ammoH, Color(11, 15, 25, 246))
-            surface.SetDrawColor(30, 41, 59, 220)
+            surface.SetDrawColor(borderCol.r, borderCol.g, borderCol.b, borderCol.a)
             surface.DrawOutlinedRect(ammoX, ammoY, ammoW, ammoH, 1)
 
             -- Accent Right Border
-            draw.RoundedBoxEx(8, ammoX + ammoW - 4, ammoY, 4, ammoH, Color(245, 158, 11), false, true, false, true)
+            local accentCol = isEmptyClip and Color(239, 68, 68, math.floor(Lerp(ammoPulse, 160, 255)))
+                or (isLowClip and Color(245, 158, 11, math.floor(Lerp(ammoPulse, 160, 255)))
+                or Color(245, 158, 11, 220))
+            draw.RoundedBoxEx(8, ammoX + ammoW - 4, ammoY, 4, ammoH, accentCol, false, true, false, true)
 
-            -- Weapon Name Pill
+            -- Prominent Weapon Name Header (High-contrast, crisp typography)
             local wepName = wep:GetPrintName() or wep:GetClass()
-            local fitName = (GRID.UI.FitText and GRID.UI.FitText(string.upper(wepName), "GRID_UI_Badge", ammoW - 28)) or
-            string.upper(wepName)
-            draw.SimpleText(fitName, "GRID_UI_Badge", ammoX + 14, ammoY + 16, Color(148, 163, 184), TEXT_ALIGN_LEFT,
+            local fitName = (GRID.UI.FitText and GRID.UI.FitText(string.upper(wepName), "GRID_UI_Sub", ammoW - 28)) or
+                string.upper(wepName)
+            draw.SimpleText(fitName, "GRID_UI_Sub", ammoX + 15, ammoY + 19, Color(0, 0, 0, 180), TEXT_ALIGN_LEFT,
+                TEXT_ALIGN_CENTER)
+            draw.SimpleText(fitName, "GRID_UI_Sub", ammoX + 14, ammoY + 18, Color(248, 250, 252), TEXT_ALIGN_LEFT,
                 TEXT_ALIGN_CENTER)
 
-            if clip >= 0 then
-                draw.SimpleText(tostring(clip), "GRID_FontAmmo", ammoX + ammoW - 14 - 55, ammoY + 52, Color(245, 158, 11),
+            -- Subtle divider line
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawLine(ammoX + 14, ammoY + 32, ammoX + ammoW - 14, ammoY + 32)
+
+            -- Left side: Weapon Durability / Condition Meter (if weapon tracks durability)
+            local dur = (wep.GetDurability and wep:GetDurability())
+            if dur ~= nil then
+                local durFrac = math.Clamp(dur / 100, 0, 1)
+                local durCol = dur > 50 and Color(52, 211, 153) or (dur > 20 and Color(251, 191, 36) or Color(239, 68, 68))
+                local isLowDur = dur <= 20
+                local durPulse = isLowDur and math.abs(math.sin(CurTime() * 5)) or 0
+                if isLowDur then
+                    durCol = Color(math.floor(Lerp(durPulse, 220, 255)), math.floor(Lerp(durPulse, 38, 90)), math.floor(Lerp(durPulse, 38, 90)))
+                end
+
+                local durX = ammoX + 14
+                local durY = ammoY + 46
+                local durTrackW = 72
+                local durTrackH = 6
+
+                draw.SimpleText(string.format("COND %d%%", math.ceil(dur)), "GRID_UI_Caption", durX, durY, durCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+                -- Mini track
+                draw.RoundedBox(3, durX, durY + 11, durTrackW, durTrackH, Color(15, 23, 42, 220))
+                surface.SetDrawColor(30, 41, 59, 180)
+                surface.DrawOutlinedRect(durX, durY + 11, durTrackW, durTrackH, 1)
+
+                if durFrac > 0 then
+                    local fillW = math.max(3, math.floor(durTrackW * durFrac))
+                    draw.RoundedBox(3, durX, durY + 11, fillW, durTrackH, durCol)
+                end
+            end
+
+            -- Clip Number Color
+            local clipCol = isEmptyClip and Color(239, 68, 68)
+                or (isLowClip and Color(251, 191, 36)
+                or Color(245, 158, 11))
+
+            if hasClip then
+                surface.SetFont("GRID_UI_Sub")
+                local reserveStr = "/ " .. tostring(reserve)
+                local resW = surface.GetTextSize(reserveStr)
+                local resX = ammoX + ammoW - 14
+
+                draw.SimpleText(reserveStr, "GRID_UI_Sub", resX, ammoY + 56, Color(203, 213, 225),
                     TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
-                draw.SimpleText("/ " .. reserve, "GRID_UI_Sub", ammoX + ammoW - 14, ammoY + 55, Color(203, 213, 225),
+
+                local clipStr = tostring(clip)
+                local clipX = resX - resW - 8
+                draw.SimpleText(clipStr, "GRID_FontAmmo", clipX, ammoY + 54, clipCol,
                     TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
             else
-                draw.SimpleText(tostring(reserve), "GRID_FontAmmo", ammoX + ammoW - 14, ammoY + 52, Color(245, 158, 11),
+                draw.SimpleText(tostring(reserve), "GRID_FontAmmo", ammoX + ammoW - 14, ammoY + 54, Color(245, 158, 11),
                     TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
             end
         end
@@ -401,7 +512,92 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
         end
 
         local distSqr = tr.HitPos:DistToSqr(ply:EyePos())
-        if ent.isDoor and ent:isDoor() and distSqr <= (200 * 200) then
+        -- Up-Close Raycast UI: Dropped Weapon on the Ground
+        if ent:IsWeapon() and not IsValid(ent:GetOwner()) and distSqr <= (180 * 180) then
+            local tagX = ScrW() / 2
+            local tagY = ScrH() / 2 + 36
+
+            local cardW = 340
+            local cardH = 96
+            local cardX = tagX - cardW / 2
+
+            -- Quality / Rarity metadata
+            local qData = ent.GetItemQualityData and ent:GetItemQualityData() or nil
+            local accentCol = qData and qData.color or Color(245, 158, 11)
+            local badgeText = qData and qData.name or "FIREARM"
+
+            -- Resolve Weapon Name
+            local wepName = ent.PrintName
+            if not wepName or wepName == "" then
+                if ent.GetPrintName then wepName = ent:GetPrintName() end
+            end
+            if not wepName or wepName == "" then
+                local def = GRID.Inventory and GRID.Inventory.GetItemData and GRID.Inventory.GetItemData(ent:GetClass())
+                if def and def.name then wepName = def.name end
+            end
+            wepName = wepName or ent:GetClass()
+
+            -- Measure Badge Width
+            surface.SetFont("GRID_UI_Badge")
+            local bTextW = surface.GetTextSize(badgeText)
+            local badgeW = bTextW + 16
+
+            -- Card Background
+            draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 200)
+            surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
+
+            -- Top Accent Line
+            draw.RoundedBoxEx(8, cardX, tagY, cardW, 3, accentCol, true, true, false, false)
+
+            -- Row 1: Badge + Name
+            draw.RoundedBox(4, cardX + 8, tagY + 8, badgeW, 20, Color(accentCol.r, accentCol.g, accentCol.b, 40))
+            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 160)
+            surface.DrawOutlinedRect(cardX + 8, tagY + 8, badgeW, 20, 1)
+            draw.SimpleText(badgeText, "GRID_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER,
+                TEXT_ALIGN_CENTER)
+
+            local maxTitleW = cardW - badgeW - 24
+            local fitTitle = (GRID.UI.FitText and GRID.UI.FitText(wepName, "GRID_UI_Badge", maxTitleW)) or wepName
+            draw.SimpleText(fitTitle, "GRID_UI_Badge", cardX + badgeW + 16, tagY + 18, Color(248, 250, 252),
+                TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+            -- Row 2: Condition / Durability & Loaded Ammo
+            local dur = (ent.GetDurability and ent:GetDurability())
+            local clip = ent:Clip1()
+
+            if dur ~= nil then
+                local durFrac = math.Clamp(dur / 100, 0, 1)
+                local durCol = dur > 50 and Color(52, 211, 153) or (dur > 20 and Color(251, 191, 36) or Color(239, 68, 68))
+                local condStr = string.format("Condition: %d%%", math.ceil(dur))
+                draw.SimpleText(condStr, "GRID_FontSmall", cardX + 12, tagY + 41, durCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+
+                if clip and clip >= 0 then
+                    local clipStr = string.format("Loaded: %d rds", clip)
+                    draw.SimpleText(clipStr, "GRID_UI_Caption", cardX + cardW - 12, tagY + 41, Color(203, 213, 225), TEXT_ALIGN_RIGHT, TEXT_ALIGN_CENTER)
+                end
+
+                -- Condition mini-track
+                local barW = cardW - 24
+                local barH = 5
+                local barX = cardX + 12
+                local barY = tagY + 52
+                draw.RoundedBox(3, barX, barY, barW, barH, Color(15, 23, 42, 220))
+                surface.SetDrawColor(30, 41, 59, 180)
+                surface.DrawOutlinedRect(barX, barY, barW, barH, 1)
+
+                if durFrac > 0 then
+                    local fillW = math.max(3, math.floor(barW * durFrac))
+                    draw.RoundedBox(3, barX, barY, fillW, barH, durCol)
+                end
+            else
+                local subInfo = (clip and clip >= 0) and string.format("Loaded: %d rounds", clip) or "Ground Firearm"
+                draw.SimpleText(subInfo, "GRID_FontSmall", cardX + 12, tagY + 44, Color(148, 163, 184), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            end
+
+            -- Row 3: Pickup Keycap
+            GRID.UI.DrawKeycap(cardX + 12, tagY + cardH - 18, "E", "Pick Up Weapon", accentCol, Color(248, 250, 252))
+        elseif ent.isDoor and ent:isDoor() and distSqr <= (200 * 200) then
             local tagX = ScrW() / 2
             local tagY = ScrH() / 2 + 36
 
@@ -426,7 +622,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
             local titleText = "Property Available"
             local subText = string.format("Purchase Cost: $%s", string.Comma(cost))
             local subCol = Color(74, 222, 128)
-            local promptText = "[F2] Purchase Door"
+            local promptKey = "F2"
+            local promptAction = "Purchase Property"
             local promptCol = Color(248, 250, 252)
 
             if isOwner then
@@ -437,7 +634,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     "Private Residence"
                 subText = gangStr
                 subCol = Color(148, 163, 184)
-                promptText = "[F2] Manage / Sell Property"
+                promptKey = "F2"
+                promptAction = "Manage / Sell Property"
                 promptCol = Color(74, 222, 128)
             elseif isOwned then
                 local gangCol = (gangName ~= "" and gangName ~= "neutral" and getGangCol) and getGangCol(gangName) or nil
@@ -447,7 +645,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                     titleText = owner:Nick()
                     subText = string.format("Gang: %s  -  Access Permitted", string.upper(gangName))
                     subCol = Color(52, 211, 153)
-                    promptText = "[Shared Property]"
+                    promptKey = nil
+                    promptAction = "Shared Property"
                     promptCol = Color(203, 213, 225)
                 else
                     accentCol = gangCol or Color(251, 191, 36)
@@ -457,7 +656,8 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                         ("Faction: " .. string.upper(gangName)) or "Private Residence"
                     subText = gangStr
                     subCol = Color(148, 163, 184)
-                    promptText = "Restricted Access  -  Trespassers Beware"
+                    promptKey = nil
+                    promptAction = "Restricted Access  -  Trespassers Beware"
                     promptCol = Color(239, 68, 68)
                 end
             end
@@ -491,8 +691,12 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
             draw.SimpleText(subText, "GRID_FontSmall", cardX + 12, tagY + 44, subCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Row 3: Prompt Action
-            draw.SimpleText(promptText, "GRID_UI_Caption", cardX + 12, tagY + 68, promptCol, TEXT_ALIGN_LEFT,
-                TEXT_ALIGN_CENTER)
+            if promptKey then
+                GRID.UI.DrawKeycap(cardX + 12, tagY + 68, promptKey, promptAction, accentCol, promptCol)
+            else
+                draw.SimpleText(promptAction, "GRID_UI_Caption", cardX + 12, tagY + 68, promptCol, TEXT_ALIGN_LEFT,
+                    TEXT_ALIGN_CENTER)
+            end
         elseif distSqr <= (160 * 160) and ent:GetClass() == "grid_clinic_pod" then
             local tagX = ScrW() / 2
             local tagY = ScrH() / 2 + 36
@@ -594,8 +798,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
                 draw.SimpleText("Empty - Refreshes in " .. timeStr, "GRID_UI_Caption", cardX + 12, tagY + 68,
                     Color(248, 113, 113), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             else
-                draw.SimpleText("[E] Hold to Rummage & Scavenge", "GRID_UI_Caption", cardX + 12, tagY + 68,
-                    Color(52, 211, 153), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                GRID.UI.DrawKeycap(cardX + 12, tagY + 68, "E", "Hold to Rummage & Scavenge", Color(52, 211, 153), Color(248, 250, 252))
             end
             -- Up-Close Raycast UI: Street Recycling Depot
         elseif distSqr <= (160 * 160) and ent:GetClass() == "grid_recycler_depot" then
@@ -647,51 +850,7 @@ hook.Add("HUDPaint", "GRID_DrawMainHUD", function()
             draw.SimpleText(subText, "GRID_FontSmall", cardX + 12, tagY + 44, subCol, TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
 
             -- Row 3: Action Prompt
-            draw.SimpleText("[E] Access Recycler & Compactor", "GRID_UI_Caption", cardX + 12, tagY + 68,
-                Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-        -- Up-Close Raycast UI: Auction House Terminal
-        elseif distSqr <= (180 * 180) and ent:GetClass() == "grid_auction_terminal" then
-            local tagX = ScrW() / 2
-            local tagY = ScrH() / 2 + 36
-
-            local cardW = 340
-            local cardH = 92
-            local cardX = tagX - cardW / 2
-
-            local accentCol = Color(6, 182, 212)
-            local badgeText = "EXCHANGE"
-
-            surface.SetFont("GRID_UI_Badge")
-            local bTextW = surface.GetTextSize(badgeText)
-            local badgeW = bTextW + 16
-
-            -- Card Background
-            draw.RoundedBox(8, cardX, tagY, cardW, cardH, Color(11, 15, 25, 245))
-            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 200)
-            surface.DrawOutlinedRect(cardX, tagY, cardW, cardH, 1)
-
-            -- Top Accent Line
-            draw.RoundedBoxEx(8, cardX, tagY, cardW, 3, accentCol, true, true, false, false)
-
-            -- Row 1: Badge + Name
-            draw.RoundedBox(4, cardX + 8, tagY + 8, badgeW, 20, Color(accentCol.r, accentCol.g, accentCol.b, 40))
-            surface.SetDrawColor(accentCol.r, accentCol.g, accentCol.b, 160)
-            surface.DrawOutlinedRect(cardX + 8, tagY + 8, badgeW, 20, 1)
-            draw.SimpleText(badgeText, "GRID_UI_Badge", cardX + 8 + badgeW / 2, tagY + 18, accentCol, TEXT_ALIGN_CENTER,
-                TEXT_ALIGN_CENTER)
-
-            draw.SimpleText("Auction House Terminal", "GRID_UI_Badge", cardX + badgeW + 16, tagY + 18,
-                Color(248, 250, 252), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-
-            -- Row 2: Subtitle Info
-            local totalListings = (GRID.Auction and GRID.Auction.Listings) and #GRID.Auction.Listings or 0
-            local subText = string.format("Marketplace Hub  -  %d Active Listings", totalListings)
-            draw.SimpleText(subText, "GRID_FontSmall", cardX + 12, tagY + 44, Color(148, 163, 184), TEXT_ALIGN_LEFT,
-                TEXT_ALIGN_CENTER)
-
-            -- Row 3: Action Prompt
-            draw.SimpleText("[E] Access Auction Terminal", "GRID_UI_Caption", cardX + 12, tagY + 68,
-                Color(74, 222, 128), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+            GRID.UI.DrawKeycap(cardX + 12, tagY + 68, "E", "Access Recycler & Compactor", Color(52, 211, 153), Color(248, 250, 252))
         elseif distSqr <= (160 * 160) and ent.HasItemQuality and ent:HasItemQuality() then
             local qData = ent:GetItemQualityData()
             if qData then
