@@ -148,7 +148,14 @@ function ENT:DrawBillboardContents(pos, ang, alpha)
     -- Turf Dividends Info
     local dividendAmt = (GRID.Config and GRID.Config.TurfDividendAmount) or 25
     local taxRate = data.tax_rate or (zone and zone.tax_rate) or 10
-    local dividendText = (not isNeutral and ownerStr ~= "Police") and string.format("Yield: +$%d/m | Protection Tax: %d%%", dividendAmt, taxRate) or ("Yields +$" .. dividendAmt .. "/m to controlling gang")
+    local dividendText
+    if ownerStr == "Police" then
+        dividendText = string.format("Secured Police District | Stipend: +$%d/m", dividendAmt)
+    elseif not isNeutral then
+        dividendText = string.format("Yield: +$%d/m | Extortion Tax: %d%%", dividendAmt, taxRate)
+    else
+        dividendText = string.format("Yields +$%d/m to controlling syndicate", dividendAmt)
+    end
     draw.SimpleText(dividendText, "GRID_UI_Caption", 0, -halfH + 96, Color(148, 163, 184, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
 
     -- Interaction / Progress Button
@@ -177,13 +184,19 @@ function ENT:DrawBillboardContents(pos, ang, alpha)
     elseif isOwner then
         btnBg = Color(34, 197, 94, math.min(45, a))
         btnBorder = Color(34, 197, 94, math.min(180, a))
-        local isLeader = ply:GetNWBool("GRID_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
-        btnText = (isLeader and ownerStr ~= "Police") and string.format("[E] Manage Protection Tax (%d%%)", taxRate) or string.format("Controlled by your gang (Tax: %d%%)", taxRate)
+        if ownerStr == "Police" then
+            btnText = "Secured Police Jurisdiction"
+        else
+            local isLeader = ply:GetNWBool("GRID_IsGangLeader", false) or (ply.GetJob and ply:GetJob() == "gang_leader") or ply:IsAdmin()
+            btnText = isLeader and string.format("[E] Manage Extortion Tax (%d%%)", taxRate) or string.format("Controlled by your gang (Tax: %d%%)", taxRate)
+        end
         btnCol = Color(74, 222, 128, a)
     elseif isNeutral then
         btnBg = Color(245, 158, 11, math.min(45, a))
         btnBorder = Color(245, 158, 11, math.min(180, a))
-        btnText = "[E] Claim Territory for Gang"
+        local plyFaction = ply.GetFaction and ply:GetFaction()
+        local isPolice = plyFaction and plyFaction.id == "police"
+        btnText = isPolice and "[E] Secure District for Police" or "[E] Claim Territory for Gang"
         btnCol = Color(251, 191, 36, a)
     else
         btnBg = Color(239, 68, 68, math.min(45, a))

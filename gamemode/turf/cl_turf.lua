@@ -218,27 +218,32 @@ function GRID.Turf.DrawHUD()
 
         -- Subtitle: Controlled vs Unclaimed
         if isOwned then
-            local taxCol
-            if taxRate <= 10 then
-                taxCol = Color(74, 222, 128)
-            elseif taxRate <= 20 then
-                taxCol = Color(250, 204, 21)
-            elseif taxRate <= 30 then
-                taxCol = Color(251, 146, 60)
+            if owner == "Police" then
+                local policeTxt = "Secured District  -  Law Enforcement Jurisdiction"
+                draw.SimpleText(policeTxt, "GRID_UI_Caption", cardX + cardW / 2, cardY + 38, Color(56, 189, 248, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
             else
-                taxCol = Color(248, 113, 113)
+                local taxCol
+                if taxRate <= 10 then
+                    taxCol = Color(74, 222, 128)
+                elseif taxRate <= 20 then
+                    taxCol = Color(250, 204, 21)
+                elseif taxRate <= 30 then
+                    taxCol = Color(251, 146, 60)
+                else
+                    taxCol = Color(248, 113, 113)
+                end
+
+                surface.SetFont("GRID_UI_Caption")
+                local prefix = string.format("Controlled by %s  -  Extortion Tax: ", string.upper(owner))
+                local taxSuffix = string.format("%d%%", taxRate)
+                local preW = surface.GetTextSize(prefix)
+                local sufW = surface.GetTextSize(taxSuffix)
+                local totalLineW = preW + sufW
+                local startLineX = cardX + (cardW - totalLineW) / 2
+
+                draw.SimpleText(prefix, "GRID_UI_Caption", startLineX, cardY + 38, Color(ownerCol.r, ownerCol.g, ownerCol.b, a), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
+                draw.SimpleText(taxSuffix, "GRID_UI_Caption", startLineX + preW, cardY + 38, Color(taxCol.r, taxCol.g, taxCol.b, a), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
             end
-
-            surface.SetFont("GRID_UI_Caption")
-            local prefix = string.format("Controlled by %s  -  Extortion Tax: ", string.upper(owner))
-            local taxSuffix = string.format("%d%%", taxRate)
-            local preW = surface.GetTextSize(prefix)
-            local sufW = surface.GetTextSize(taxSuffix)
-            local totalLineW = preW + sufW
-            local startLineX = cardX + (cardW - totalLineW) / 2
-
-            draw.SimpleText(prefix, "GRID_UI_Caption", startLineX, cardY + 38, Color(ownerCol.r, ownerCol.g, ownerCol.b, a), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
-            draw.SimpleText(taxSuffix, "GRID_UI_Caption", startLineX + preW, cardY + 38, Color(taxCol.r, taxCol.g, taxCol.b, a), TEXT_ALIGN_LEFT, TEXT_ALIGN_CENTER)
         else
             local unclaimTxt = "Unclaimed Territory  -  Contest Flag Pole to Claim"
             draw.SimpleText(unclaimTxt, "GRID_UI_Caption", cardX + cardW / 2, cardY + 38, Color(251, 191, 36, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)

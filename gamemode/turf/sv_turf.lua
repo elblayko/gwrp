@@ -257,6 +257,12 @@ function GRID.Turf.FinalizeCapture(turfId, ply, claimant)
     zone.owner = claimant
     zone.progress = 100
     zone.captured_at = os.time()
+    if claimant == "Police" then
+        zone.tax_rate = 0
+    elseif (zone.tax_rate or 0) <= 0 then
+        zone.tax_rate = 10
+    end
+
     GRID.Turf.SaveMapProfile()
     GRID.Turf.BroadcastUpdate(turfId)
 
@@ -308,6 +314,13 @@ function GRID.Turf.SetTaxRate(turfId, taxRate, ply)
     local zone = GRID.Turf.Zones[turfId]
     if not zone then
         if IsValid(ply) then GRID.Notify(ply, "Invalid turf zone!", NOTIFY_ERROR) end
+        return false
+    end
+
+    if zone.owner == "Police" then
+        if IsValid(ply) then
+            GRID.Notify(ply, "Police territories do not enforce extortion taxes!", NOTIFY_ERROR)
+        end
         return false
     end
 

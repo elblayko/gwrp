@@ -70,7 +70,9 @@ ENT.InteractionConfig = {
         local nwOwner = self:GetNWString("GRID_ZoneOwner", "")
         local owner = (tData and tData.owner) or (zone and zone.owner) or (nwOwner ~= "" and nwOwner) or "neutral"
         local tax = (tData and tData.tax_rate) or (zone and zone.tax_rate) or self:GetNWInt("GRID_TaxRate", 10)
-        if owner ~= "" and owner ~= "neutral" then
+        if owner == "Police" then
+            return "Secured District - Law Enforcement Jurisdiction"
+        elseif owner ~= "" and owner ~= "neutral" then
             return string.format("Controlled by: %s  |  Extortion Tax: %d%%", string.upper(owner), tax)
         end
         return "Unclaimed District - Ripe for Syndicate Takeover"

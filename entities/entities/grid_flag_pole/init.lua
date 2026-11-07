@@ -78,6 +78,11 @@ function ENT:Use(activator, caller)
     end
 
     if string.lower(zone.owner or "") == string.lower(claimant) then
+        if string.lower(claimant) == "police" then
+            GRID.Notify(activator, string.format("%s is secured under Police Jurisdiction.", zone.name), NOTIFY_GENERIC)
+            return
+        end
+
         if activator:GetNWBool("GRID_IsGangLeader", false) or (activator.GetJob and activator:GetJob() == "gang_leader") or activator:IsAdmin() then
             local gData = GRID.Database and GRID.Database.GetGang and GRID.Database.GetGang(claimant)
             local bank = gData and gData.bank or 0
