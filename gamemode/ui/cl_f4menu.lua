@@ -237,6 +237,15 @@ function GRID.UI.ToggleF4Menu()
         table.insert(navSections[4].tabs, { id = "debug_buffs", title = "Debug Buffs", badge = "Admin" })
     end
 
+    if ply:IsPolice() then
+        local isMayor = (ply.GetJob and ply:GetJob() == "mayor")
+        table.insert(navSections[1].tabs, {
+            id = "police_dispatch",
+            title = isMayor and "Mayor Warrants" or "Police Dispatch",
+            badge = isMayor and "Mayor" or "LSPD"
+        })
+    end
+
     -- Sidebar Scrollable Button List
     local navScroll = vgui.Create("DScrollPanel", sidebar)
     navScroll:SetPos(6, 8)
@@ -454,6 +463,8 @@ function GRID.UI.RenderContentTab(container, tabId, mainFrame)
         GRID.UI.RenderGangContent(scroll, mainFrame)
     elseif tabId == "inventory" then
         GRID.UI.PopulateInventoryGrid(scroll, mainFrame, "")
+    elseif tabId == "police_dispatch" then
+        GRID.UI.RenderPoliceDispatchContent(scroll, mainFrame)
     else
         GRID.UI.PopulateGrid(scroll, tabId, mainFrame, "")
     end
@@ -1925,4 +1936,222 @@ function GRID.UI.RenderRulesContent(scroll)
             end
         end
     end
+end
+
+-- ==========================================
+-- POLICE DISPATCH & WARRANT MANAGEMENT TAB
+-- ==========================================
+
+function GRID.UI.RenderPoliceDispatchContent(scroll, mainFrame)
+    local ply = LocalPlayer()
+    local isMayor = IsValid(ply) and (ply.GetJob and ply:GetJob() == "mayor")
+
+    local scrollW = scroll:GetWide() - 32
+    local totalH = math.max(scroll:GetTall() - 20, 520)
+
+    local container = scroll:Add("DPanel")
+    container:Dock(TOP)
+    container:SetTall(totalH)
+    container.Paint = function() end
+
+    -- Top Header Card
+    local headerCard = vgui.Create("DPanel", container)
+    headerCard:SetPos(0, 0)
+    headerCard:SetSize(scrollW, 64)
+    headerCard.Paint = function(s, w, h)
+        draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 230))
+        local accent = isMayor and Color(245, 158, 11) or Color(6, 182, 212)
+        draw.RoundedBoxEx(8, 0, 0, w, 3, accent, true, true, false, false)
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+        local title = isMayor and "MAYOR EXECUTIVE WARRANT BUREAU" or "LSPD TACTICAL DISPATCH & WARRANTS"
+        local sub = isMayor and "Issue immediate executive search & arrest warrants on metropolitan suspects." or
+            "Submit suspect warrants for departmental majority vote or track active fugitives."
+        draw.SimpleText(title, "GRID_UI_Header", 16, 14, Color(248, 250, 252))
+        draw.SimpleText(sub, "GRID_UI_Caption", 16, 38, Color(148, 163, 184))
+    end
+
+    local bodyY = 76
+    local bodyH = totalH - bodyY
+    local leftW = math.floor(scrollW * 0.44)
+    local rightW = scrollW - leftW - 16
+
+    -- Left: Suspect List Panel
+    local leftPanel = vgui.Create("DPanel", container)
+    leftPanel:SetPos(0, bodyY)
+    leftPanel:SetSize(leftW, bodyH)
+    leftPanel.Paint = function(s, w, h)
+        draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+    end
+
+    local txtSearch = vgui.Create("DTextEntry", leftPanel)
+    txtSearch:SetPos(10, 10)
+    txtSearch:SetSize(leftW - 20, 32)
+    txtSearch:SetPlaceholderText("Search online citizens...")
+    txtSearch:SetFont("GRID_UI_Body")
+
+    local suspectList = vgui.Create("DListView", leftPanel)
+    suspectList:SetPos(10, 48)
+    suspectList:SetSize(leftW - 20, bodyH - 58)
+    suspectList:SetMultiSelect(false)
+    suspectList:AddColumn("Citizen Name"):SetFixedWidth(math.floor((leftW - 20) * 0.48))
+    suspectList:AddColumn("Occupation"):SetFixedWidth(math.floor((leftW - 20) * 0.32))
+    suspectList:AddColumn("Status"):SetFixedWidth(math.floor((leftW - 20) * 0.20))
+
+    -- Right: Details & Action Panel
+    local rightPanel = vgui.Create("DPanel", container)
+    rightPanel:SetPos(leftW + 16, bodyY)
+    rightPanel:SetSize(rightW, bodyH)
+    rightPanel.Paint = function(s, w, h)
+        draw.RoundedBox(8, 0, 0, w, h, Color(17, 24, 39, 200))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+    end
+
+    local selectedPlayer = nil
+
+    local function PopulateSuspects(filter)
+        suspectList:Clear()
+        for _, p in ipairs(player.GetAll()) do
+            if not IsValid(p) or p == ply then continue end
+            local nick = p:Nick()
+            if filter and filter ~= "" and not string.find(string.lower(nick), string.lower(filter), 1, true) then
+                continue
+            end
+            local job = p:GetJobData()
+            local status = p:IsWanted() and "WANTED" or "Clean"
+            local line = suspectList:AddLine(nick, job and job.name or "Citizen", status)
+            line.Player = p
+        end
+    end
+
+    local function RefreshActionPanel()
+        rightPanel:Clear()
+
+        if not IsValid(selectedPlayer) then
+            local lbl = vgui.Create("DLabel", rightPanel)
+            lbl:Dock(FILL)
+            lbl:SetText("Select an online citizen to view profile, issue a warrant, or call a department vote.")
+            lbl:SetFont("GRID_UI_Body")
+            lbl:SetContentAlignment(5)
+            lbl:SetTextColor(Color(148, 163, 184))
+            return
+        end
+
+        local pNick = selectedPlayer:Nick()
+        local pJob = selectedPlayer:GetJobData()
+        local isWanted = selectedPlayer:IsWanted()
+
+        local details = vgui.Create("DPanel", rightPanel)
+        details:SetPos(16, 16)
+        details:SetSize(rightW - 32, 90)
+        details.Paint = function(s, w, h)
+            draw.RoundedBox(6, 0, 0, w, h, Color(15, 23, 42, 220))
+            surface.SetDrawColor(30, 41, 59, 180)
+            surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+            draw.SimpleText(pNick, "GRID_UI_Header", 16, 14, Color(248, 250, 252))
+            draw.SimpleText(string.format("Role: %s  |  Level: %d", pJob and pJob.name or "Citizen", selectedPlayer:GetLevel()), "GRID_UI_Body", 16, 42, Color(148, 163, 184))
+
+            local statText = isWanted and "[*] WANTED SUSPECT" or "Clean Record"
+            local statCol = isWanted and Color(239, 68, 68) or Color(52, 211, 153)
+            draw.SimpleText(statText, "GRID_UI_Badge", w - 16, 16, statCol, TEXT_ALIGN_RIGHT)
+        end
+
+        if isWanted then
+            -- Revoke wanted button
+            local btnRevoke = vgui.Create("DButton", rightPanel)
+            btnRevoke:SetPos(16, 120)
+            btnRevoke:SetSize(rightW - 32, 42)
+            btnRevoke:SetText("")
+            btnRevoke.Paint = function(s, w, h)
+                local bg = s:IsHovered() and Color(239, 68, 68, 240) or Color(185, 28, 28, 200)
+                draw.RoundedBox(6, 0, 0, w, h, bg)
+                draw.SimpleText("Revoke Wanted Status", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+            btnRevoke.DoClick = function()
+                LocalPlayer():ConCommand("say /unwanted " .. pNick)
+                timer.Simple(0.3, function()
+                    PopulateSuspects(txtSearch:GetText())
+                    RefreshActionPanel()
+                end)
+            end
+        else
+            -- Issue warrant form
+            local lblReason = vgui.Create("DLabel", rightPanel)
+            lblReason:SetPos(16, 116)
+            lblReason:SetSize(rightW - 32, 22)
+            lblReason:SetText("Warrant Justification / Criminal Charge:")
+            lblReason:SetFont("GRID_UI_BodyBold")
+            lblReason:SetTextColor(Color(248, 250, 252))
+
+            local txtReason = vgui.Create("DTextEntry", rightPanel)
+            txtReason:SetPos(16, 142)
+            txtReason:SetSize(rightW - 32, 36)
+            txtReason:SetFont("GRID_UI_Body")
+            txtReason:SetPlaceholderText("Enter justification (e.g. Armed Robbery, Assault, Evading Police)...")
+
+            local btnAction = vgui.Create("DButton", rightPanel)
+            btnAction:SetPos(16, 190)
+            btnAction:SetSize(rightW - 32, 44)
+            btnAction:SetText("")
+            btnAction.Paint = function(s, w, h)
+                local btnCol = isMayor and (s:IsHovered() and Color(245, 158, 11, 240) or Color(217, 119, 6, 200)) or
+                    (s:IsHovered() and Color(6, 182, 212, 240) or Color(14, 116, 144, 200))
+                draw.RoundedBox(6, 0, 0, w, h, btnCol)
+                local btnText = isMayor and "Issue Instant Executive Warrant" or "Call Department Warrant Vote"
+                draw.SimpleText(btnText, "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+            end
+            btnAction.DoClick = function()
+                local reason = txtReason:GetText()
+                if not reason or string.Trim(reason) == "" then
+                    reason = "Evading Law Enforcement"
+                end
+                if isMayor then
+                    LocalPlayer():ConCommand(string.format("say /wanted %s %s", pNick, reason))
+                else
+                    LocalPlayer():ConCommand(string.format("say /votewanted %s %s", pNick, reason))
+                end
+
+                timer.Simple(0.3, function()
+                    PopulateSuspects(txtSearch:GetText())
+                    RefreshActionPanel()
+                end)
+            end
+
+            -- Instructions note
+            local note = vgui.Create("DPanel", rightPanel)
+            note:SetPos(16, 250)
+            note:SetSize(rightW - 32, bodyH - 266)
+            note.Paint = function(s, w, h)
+                draw.RoundedBox(6, 0, 0, w, h, Color(15, 23, 42, 200))
+                surface.SetDrawColor(30, 41, 59, 180)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+                draw.SimpleText("PROCEDURAL PROTOCOL", "GRID_UI_Badge", 16, 16, Color(56, 189, 248))
+                local msg = isMayor and
+                    "The Mayor holds executive authority to unilaterally authorize arrest warrants. Suspects become subject to immediate apprehension and tasing." or
+                    "Calling a warrant vote broadcasts a 30-second notification card to all active police officers. A majority (>50%) vote confirms the warrant."
+                local wrapped = GRID.UI.WrapText(msg, "GRID_UI_Caption", w - 32)
+                for idx, ln in ipairs(wrapped) do
+                    draw.SimpleText(ln, "GRID_UI_Caption", 16, 40 + (idx - 1) * 20, Color(203, 213, 225))
+                end
+            end
+        end
+    end
+
+    suspectList.OnRowSelected = function(s, rowIndex, row)
+        selectedPlayer = row.Player
+        RefreshActionPanel()
+    end
+
+    txtSearch.OnChange = function(s)
+        PopulateSuspects(s:GetText())
+    end
+
+    PopulateSuspects("")
+    RefreshActionPanel()
 end

@@ -116,14 +116,27 @@ function GRID.Economy.StartPaydayTimer()
     end)
 end
 
-function GRID.Economy.SpawnCashStack(pos, amount)
+function GRID.Economy.SpawnCashStack(pos, amount, deathData)
     local cash = ents.Create("grid_cash_stack")
     if IsValid(cash) then
         cash:SetPos(pos)
         cash:SetAmount(amount)
+        if deathData then
+            cash.IsDeathDrop = true
+            cash.VictimNick = deathData.victimNick
+            cash.VictimSteamID = deathData.victimSteamID
+            cash.KillerNick = deathData.killerNick
+            cash.KillerSteamID = deathData.killerSteamID
+            cash.KillerEntity = deathData.killerEntity
+            cash:SetNWBool("GRID_IsDeathEvidence", true)
+            if deathData.victimNick then
+                cash:SetNWString("GRID_VictimNick", deathData.victimNick)
+            end
+        end
         cash:Spawn()
         cash:Activate()
     end
+    return cash
 end
 
 -- Chat command /dropmoney <amount>

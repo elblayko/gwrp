@@ -159,21 +159,21 @@ GRID.Jobs = {
         level = 2,
         faction = GRID.Factions.FACTION_POLICE,
         salary = 16,
-        weapons = { "weapon_fists", "weapon_grid_glock", "weapon_stunstick", "weapon_grid_scanner" },
+        weapons = { "weapon_fists", "weapon_grid_glock", "weapon_grid_stunstick", "weapon_grid_taser", "weapon_grid_scanner" },
         armor = 30,
         walkSpeed = 230,
         runSpeed = 350,
         models = { "models/player/police.mdl" },
         max = 6,
         desc =
-        "Rapid pursuit interceptor & detective. Top 350 sprint speed, exclusive contraband scanner, 5s rapid dispatch respawn, and +50% cash bounties on seized printers."
+        "Rapid pursuit interceptor & detective. Armed with stun baton (arrests wanted suspects), tactical taser, and contraband scanner."
     },
     ["police_chief"] = {
         name = "Police Chief",
         level = 5,
         faction = GRID.Factions.FACTION_POLICE,
         salary = 25,
-        weapons = { "weapon_fists", "weapon_grid_deagle", "weapon_grid_shotgun", "weapon_stunstick" },
+        weapons = { "weapon_fists", "weapon_grid_deagle", "weapon_grid_shotgun", "weapon_grid_stunstick", "weapon_grid_taser" },
         armor = 50,
         walkSpeed = 220,
         runSpeed = 315,
@@ -187,14 +187,14 @@ GRID.Jobs = {
         level = 7,
         faction = GRID.Factions.FACTION_POLICE,
         salary = 22,
-        weapons = { "weapon_fists", "weapon_grid_shotgun", "weapon_grid_ram" },
+        weapons = { "weapon_fists", "weapon_grid_shotgun", "weapon_grid_ram", "weapon_grid_stunstick", "weapon_grid_taser" },
         armor = 100,
         walkSpeed = 160,
         runSpeed = 230,
         models = { "models/player/swat.mdl", "models/player/combine_soldier.mdl" },
         max = 2,
         desc =
-        "Heavy tactical siege breacher with 100 Armor and Battering Ram. Heavy ballistic plating heavily restricts mobility (160 walk / 230 sprint)."
+        "Heavy tactical siege breacher with 100 Armor, Battering Ram, and Tactical Taser."
     },
     ["mayor"] = {
         name = "Mayor",

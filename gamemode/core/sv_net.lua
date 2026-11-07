@@ -63,6 +63,15 @@ util.AddNetworkString("GRID_Auction_RequestCollection")
 util.AddNetworkString("GRID_Auction_SendCollection")
 util.AddNetworkString("GRID_Auction_ClaimItem")
 
+-- Police Capabilities, Jail & Warrant Voting
+util.AddNetworkString("GRID_JailPayBail")
+util.AddNetworkString("GRID_JailAdminAction")
+util.AddNetworkString("GRID_JailSyncPoints")
+util.AddNetworkString("GRID_PoliceVoteStart")
+util.AddNetworkString("GRID_PoliceCastVote")
+util.AddNetworkString("GRID_PoliceVoteEnd")
+util.AddNetworkString("GRID_EvidenceInvestigate")
+
 GRID = GRID or {}
 GRID.NetLimits = GRID.NetLimits or {}
 

@@ -41,6 +41,10 @@ AddCSLuaFile("ui/cl_f4menu.lua")
 AddCSLuaFile("ui/cl_chatbox.lua")
 AddCSLuaFile("ui/cl_scoreboard.lua")
 AddCSLuaFile("ui/cl_deathscreen.lua")
+AddCSLuaFile("police/sh_jail.lua")
+AddCSLuaFile("police/cl_jail.lua")
+AddCSLuaFile("police/sh_voting.lua")
+AddCSLuaFile("police/cl_voting.lua")
 
 -- Server Includes
 include("shared.lua")
@@ -71,6 +75,10 @@ include("mapspawns/sh_map_spawns.lua")
 include("mapspawns/sv_map_spawns.lua")
 include("onboarding/sh_onboarding.lua")
 include("onboarding/sv_onboarding.lua")
+include("police/sh_jail.lua")
+include("police/sv_jail.lua")
+include("police/sh_voting.lua")
+include("police/sv_voting.lua")
 
 function GM:Initialize()
     math.randomseed(os.time() + math.floor(SysTime() * 1000))
@@ -352,7 +360,14 @@ function GM:PlayerDeath(victim, inflictor, attacker)
     local dropAmount = isRookie and 0 or math.min(GRID.Config.DropMoneyOnDeathMax or 75, math.floor(victim:GetMoney() * 0.1))
     if dropAmount > 0 then
         victim:AddMoney(-dropAmount)
-        GRID.Economy.SpawnCashStack(victim:GetPos() + Vector(0, 0, 10), dropAmount)
+        local deathData = {
+            victimNick = victim:Nick(),
+            victimSteamID = victim:SteamID(),
+            killerNick = (IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim) and attacker:Nick() or nil,
+            killerSteamID = (IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim) and attacker:SteamID() or nil,
+            killerEntity = (IsValid(attacker) and attacker:IsPlayer() and attacker ~= victim) and attacker or nil,
+        }
+        GRID.Economy.SpawnCashStack(victim:GetPos() + Vector(0, 0, 10), dropAmount, deathData)
     end
 
     -- Award Combat XP

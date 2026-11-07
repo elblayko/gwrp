@@ -125,9 +125,10 @@ function GRID.Turf.OpenSetupMenu()
     contentPanel.Paint = function() end
 
     local tabs = {
-        { id = "players",  name = "Player Debug & Economy" },
+        { id = "players",  name = "Player Debug" },
         { id = "turf",     name = "Turf & Flag Poles" },
-        { id = "spawners", name = "Game Loop & Spawners" }
+        { id = "spawners", name = "Spawners & Economy" },
+        { id = "jail",     name = "Jail & Holding Cells" }
     }
 
     local function SwitchTab(tabId)
@@ -140,6 +141,8 @@ function GRID.Turf.OpenSetupMenu()
             GRID.Turf.RenderTurfTab(contentPanel)
         elseif tabId == "spawners" then
             GRID.Turf.RenderSpawnersTab(contentPanel)
+        elseif tabId == "jail" then
+            GRID.Turf.RenderJailTab(contentPanel)
         end
     end
 
@@ -147,7 +150,7 @@ function GRID.Turf.OpenSetupMenu()
     for _, t in ipairs(tabs) do
         local btn = vgui.Create("DButton", tabContainer)
         btn:SetPos(btnX, 0)
-        btn:SetSize(220, 36)
+        btn:SetSize(214, 36)
         btn:SetText("")
         btn.Paint = function(s, w, h)
             local isActive = (GRID.AdminActiveTab == t.id)
@@ -163,7 +166,7 @@ function GRID.Turf.OpenSetupMenu()
         btn.DoClick = function()
             SwitchTab(t.id)
         end
-        btnX = btnX + 228
+        btnX = btnX + 222
     end
 
     SwitchTab(GRID.AdminActiveTab or "players")
@@ -1031,4 +1034,185 @@ function GRID.Turf.RenderSpawnersTab(parent)
         draw.SimpleText("via Q Menu > Entities (under 'GridRP - World Infrastructure', 'GridRP - Scavenging', etc.).", "GRID_UI_Body", 16, 64, Color(245, 158, 11))
         draw.SimpleText("SuperAdmins can spawn and freeze entities anywhere; they auto-anchor and persist to MariaDB.", "GRID_UI_Caption", 16, 88, Color(148, 163, 184))
     end
+end
+
+-- ========================================================
+-- TAB 4: JAIL & HOLDING CELLS SETUP
+-- ========================================================
+
+function GRID.Turf.RenderJailTab(parent)
+    local contW, contH = parent:GetWide(), parent:GetTall()
+
+    -- Left: Jail Cells List
+    local listPanel = vgui.Create("DPanel", parent)
+    listPanel:SetPos(0, 0)
+    listPanel:SetSize(420, contH)
+    listPanel.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+    end
+
+    local cellList = vgui.Create("DListView", listPanel)
+    cellList:SetPos(10, 10)
+    cellList:SetSize(400, contH - 62)
+    cellList:SetMultiSelect(false)
+    cellList:AddColumn("Cell #"):SetFixedWidth(65)
+    cellList:AddColumn("Position (X, Y, Z)"):SetFixedWidth(235)
+    cellList:AddColumn("Yaw"):SetFixedWidth(85)
+
+    local function PopulateCells()
+        cellList:Clear()
+        local pts = GRID.Jail.ClientPoints or {}
+        for idx, pt in ipairs(pts) do
+            local posStr = string.format("%d, %d, %d", math.Round(pt.pos.x), math.Round(pt.pos.y), math.Round(pt.pos.z))
+            local yawStr = string.format("%d deg", math.Round((pt.ang and pt.ang.y) or 0))
+            local line = cellList:AddLine("#" .. idx, posStr, yawStr)
+            line.CellIndex = idx
+            line.Point = pt
+        end
+    end
+
+    GRID.Jail.OnPointsUpdated = function()
+        if IsValid(cellList) then
+            PopulateCells()
+        end
+    end
+
+    -- Bottom Action Strip for Left Panel
+    local btnTeleport = vgui.Create("DButton", listPanel)
+    btnTeleport:SetPos(10, contH - 46)
+    btnTeleport:SetSize(195, 36)
+    btnTeleport:SetText("")
+    btnTeleport.Paint = function(s, w, h)
+        local bg = s:IsHovered() and Color(6, 182, 212, 220) or Color(14, 116, 144, 200)
+        draw.RoundedBox(6, 0, 0, w, h, bg)
+        draw.SimpleText("Teleport to Cell", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    btnTeleport.DoClick = function()
+        local line = cellList:GetSelectedLine()
+        if not line then return end
+        local item = cellList:GetLine(line)
+        if item and item.CellIndex then
+            net.Start("GRID_JailAdminAction")
+            net.WriteString("teleport_cell")
+            net.WriteInt(item.CellIndex, 16)
+            net.SendToServer()
+        end
+    end
+
+    local btnRemoveCell = vgui.Create("DButton", listPanel)
+    btnRemoveCell:SetPos(215, contH - 46)
+    btnRemoveCell:SetSize(195, 36)
+    btnRemoveCell:SetText("")
+    btnRemoveCell.Paint = function(s, w, h)
+        local bg = s:IsHovered() and Color(239, 68, 68, 220) or Color(185, 28, 28, 200)
+        draw.RoundedBox(6, 0, 0, w, h, bg)
+        draw.SimpleText("Remove Cell", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    btnRemoveCell.DoClick = function()
+        local line = cellList:GetSelectedLine()
+        if not line then return end
+        local item = cellList:GetLine(line)
+        if item and item.CellIndex then
+            net.Start("GRID_JailAdminAction")
+            net.WriteString("remove_cell")
+            net.WriteInt(item.CellIndex, 16)
+            net.SendToServer()
+        end
+    end
+
+    -- Right: Controls / Properties Panel
+    local actionPanel = vgui.Create("DPanel", parent)
+    actionPanel:SetPos(436, 0)
+    actionPanel:SetSize(contW - 436, contH)
+    actionPanel.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(17, 24, 39, 200))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+        draw.SimpleText("Holding Cells & Police Setup", "GRID_UI_Header", 16, 16, Color(248, 250, 252))
+        draw.SimpleText("Configure persistent holding cell coordinates for the current map.", "GRID_UI_Caption", 16, 42, Color(148, 163, 184))
+    end
+
+    local btnAddCurrent = vgui.Create("DButton", actionPanel)
+    btnAddCurrent:SetPos(16, 80)
+    btnAddCurrent:SetSize(contW - 436 - 32, 42)
+    btnAddCurrent:SetText("")
+    btnAddCurrent.Paint = function(s, w, h)
+        local bg = s:IsHovered() and Color(16, 185, 129, 240) or Color(5, 150, 105, 200)
+        draw.RoundedBox(6, 0, 0, w, h, bg)
+        draw.SimpleText("+ Register Current Position as Jail Cell", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    btnAddCurrent.DoClick = function()
+        net.Start("GRID_JailAdminAction")
+        net.WriteString("add_cell")
+        net.SendToServer()
+    end
+
+    local btnSetRelease = vgui.Create("DButton", actionPanel)
+    btnSetRelease:SetPos(16, 134)
+    btnSetRelease:SetSize(contW - 436 - 32, 42)
+    btnSetRelease:SetText("")
+    btnSetRelease.Paint = function(s, w, h)
+        local bg = s:IsHovered() and Color(56, 189, 248, 240) or Color(14, 116, 144, 200)
+        draw.RoundedBox(6, 0, 0, w, h, bg)
+        draw.SimpleText("Set Current Position as Public Release Exit", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    btnSetRelease.DoClick = function()
+        net.Start("GRID_JailAdminAction")
+        net.WriteString("set_release")
+        net.SendToServer()
+    end
+
+    local btnClearAll = vgui.Create("DButton", actionPanel)
+    btnClearAll:SetPos(16, 188)
+    btnClearAll:SetSize(contW - 436 - 32, 42)
+    btnClearAll:SetText("")
+    btnClearAll.Paint = function(s, w, h)
+        local bg = s:IsHovered() and Color(239, 68, 68, 240) or Color(185, 28, 28, 200)
+        draw.RoundedBox(6, 0, 0, w, h, bg)
+        draw.SimpleText("Clear All Registered Jail Cells", "GRID_UI_Btn", w / 2, h / 2, Color(248, 250, 252), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
+    end
+    btnClearAll.DoClick = function()
+        net.Start("GRID_JailAdminAction")
+        net.WriteString("clear_cells")
+        net.SendToServer()
+    end
+
+    -- Overview info box
+    local infoBox = vgui.Create("DPanel", actionPanel)
+    infoBox:SetPos(16, 250)
+    infoBox:SetSize(contW - 436 - 32, contH - 266)
+    infoBox.Paint = function(s, w, h)
+        draw.RoundedBox(6, 0, 0, w, h, Color(15, 23, 42, 220))
+        surface.SetDrawColor(30, 41, 59, 180)
+        surface.DrawOutlinedRect(0, 0, w, h, 1)
+
+        draw.SimpleText("POLICE INCARCERATION ENGINE RULES", "GRID_UI_Badge", 16, 16, Color(245, 158, 11))
+
+        local lines = {
+            "- When an officer hits a Wanted suspect with Stun Baton Secondary Fire, the suspect is arrested.",
+            "- Suspect is placed into the jail cell furthest away from other inmates to isolate prisoners.",
+            "- Sentences default to 90s with automatic unjail teleport upon completion.",
+            "- Inmates or allies can post bail via /paybail (defaults to $500).",
+            "- Chat shortcuts: /setjail, /clearjail, /setjailrelease, /unjail <name>, /paybail."
+        }
+
+        local y = 42
+        for _, line in ipairs(lines) do
+            draw.SimpleText(line, "GRID_UI_Caption", 16, y, Color(203, 213, 225))
+            y = y + 22
+        end
+
+        local relText = "Release Point: " .. (GRID.Jail.ClientReleasePoint and "Configured" or "Default Map Spawn")
+        draw.SimpleText(relText, "GRID_UI_Body", 16, h - 30, (GRID.Jail.ClientReleasePoint and Color(52, 211, 153) or Color(245, 158, 11)))
+    end
+
+    -- Request data from server
+    net.Start("GRID_JailAdminAction")
+    net.WriteString("request_points")
+    net.SendToServer()
+
+    PopulateCells()
 end

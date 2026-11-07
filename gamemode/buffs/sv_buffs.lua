@@ -352,6 +352,12 @@ hook.Add("PlayerSay", "GRID_BuffsPoliceCommands", function(ply, text)
             return ""
         end
 
+        local isMayorOrAdmin = (ply.GetJob and ply:GetJob() == "mayor") or ply:IsAdmin() or ply:IsSuperAdmin()
+        if not isMayorOrAdmin then
+            GRID.Notify(ply, "Only the Mayor or an Admin can unilaterally issue warrants! Use /votewanted <name> [reason] to start a department vote.", NOTIFY_ERROR, 7)
+            return ""
+        end
+
         local args = string.Explode(" ", text)
         table.remove(args, 1) -- Remove command name
         local targetName = args[1]
