@@ -103,6 +103,22 @@ function GRID.Turf.LoadMapProfile()
     loadFromFileOrDefault()
 end
 
+function GRID.Turf.SyncPoleMetadata()
+    if not GRID.Turf or not GRID.Turf.Zones then return end
+    for _, ent in ipairs(ents.FindByClass("grid_flag_pole")) do
+        if IsValid(ent) then
+            local id = ent:GetTurfID()
+            local zone = id and GRID.Turf.Zones[id]
+            if zone then
+                zone.entity = ent
+                ent:SetNWString("GRID_ZoneName", tostring(zone.name or ("Territory #" .. id)))
+                ent:SetNWString("GRID_ZoneOwner", tostring(zone.owner or "neutral"))
+                ent:SetNWInt("GRID_TaxRate", tonumber(zone.tax_rate) or 10)
+            end
+        end
+    end
+end
+
 function GRID.Turf.SpawnPoles()
     -- Clean up any existing flag poles
     for _, ent in ipairs(ents.FindByClass("grid_flag_pole")) do
@@ -115,6 +131,9 @@ function GRID.Turf.SpawnPoles()
         if IsValid(pole) then
             pole:SetPos(zone.pos)
             pole:SetTurfID(id)
+            pole:SetNWString("GRID_ZoneName", tostring(zone.name or ("Territory #" .. id)))
+            pole:SetNWString("GRID_ZoneOwner", tostring(zone.owner or "neutral"))
+            pole:SetNWInt("GRID_TaxRate", tonumber(zone.tax_rate) or 10)
             pole:Spawn()
             pole:Activate()
             zone.entity = pole
@@ -133,6 +152,7 @@ function GRID.Turf.Init()
 end
 
 function GRID.Turf.SyncToPlayer(ply)
+    GRID.Turf.SyncPoleMetadata()
     local count = table.Count(GRID.Turf.Zones)
     net.Start("GRID_SyncTurfZones")
         net.WriteUInt(count, 8)
@@ -153,6 +173,7 @@ function GRID.Turf.SyncToPlayer(ply)
 end
 
 function GRID.Turf.SyncToAll()
+    GRID.Turf.SyncPoleMetadata()
     local count = table.Count(GRID.Turf.Zones)
     net.Start("GRID_SyncTurfZones")
         net.WriteUInt(count, 8)
@@ -173,6 +194,7 @@ function GRID.Turf.SyncToAll()
 end
 
 function GRID.Turf.BroadcastUpdate(turfId)
+    GRID.Turf.SyncPoleMetadata()
     local zone = GRID.Turf.Zones[turfId]
     if not zone then return end
 
@@ -500,3 +522,10 @@ local function HandleAdminTurfAction(len, ply)
 end
 
 net.Receive("GRID_AdminTurfAction", HandleAdminTurfAction)
+
+-- Auto-sync existing zones to connected clients on Lua hot-reload
+timer.Simple(0.5, function()
+    if GRID.Turf and GRID.Turf.Zones and table.Count(GRID.Turf.Zones) > 0 then
+        GRID.Turf.SyncToAll()
+    end
+end)

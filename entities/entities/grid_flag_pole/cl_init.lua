@@ -47,9 +47,12 @@ function ENT:DrawBillboardContents(pos, ang, alpha)
     local id = self:GetTurfID()
     local zones = GRID.Turf and GRID.Turf.Zones
     local zone = zones and zones[id]
-    local zoneName = zone and zone.name or ("Territory #" .. id)
+    local nwName = self:GetNWString("GRID_ZoneName", "")
+    local nwOwner = self:GetNWString("GRID_ZoneOwner", "")
+    local nwTax = self:GetNWInt("GRID_TaxRate", 10)
+    local zoneName = (zone and zone.name) or (nwName ~= "" and nwName) or ("Territory #" .. id)
     local turfData = GRID.TurfData and GRID.TurfData[id]
-    local data = turfData or (zone and { owner = zone.owner, progress = zone.progress or 100, tax_rate = zone.tax_rate or 10 } or { owner = "neutral", progress = 100, tax_rate = 10 })
+    local data = turfData or (zone and { owner = zone.owner, progress = zone.progress or 100, tax_rate = zone.tax_rate or 10 } or { owner = (nwOwner ~= "" and nwOwner) or "neutral", progress = 100, tax_rate = nwTax })
 
     local owner = data.owner
     local isNeutral = (not owner or owner == "" or owner == "neutral")

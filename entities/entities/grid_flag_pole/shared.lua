@@ -35,7 +35,9 @@ ENT.InteractionConfig = {
     GetBadge = function(self, ply)
         local id = self:GetTurfID()
         local zone = GRID.Turf and GRID.Turf.Zones and GRID.Turf.Zones[id]
-        local owner = zone and zone.owner or "neutral"
+        local tData = GRID.TurfData and GRID.TurfData[id]
+        local nwOwner = self:GetNWString("GRID_ZoneOwner", "")
+        local owner = (tData and tData.owner) or (zone and zone.owner) or (nwOwner ~= "" and nwOwner) or "neutral"
         if self:GetIsCapturing() then
             return "CONTESTED"
         end
@@ -44,7 +46,9 @@ ENT.InteractionConfig = {
     GetBadgeColor = function(self, ply)
         local id = self:GetTurfID()
         local zone = GRID.Turf and GRID.Turf.Zones and GRID.Turf.Zones[id]
-        local owner = zone and zone.owner or "neutral"
+        local tData = GRID.TurfData and GRID.TurfData[id]
+        local nwOwner = self:GetNWString("GRID_ZoneOwner", "")
+        local owner = (tData and tData.owner) or (zone and zone.owner) or (nwOwner ~= "" and nwOwner) or "neutral"
         if self:GetIsCapturing() then
             return Color(245, 158, 11)
         end
@@ -56,13 +60,16 @@ ENT.InteractionConfig = {
     GetTitle = function(self, ply)
         local id = self:GetTurfID()
         local zone = GRID.Turf and GRID.Turf.Zones and GRID.Turf.Zones[id]
-        return zone and zone.name or ("Territory #" .. id)
+        local nwName = self:GetNWString("GRID_ZoneName", "")
+        return (zone and zone.name) or (nwName ~= "" and nwName) or ("Territory #" .. id)
     end,
     GetSubtext = function(self, ply)
         local id = self:GetTurfID()
         local zone = GRID.Turf and GRID.Turf.Zones and GRID.Turf.Zones[id]
-        local owner = zone and zone.owner or "neutral"
-        local tax = zone and zone.tax_rate or 10
+        local tData = GRID.TurfData and GRID.TurfData[id]
+        local nwOwner = self:GetNWString("GRID_ZoneOwner", "")
+        local owner = (tData and tData.owner) or (zone and zone.owner) or (nwOwner ~= "" and nwOwner) or "neutral"
+        local tax = (tData and tData.tax_rate) or (zone and zone.tax_rate) or self:GetNWInt("GRID_TaxRate", 10)
         if owner ~= "" and owner ~= "neutral" then
             return string.format("Controlled by: %s  |  Extortion Tax: %d%%", string.upper(owner), tax)
         end

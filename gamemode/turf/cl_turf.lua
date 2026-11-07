@@ -98,12 +98,15 @@ function GRID.Turf.DrawHUD()
                 if pos:DistToSqr(polePos) <= (poleRadius * poleRadius) then
                     local id = pole:GetTurfID()
                     activeId = id
+                    local nwName = pole:GetNWString("GRID_ZoneName", "")
+                    local nwOwner = pole:GetNWString("GRID_ZoneOwner", "")
+                    local nwTax = pole:GetNWInt("GRID_TaxRate", 10)
                     activeZone = (GRID.Turf.Zones and GRID.Turf.Zones[id]) or (GRID.TurfData and GRID.TurfData[id]) or {
                         id = id,
-                        name = "Territory #" .. id,
-                        owner = "neutral",
+                        name = (nwName ~= "" and nwName) or ("Territory #" .. id),
+                        owner = (nwOwner ~= "" and nwOwner) or "neutral",
                         progress = 100,
-                        tax_rate = 10,
+                        tax_rate = nwTax,
                         pos = polePos,
                         radius = poleRadius
                     }
@@ -119,8 +122,29 @@ function GRID.Turf.DrawHUD()
         for id, z in pairs(GRID.Turf.Zones) do
             table.insert(zonesList, z)
         end
-        table.sort(zonesList, function(a, b) return (a.id or 0) < (b.id or 0) end)
     end
+
+    -- Fallback: if client zones table has not synced yet, populate from in-world flag poles
+    if #zonesList == 0 then
+        for _, pole in ipairs(ents.FindByClass("grid_flag_pole")) do
+            if IsValid(pole) then
+                local id = pole:GetTurfID()
+                if id and id > 0 then
+                    local nwName = pole:GetNWString("GRID_ZoneName", "")
+                    local nwOwner = pole:GetNWString("GRID_ZoneOwner", "")
+                    local nwTax = pole:GetNWInt("GRID_TaxRate", 10)
+                    table.insert(zonesList, {
+                        id = id,
+                        name = (nwName ~= "" and nwName) or ("Territory #" .. id),
+                        owner = (nwOwner ~= "" and nwOwner) or "neutral",
+                        tax_rate = nwTax,
+                        pos = pole:GetPos()
+                    })
+                end
+            end
+        end
+    end
+    table.sort(zonesList, function(a, b) return (a.id or 0) < (b.id or 0) end)
 
     local scrW = ScrW()
     local hasZones = #zonesList > 0
@@ -220,7 +244,6 @@ function GRID.Turf.DrawHUD()
             draw.SimpleText(unclaimTxt, "GRID_UI_Caption", cardX + cardW / 2, cardY + 38, Color(251, 191, 36, a), TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
         end
     end
-end
 end
 
 -- ========================================================

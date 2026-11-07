@@ -58,13 +58,13 @@ net.Receive("GRID_OpenTurfSetup", function()
     end
 end)
 
--- Direct Physical Key Listener (Hooks KEY_F4, KEY_F2, and KEY_B directly on client)
+-- Direct Physical Key Listener (Hooks KEY_F4, KEY_F2, and KEY_I directly on client)
 hook.Add("PlayerButtonDown", "GRID_FKeyBindings", function(ply, button)
     if button == KEY_F4 then
         GRID.UI.ToggleF4Menu()
     elseif button == KEY_F2 then
         GRID.Doors.OpenDoorMenu()
-    elseif button == KEY_B then
+    elseif button == KEY_I then
         GRID.UI.ToggleBag()
     end
 end)

@@ -96,8 +96,8 @@ net.Receive("GRID_ATM_Action", function(len, ply)
         if IsValid(atmEnt) then
             net.Start("GRID_ATM_Open")
                 net.WriteEntity(atmEnt)
-                net.WriteUInt(ply:GetMoney(), 32)
-                net.WriteUInt(ply:GetBank(), 32)
+                net.WriteUInt(newMoney or ply:GetMoney(), 32)
+                net.WriteUInt(newBank or ply:GetBank(), 32)
             net.Send(ply)
         end
     end)
