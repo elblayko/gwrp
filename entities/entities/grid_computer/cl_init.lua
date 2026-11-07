@@ -41,47 +41,7 @@ local ColorPalette = {
     highlight = Color(251, 191, 36)
 }
 
-function ENT:Draw()
-    self:DrawModel()
-
-    local ply = LocalPlayer()
-    if not IsValid(ply) then return end
-
-    local myPos = self:GetPos() + Vector(0, 0, 24)
-    if myPos:DistToSqr(ply:EyePos()) > (240 * 240) then return end
-
-    local ang = (ply:EyePos() - myPos):Angle()
-    ang.p = 0
-    ang.r = 0
-    ang:RotateAroundAxis(ang:Up(), 90)
-    ang:RotateAroundAxis(ang:Forward(), 90)
-
-    cam.Start3D2D(myPos, ang, 0.08)
-    local ip = self:GetIPAddress()
-    local isNet = IsValid(self:GetConnectedSwitch()) and (ip and ip ~= "")
-    local isBotnet = self.GetBotnetActive and self:GetBotnetActive()
-    local botnetYield = self.GetBotnetYield and self:GetBotnetYield() or 0
-    local statusText = isNet and ("IP: " .. ip) or "OFFLINE (NO CARRIER)"
-    local statusCol = isNet and Color(74, 222, 128) or Color(239, 68, 68)
-
-    local boxH = isBotnet and 86 or 68
-    local boxY = isBotnet and -43 or -34
-    draw.RoundedBox(6, -125, boxY, 250, boxH, Color(15, 23, 42, 235))
-    draw.RoundedBox(6, -123, boxY + 2, 246, boxH - 4, Color(30, 41, 59, 240))
-
-    if isBotnet then
-        draw.SimpleText("CYBERDECK TERMINAL", "GRID_FontSmall", 0, -33, Color(56, 189, 248), TEXT_ALIGN_CENTER)
-        draw.SimpleText(statusText, "GRID_FontSmall", 0, -15, statusCol, TEXT_ALIGN_CENTER)
-        draw.SimpleText(string.format("BOTNET C2: +$%d / 20s", botnetYield), "GRID_FontSmall", 0, 4, Color(250, 204, 21),
-            TEXT_ALIGN_CENTER)
-        draw.SimpleText("[E] Access Shell", "GRID_FontSmall", 0, 23, Color(148, 163, 184), TEXT_ALIGN_CENTER)
-    else
-        draw.SimpleText("CYBERDECK TERMINAL", "GRID_FontSmall", 0, -24, Color(56, 189, 248), TEXT_ALIGN_CENTER)
-        draw.SimpleText(statusText, "GRID_FontSmall", 0, -5, statusCol, TEXT_ALIGN_CENTER)
-        draw.SimpleText("[E] Access Shell", "GRID_FontSmall", 0, 14, Color(148, 163, 184), TEXT_ALIGN_CENTER)
-    end
-    cam.End3D2D()
-end
+-- ENT:Draw is inherited from grid_base_interactive, handling both ENT:DrawModel and ENT.OverheadConfig.CustomDraw
 
 -- Terminal Window Singleton
 local ActiveTerminal = nil

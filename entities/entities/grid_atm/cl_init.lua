@@ -11,28 +11,7 @@ local COLOR_BG_DARK     = Color(15, 23, 42, 230)
 local COLOR_TEXT_WHITE  = Color(248, 250, 252)
 local COLOR_GREEN       = Color(34, 197, 94)
 
-function ENT:Draw()
-    self:DrawModel()
-
-    local lp = LocalPlayer()
-    if not IsValid(lp) then return end
-    if lp:EyePos():DistToSqr(self:GetPos()) > (350 * 350) then return end
-
-    local ang = self:GetAngles()
-    ang:RotateAroundAxis(ang:Up(), 90)
-    ang:RotateAroundAxis(ang:Forward(), 90)
-
-    local pos = self:GetPos() + self:GetUp() * 50 + self:GetForward() * 12
-
-    cam.Start3D2D(pos, ang, 0.08)
-        draw.RoundedBox(6, -110, -32, 220, 64, COLOR_BG_DARK)
-        surface.SetDrawColor(COLOR_GREEN.r, COLOR_GREEN.g, COLOR_GREEN.b, 200)
-        surface.DrawOutlinedRect(-110, -32, 220, 64, 2)
-
-        draw.SimpleText("STREET ATM", "GRID_UI_Header", 0, -12, COLOR_GREEN, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-        draw.SimpleText("[E] ACCESS BANKING", "GRID_UI_Caption", 0, 14, COLOR_TEXT_WHITE, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-    cam.End3D2D()
-end
+-- ENT:Draw is inherited from grid_base_interactive, handling both ENT:DrawModel and ENT.OverheadConfig
 
 -- --------------------------------------------------------
 -- Interactive Banking Derma UI

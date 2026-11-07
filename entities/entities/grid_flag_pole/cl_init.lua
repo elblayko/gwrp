@@ -33,22 +33,9 @@ surface.CreateFont("GRID_Pole_Btn", {
     antialias = true
 })
 
-function ENT:DrawBillboard()
+function ENT:DrawBillboardContents(pos, ang, alpha)
     local ply = LocalPlayer()
     if not IsValid(ply) then return end
-
-    local eyePos = ply:EyePos()
-    local polePos = self:GetPos()
-    local distSqr = eyePos:DistToSqr(polePos)
-    if distSqr > (950 * 950) then return end
-
-    local dist = math.sqrt(distSqr)
-    local alpha = 255
-    if dist > 750 then
-        alpha = math.Clamp(math.Remap(dist, 750, 950, 255, 0), 0, 255)
-    end
-    if alpha <= 5 then return end
-    alpha = math.floor(alpha)
 
     local id = self:GetTurfID()
     local zones = GRID.Turf and GRID.Turf.Zones
@@ -216,20 +203,9 @@ function ENT:DrawBillboard()
         surface.SetDrawColor(btnBorder.r, btnBorder.g, btnBorder.b, btnBorder.a)
         surface.DrawOutlinedRect(-btnW / 2, btnY, btnW, btnH, 1)
         draw.SimpleText(btnText, "GRID_Pole_Btn", 0, btnY + btnH / 2, btnCol, TEXT_ALIGN_CENTER, TEXT_ALIGN_CENTER)
-    cam.End3D2D()
 end
 
-function ENT:Draw()
-    self:DrawModel()
-    self:DrawBillboard()
-    self.LastDrawnFrame = FrameNumber()
-end
-
-function ENT:DrawTranslucent()
-    if self.LastDrawnFrame == FrameNumber() then return end
-    self.LastDrawnFrame = FrameNumber()
-    self:DrawBillboard()
-end
+-- ENT:Draw is inherited from grid_base_interactive, calling ENT.OverheadConfig.CustomDraw (DrawBillboardContents)
 
 -- ========================================================
 -- Client Screen HUD Progress Bar (Matches Lockpicking UX)
