@@ -496,6 +496,59 @@ BEGIN
     COMMIT;
 END$$
 
+-- Fully reset a player profile across character data, inventory, bags, buffs, and gang membership (preserving telemetry)
+CREATE OR REPLACE PROCEDURE grid_reset_player(
+    IN p_steamid VARCHAR(20)
+)
+BEGIN
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    START TRANSACTION;
+
+    -- Reset core player record to brand-new state ($0 money, $0 bank, level 1, 0 respect, citizen job, no gang, stage 0)
+    UPDATE grid_players
+    SET money = 0,
+        bank = 0,
+        respect = 0,
+        gang = '',
+        job = 'citizen',
+        level = 1,
+        xp = 0,
+        onboarding_stage = 0,
+        last_seen = UNIX_TIMESTAMP()
+    WHERE steamid = p_steamid;
+
+    -- Remove player from all gang memberships
+    DELETE FROM grid_gang_members WHERE steamid = p_steamid;
+
+    -- Wipe active inventory slots
+    DELETE FROM grid_inventory WHERE steamid = p_steamid;
+
+    -- Wipe equipped bags
+    DELETE FROM grid_player_bags WHERE steamid = p_steamid;
+
+    -- Wipe active temporary player buffs
+    DELETE FROM grid_player_buffs WHERE steamid = p_steamid;
+
+    -- Log telemetry record of the administrative profile reset
+    INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
+    VALUES (
+        UNIX_TIMESTAMP(),
+        'ADMIN',
+        'PLAYER_FULL_RESET',
+        'CONSOLE',
+        p_steamid,
+        0,
+        JSON_OBJECT('reason', 'admin_hud_reset')
+    );
+
+    COMMIT;
+END$$
+
 -- Gangs & Atomic Vault Transfers
 CREATE OR REPLACE PROCEDURE grid_create_gang(
     IN p_gang_name VARCHAR(32),

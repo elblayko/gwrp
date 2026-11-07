@@ -661,6 +661,56 @@ function GRID.Turf.RenderPlayerDebug(parent)
             net.WriteEntity(selectedPlayer)
             net.SendToServer()
         end
+
+        -- Section 5: Administrative Database Account Reset (SuperAdmin Only)
+        local lp = LocalPlayer()
+        if IsValid(lp) and lp:IsSuperAdmin() then
+            local secReset = scroll:Add("DPanel")
+            secReset:Dock(TOP)
+            secReset:DockMargin(0, 0, 0, 16)
+            secReset:SetTall(95)
+            secReset.Paint = function(s, w, h)
+                draw.RoundedBox(6, 0, 0, w, h, Color(35, 18, 22, 220))
+                surface.SetDrawColor(239, 68, 68, 120)
+                surface.DrawOutlinedRect(0, 0, w, h, 1)
+                draw.SimpleText("Danger Zone: Database Reset", "GRID_UI_Sub", 14, 10, Color(248, 113, 113))
+                draw.SimpleText("Wipes character progression, money, bank, inventory, and gang data. Telemetry is preserved.", "GRID_UI_Caption", 14, 30, Color(180, 190, 205))
+            end
+
+            local btnReset = vgui.Create("DButton", secReset)
+            btnReset:SetPos(14, 52)
+            btnReset:SetSize(220, 32)
+            btnReset:SetText("FULL DATABASE RESET")
+            btnReset:SetFont("GRID_UI_Btn")
+            btnReset:SetTextColor(Color(255, 255, 255))
+            btnReset.Paint = function(s, w, h)
+                if s:IsHovered() then
+                    draw.RoundedBox(6, 0, 0, w, h, Color(220, 38, 38))
+                else
+                    draw.RoundedBox(6, 0, 0, w, h, Color(185, 28, 28))
+                end
+            end
+            btnReset.DoClick = function()
+                Derma_Query(
+                    string.format("Are you absolutely sure you want to permanently reset %s?\n\nThis will wipe all cash, bank balance, levels, XP, bags, inventory slots, and gangs to Level 1 Rookie state. Telemetry history is preserved.", selectedPlayer:Nick()),
+                    "CONFIRM FULL DATABASE RESET",
+                    "YES, EXECUTE RESET",
+                    function()
+                        net.Start("GRID_AdminDebugAction")
+                        net.WriteString("reset_player")
+                        net.WriteEntity(selectedPlayer)
+                        net.SendToServer()
+
+                        timer.Simple(0.3, function()
+                            PopulatePlayers(txtSearch:GetText())
+                            RefreshActionPanel()
+                        end)
+                    end,
+                    "CANCEL",
+                    function() end
+                )
+            end
+        end
     end
 
     playerList.OnRowSelected = function(s, index, pnl)

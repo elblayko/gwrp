@@ -191,6 +191,24 @@ GRID.Database.MariaDBDirectProcedures = {
             ))
         end)
     end,
+    grid_reset_player = function(p, run)
+        -- p = { steamID }
+        local steamID = p[1]
+        local now = os.time()
+        GRID.Database.Execute(GRID.Database.FormatQuery(
+            "UPDATE grid_players SET money = 0, bank = 0, respect = 0, gang = '', job = 'citizen', level = 1, xp = 0, onboarding_stage = 0, last_seen = ? WHERE steamid = ?;",
+            { now, steamID }
+        ), function()
+            GRID.Database.Execute(GRID.Database.FormatQuery("DELETE FROM grid_gang_members WHERE steamid = ?;", { steamID }))
+            GRID.Database.Execute(GRID.Database.FormatQuery("DELETE FROM grid_inventory WHERE steamid = ?;", { steamID }))
+            GRID.Database.Execute(GRID.Database.FormatQuery("DELETE FROM grid_player_bags WHERE steamid = ?;", { steamID }))
+            GRID.Database.Execute(GRID.Database.FormatQuery("DELETE FROM grid_player_buffs WHERE steamid = ?;", { steamID }))
+            GRID.Database.Execute(GRID.Database.FormatQuery(
+                "INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (?, 'ADMIN', 'PLAYER_FULL_RESET', 'CONSOLE', ?, 0, ?);",
+                { now, steamID, '{"reason":"admin_hud_reset"}' }
+            ))
+        end)
+    end,
     grid_update_player_gang = function(p, run)
         run(GRID.Database.FormatQuery("UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] }))
     end,
@@ -410,6 +428,17 @@ GRID.Database.SQLiteProcedures = {
         sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET onboarding_stage = 3, level = MAX(level, 2), money = 0, bank = bank + ? WHERE steamid = ? AND onboarding_stage < 3;", { bonusCash, steamID }))
         local qMeta = sql.SQLStr('{"new_level":2}')
         return string.format("INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (%d, 'PLAYER_ACTION', 'ONBOARDING_COMPLETED', %s, '', %d, %s);", os.time(), sql.SQLStr(steamID), bonusCash, qMeta)
+    end,
+    grid_reset_player = function(p)
+        local steamID = p[1]
+        local now = os.time()
+        sql.Query(GRID.Database.FormatQuery("UPDATE grid_players SET money = 0, bank = 0, respect = 0, gang = '', job = 'citizen', level = 1, xp = 0, onboarding_stage = 0, last_seen = ? WHERE steamid = ?;", { now, steamID }))
+        sql.Query(GRID.Database.FormatQuery("DELETE FROM grid_gang_members WHERE steamid = ?;", { steamID }))
+        sql.Query(GRID.Database.FormatQuery("DELETE FROM grid_inventory WHERE steamid = ?;", { steamID }))
+        sql.Query(GRID.Database.FormatQuery("DELETE FROM grid_player_bags WHERE steamid = ?;", { steamID }))
+        sql.Query(GRID.Database.FormatQuery("DELETE FROM grid_player_buffs WHERE steamid = ?;", { steamID }))
+        local qMeta = sql.SQLStr('{"reason":"admin_hud_reset"}')
+        return string.format("INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata) VALUES (%d, 'ADMIN', 'PLAYER_FULL_RESET', 'CONSOLE', %s, 0, %s);", now, sql.SQLStr(steamID), qMeta)
     end,
     grid_update_player_gang = function(p)
         return GRID.Database.FormatQuery("UPDATE grid_players SET gang = ?, last_seen = ? WHERE steamid = ?;", { p[2], p[3], p[1] })
@@ -818,6 +847,46 @@ function GRID.Database.InitMariaDBSchema(db, onComplete)
                     JSON_OBJECT('new_level', 2)
                 );
             END IF;
+
+            COMMIT;
+        END]],
+        [[CREATE OR REPLACE PROCEDURE grid_reset_player(IN p_steamid VARCHAR(20))
+        BEGIN
+            DECLARE EXIT HANDLER FOR SQLEXCEPTION
+            BEGIN
+                ROLLBACK;
+                RESIGNAL;
+            END;
+
+            START TRANSACTION;
+
+            UPDATE grid_players
+            SET money = 0,
+                bank = 0,
+                respect = 0,
+                gang = '',
+                job = 'citizen',
+                level = 1,
+                xp = 0,
+                onboarding_stage = 0,
+                last_seen = UNIX_TIMESTAMP()
+            WHERE steamid = p_steamid;
+
+            DELETE FROM grid_gang_members WHERE steamid = p_steamid;
+            DELETE FROM grid_inventory WHERE steamid = p_steamid;
+            DELETE FROM grid_player_bags WHERE steamid = p_steamid;
+            DELETE FROM grid_player_buffs WHERE steamid = p_steamid;
+
+            INSERT INTO grid_telemetry (unix_ts, category, action_type, actor_steamid, target_steamid, numeric_value, metadata)
+            VALUES (
+                UNIX_TIMESTAMP(),
+                'ADMIN',
+                'PLAYER_FULL_RESET',
+                'CONSOLE',
+                p_steamid,
+                0,
+                JSON_OBJECT('reason', 'admin_hud_reset')
+            );
 
             COMMIT;
         END]],
@@ -2997,6 +3066,20 @@ function GRID.Database.CopyMapEntities(oldMap, newMap, callback, errback)
         if callback then callback(data) end
     end, function(err)
         ErrorNoHalt(string.format("[GRID MapSpawns DB ERROR] CopyMapEntities failed from '%s' to '%s': %s\n", oldKey, newKey, tostring(err)))
+        if errback then errback(err) end
+    end)
+end
+
+-- ========================================================
+-- 11. ADMINISTRATIVE PLAYER RESET
+-- ========================================================
+
+function GRID.Database.ResetPlayer(steamID, callback, errback)
+    if not steamID or steamID == "" then return end
+    GRID.Database.CallProcedure("grid_reset_player", { steamID }, function()
+        if callback then callback() end
+    end, function(err)
+        ErrorNoHalt(string.format("[GRID DB ERROR] ResetPlayer failed for %s: %s\n", steamID, tostring(err)))
         if errback then errback(err) end
     end)
 end

@@ -57,6 +57,50 @@ local function HandleAdminDebugAction(len, ply)
             GRID.Notify(ply, string.format("Awarded %s XP to %s.", string.Comma(xpAmount), target:Nick()), NOTIFY_GENERIC)
         end
 
+    -- Full Profile & Progression Database Reset
+    elseif action == "reset_player" then
+        local target = net.ReadEntity()
+        if not ply:IsSuperAdmin() then
+            GRID.Notify(ply, "Access Denied: Only SuperAdmins can fully reset a player profile.", NOTIFY_ERROR)
+            return
+        end
+
+        if IsValid(target) and target:IsPlayer() then
+            local targetSid = target:SteamID()
+            local targetNick = target:Nick()
+
+            if GRID.Database and GRID.Database.ResetPlayer then
+                GRID.Database.ResetPlayer(targetSid, function()
+                    if IsValid(target) then
+                        -- Live memory state reset
+                        target:SetMoney(0)
+                        if target.SetBank then target:SetBank(0) end
+                        target:SetNWInt("GRID_Respect", 0)
+                        target:SetGang("")
+                        target:SetJob("citizen")
+                        if target.SetLevel then target:SetLevel(1) end
+                        if target.SetXP then target:SetXP(0) end
+                        if target.SetOnboardingStage then target:SetOnboardingStage(0) end
+                        target:SetNWInt("GRID_OnboardingStage", 0)
+
+                        -- Strip inventory and weapons
+                        if target.ClearInventory then target:ClearInventory() end
+                        if target.Bags then target.Bags = {} end
+                        target:StripWeapons()
+                        target:StripAmmo()
+                        target:Spawn()
+
+                        GRID.Notify(target, "[ADMIN RESET] Your character profile, progression, and inventory have been reset to Level 1 Rookie.", NOTIFY_ERROR, 10)
+                    end
+
+                    GRID.Notify(ply, string.format("Successfully executed full database profile reset for %s (%s).", targetNick, targetSid), NOTIFY_HINT, 6)
+                    print(string.format("[GRID Admin] SuperAdmin %s executed full profile reset on %s (%s).", ply:Nick(), targetNick, targetSid))
+                end, function(err)
+                    GRID.Notify(ply, "Database Error: Failed to reset player profile! See server console.", NOTIFY_ERROR)
+                end)
+            end
+        end
+
         -- 2. Role & Faction Debug
     elseif action == "set_job" then
         local target = net.ReadEntity()
