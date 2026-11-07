@@ -18,31 +18,7 @@ ENT.BaseCooldown = 180
 ENT.SearchDuration = 1.5
 
 ENT.OverheadConfig = {
-    Enabled = true,
-    Offset = Vector(0, 0, 48),
-    FaceCamera = true,
-    MaxDistance = 380,
-    FadeStart = 240,
-    Scale = 0.05,
-    GetTitle = function(self)
-        return self.PrintName or "Scavenge Node"
-    end,
-    GetColor = function(self)
-        if self:IsOnCooldown() then
-            return Color(239, 68, 68)
-        end
-        return Color(52, 211, 153)
-    end,
-    GetCustomText = function(self)
-        if self:IsOnCooldown() then
-            local remain = self:GetCooldownRemaining()
-            local mins = math.floor(remain / 60)
-            local secs = remain % 60
-            local timeStr = (mins > 0) and string.format("%dm %02ds", mins, secs) or string.format("%ds", secs)
-            return "Empty - Refreshes in " .. timeStr
-        end
-        return "Searchable - Salvageable Materials"
-    end
+    Enabled = false,
 }
 
 ENT.InteractionConfig = {
